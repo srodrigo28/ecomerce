@@ -137,9 +137,9 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
   const selectedCategory = workspace.categories.find((category) => category.id === draft.categoryId);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-      <form onSubmit={handleSubmit} className="space-y-6 rounded-[2rem] border border-[var(--border)] bg-white p-6 shadow-[var(--shadow)]">
-        <div className="flex items-start justify-between gap-4">
+    <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+      <form onSubmit={handleSubmit} className="space-y-6 rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)] sm:p-6 lg:p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Cadastro amigavel</p>
             <h2 className="mt-2 text-3xl font-semibold text-slate-900">Novo produto</h2>
@@ -148,7 +148,7 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
               sempre com preview imediato e limite entre {MIN_IMAGES} e {MAX_IMAGES} fotos por produto.
             </p>
           </div>
-          <span className="rounded-full bg-[rgba(15,118,110,0.12)] px-4 py-2 text-xs font-semibold text-[var(--accent-strong)]">
+          <span className="w-fit rounded-full bg-[rgba(15,118,110,0.12)] px-4 py-2 text-xs font-semibold text-[var(--accent-strong)]">
             {draft.images.length}/{MAX_IMAGES} imagens
           </span>
         </div>
@@ -272,7 +272,7 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
         </div>
 
         <section className="space-y-4 rounded-[1.5rem] border border-dashed border-[var(--border)] bg-[rgba(15,118,110,0.03)] p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Imagens do produto</h3>
               <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
@@ -297,7 +297,7 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
             className="hidden"
           />
 
-          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
             <input
               value={urlInput}
               onChange={(event) => setUrlInput(event.target.value)}
@@ -353,7 +353,7 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
           {feedback}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm leading-6 text-[var(--muted)]">
             Categoria selecionada: <span className="font-semibold text-slate-900">{selectedCategory?.name ?? "Nao definida"}</span>
           </div>
@@ -366,7 +366,7 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
         </div>
       </form>
 
-      <aside className="space-y-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)]">
+      <aside className="space-y-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6 2xl:sticky 2xl:top-6 2xl:self-start">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Preview operacional</p>
           <h3 className="mt-2 text-2xl font-semibold text-slate-900">Como o produto apareceria</h3>

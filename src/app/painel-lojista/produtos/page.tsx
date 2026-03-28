@@ -14,12 +14,14 @@ export default async function SellerProductsPage() {
   const workspace = await getSellerWorkspace();
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-6 py-10 sm:px-10 lg:px-12">
-      <section className="grid gap-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[var(--shadow)] lg:grid-cols-[1.1fr_0.9fr]">
+    <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10 2xl:px-12">
+      <section className="grid gap-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:p-10">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Painel do lojista</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Cadastro de produtos sem depender da API</h1>
-          <p className="mt-4 max-w-3xl text-base leading-8 text-[var(--muted)]">
+          <h1 className="mt-3 max-w-4xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl xl:text-5xl">
+            Cadastro de produtos sem depender da API
+          </h1>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--muted)] sm:text-base sm:leading-8">
             Esta area foi desenhada para testes reais de usabilidade desde ja. O lojista consegue cadastrar dados,
             experimentar imagens por upload local ou URL e revisar tudo com preview antes de existir integracao definitiva.
           </p>
@@ -53,8 +55,8 @@ export default async function SellerProductsPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-        <aside className="space-y-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)]">
+      <section className="grid gap-6 2xl:grid-cols-[minmax(320px,0.7fr)_minmax(0,1.3fr)]">
+        <aside className="space-y-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6 2xl:sticky 2xl:top-6 2xl:self-start">
           <div>
             <h2 className="text-2xl font-semibold text-slate-900">O que ja pode ser testado</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
