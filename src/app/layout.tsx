@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hierarquia | Catalogo Multiloja",
+  title: "Hierarquia | Marketplace Multiloja",
   description:
-    "Base inicial do projeto Hierarquia preparada para consumir dados de uma API externa.",
+    "Frontend do projeto Hierarquia focado em vitrine, captacao de lojistas e painel comercial antes da integracao da API.",
 };
 
 export default function RootLayout({

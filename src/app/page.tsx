@@ -3,18 +3,25 @@ import Link from "next/link";
 import { getFeaturedStores, getSellerWorkspace } from "@/lib/services/catalog-service";
 import { apiConfig, appConfig, endpointMap, hasServerApiToken, resolvedEndpoints } from "@/lib/config";
 
+const navLinks = [
+  { href: "#como-funciona", label: "Como funciona" },
+  { href: "#vitrine-demo", label: "Lojas" },
+  { href: "#parceiros", label: "Parceiros" },
+  { href: "/painel-lojista", label: "Painel" },
+];
+
 const phases = [
   {
-    title: "Frontend testavel",
-    description: "O projeto pode ser navegado e validado sem API usando dados locais e servicos mockados.",
+    title: "Crie sua loja",
+    description: "Cadastre-se como loja, organize seu catalogo e publique seus produtos com uma experiencia simples.",
   },
   {
-    title: "Painel do lojista",
-    description: "Cadastro de produtos com experiencia amigavel, preview e regras de imagens prontas.",
+    title: "Venda com autonomia",
+    description: "Gerencie imagens, precos, estoque, Pix e WhatsApp em um painel pensado para operacao real.",
   },
   {
-    title: "Conexao futura",
-    description: "A troca para API real fica concentrada na camada de servicos e no .env.",
+    title: "Evolua por fases",
+    description: "O frontend ja nasce pronto para testes e cresce sem travar a entrada da API depois.",
   },
 ];
 
@@ -42,10 +49,32 @@ const envChecks = [
 ];
 
 const highlights = [
+  "Menu superior pronto para leitura em desktop e mobile",
+  "Entrada comercial clara para lojistas, login e parceiros",
   "Vitrine local com lojas e produtos de exemplo",
-  "Servicos preparados para trocar mock por API depois",
-  "Painel do lojista com cadastro visualmente validavel",
-  "Upload local e por URL com preview de 1 a 5 imagens",
+  "Painel do lojista com cadastro e preview de imagens",
+];
+
+const partnerPillars = [
+  "Marcas e fabricantes",
+  "Lojas parceiras",
+  "Representantes comerciais",
+  "Operacao de catalogo",
+];
+
+const commerceJourney = [
+  {
+    title: "1. Atrair e cadastrar lojas",
+    description: "A home precisa converter. Por isso a primeira decisao e deixar claro para quem a plataforma existe e qual acao cada perfil deve tomar.",
+  },
+  {
+    title: "2. Organizar catalogo e vitrine",
+    description: "Depois do cadastro vem a base comercial: loja, categorias, produtos, busca e apresentacao da vitrine.",
+  },
+  {
+    title: "3. Fechar pedido com seguranca",
+    description: "O fluxo seguinte e carrinho, entrega ou retirada, resumo do pedido e pagamento inicial por Pix manual.",
+  },
 ];
 
 export default async function Home() {
@@ -54,18 +83,59 @@ export default async function Home() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-8 lg:px-10 lg:py-10 2xl:px-12">
+      <section className="rounded-[2rem] border border-[var(--border)] bg-[rgba(255,252,247,0.86)] p-3 shadow-[var(--shadow)] backdrop-blur sm:p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <Link href="/" className="flex items-center justify-center gap-3 rounded-[1.5rem] px-3 py-3 text-slate-900 lg:justify-start">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
+              H
+            </span>
+            <div>
+              <strong className="block text-lg font-semibold">Hierarquia</strong>
+              <span className="text-sm text-[var(--muted)]">Marketplace multiloja de moda</span>
+            </div>
+          </Link>
+
+          <nav className="order-3 flex flex-wrap items-center justify-center gap-2 rounded-[1.5rem] border border-[var(--border)] bg-white/80 px-3 py-2 lg:order-2 lg:mx-6 lg:flex-1">
+            {navLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-[rgba(15,118,110,0.08)] hover:text-[var(--accent-strong)]"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+
+          <div className="order-2 flex flex-wrap items-center justify-center gap-3 lg:order-3 lg:justify-end">
+            <Link
+              href="/painel-lojista"
+              className="rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+            >
+              Login
+            </Link>
+            <Link
+              href="/painel-lojista/produtos"
+              className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
+            >
+              Cadastrar-se como loja
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="grid gap-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] backdrop-blur sm:p-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)] xl:p-10 2xl:gap-8">
         <div className="space-y-6">
           <span className="inline-flex w-fit rounded-full bg-[rgba(15,118,110,0.12)] px-4 py-2 text-sm font-semibold text-[var(--accent-strong)]">
-            Frontend pronto para testes sem backend
+            Plataforma multiloja em construcao com foco total no frontend
           </span>
           <div className="space-y-4">
             <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl xl:text-6xl">
-              Hierarquia agora tem uma base visual navegavel e preparada para conectar com API depois.
+              Um menu moderno no topo, uma vitrine comercial clara e um caminho direto para lojas venderem melhor.
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
-              Em vez de esperar a API existir, ja deixamos a experiencia principal viva: vitrine, contexto comercial,
-              painel do lojista e cadastro de produtos com imagens e preview.
+              A home agora passa a comunicar o negocio: cadastro de lojistas, login operacional, area para parceiros e
+              entrada para a vitrine. Mantemos os mocks e a estrutura atual para validar o produto antes da API.
             </p>
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
@@ -78,37 +148,56 @@ export default async function Home() {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/painel-lojista/produtos" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
-              Abrir painel do lojista
+              Cadastrar-se como loja
             </Link>
-            <a href="#vitrine-demo" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
-              Ver vitrine de exemplo
+            <Link href="/painel-lojista" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
+              Login do lojista
+            </Link>
+            <a href="#parceiros" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
+              Nossos parceiros
             </a>
           </div>
         </div>
 
         <aside className="rounded-[1.75rem] border border-[rgba(245,158,11,0.3)] bg-[rgba(255,255,255,0.92)] p-5 sm:p-6 xl:self-start">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-600">Diagnostico rapido</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-600">Entrada principal</p>
           <div className="mt-5 space-y-4">
-            {envChecks.map((item) => (
-              <div key={item.label} className="rounded-2xl border border-[var(--border)] px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium text-slate-900">{item.label}</span>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      item.ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {item.ready ? "ok" : "pendente"}
-                  </span>
-                </div>
-                <p className="mt-2 break-all font-mono text-xs text-[var(--muted)]">{item.value}</p>
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-[rgba(255,248,235,0.9)] p-4">
+              <p className="text-sm text-[var(--muted)]">Perfil mais importante agora</p>
+              <strong className="mt-2 block text-2xl text-slate-900">Lojista multimarcas</strong>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                Queremos que a loja entenda em segundos o que fazer: entrar, cadastrar-se e publicar catalogo.
+              </p>
+            </div>
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <p className="text-sm text-[var(--muted)]">Acesso rapido</p>
+              <div className="mt-4 grid gap-3">
+                <Link href="/painel-lojista/produtos" className="rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-700">
+                  Quero cadastrar minha loja
+                </Link>
+                <Link href="/painel-lojista" className="rounded-2xl border border-[var(--border)] px-4 py-3 text-center text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+                  Ja tenho acesso
+                </Link>
               </div>
-            ))}
+            </div>
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <p className="text-sm font-semibold text-slate-900">Base tecnica atual</p>
+              <div className="mt-3 space-y-3">
+                {envChecks.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-3">
+                    <span className="text-sm text-slate-700">{item.label}</span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {item.ready ? "ok" : "pendente"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </aside>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <section id="como-funciona" className="grid gap-6 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-8">
           <h2 className="text-2xl font-semibold text-slate-900">O que ja conseguimos validar</h2>
           <div className="mt-6 grid gap-3">
@@ -143,6 +232,51 @@ export default async function Home() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Sequencia do e-commerce</p>
+          <h2 className="mt-3 text-2xl font-semibold text-slate-900">O frontend deve crescer nessa ordem</h2>
+          <div className="mt-6 grid gap-4">
+            {commerceJourney.map((item) => (
+              <article key={item.title} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
+                <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </article>
+
+        <article id="parceiros" className="rounded-[2rem] border border-[var(--border)] bg-slate-900 p-5 text-white shadow-[var(--shadow)] sm:p-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">Nossos parceiros</p>
+          <h2 className="mt-3 text-2xl font-semibold">A Hierarquia pode unir operacao, marca e distribuicao em um so lugar</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
+            Esta secao abre espaco para apresentar quem vende, quem fornece e quem ajuda a plataforma a crescer. Mesmo
+            enquanto o backend nao entra, a home ja pode comunicar autoridade comercial.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {partnerPillars.map((pillar) => (
+              <span key={pillar} className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100">
+                {pillar}
+              </span>
+            ))}
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
+              <p className="text-sm text-slate-300">Frente comercial</p>
+              <strong className="mt-2 block text-xl">Captacao de lojas</strong>
+            </div>
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
+              <p className="text-sm text-slate-300">Frente visual</p>
+              <strong className="mt-2 block text-xl">Catalogo com identidade</strong>
+            </div>
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
+              <p className="text-sm text-slate-300">Frente operacional</p>
+              <strong className="mt-2 block text-xl">Pedido e atendimento</strong>
             </div>
           </div>
         </article>

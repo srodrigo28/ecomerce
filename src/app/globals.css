@@ -44,6 +44,10 @@ a {
   text-decoration: none;
 }
 
+img {
+  display: block;
+}
+
 ::selection {
   background: rgba(15, 118, 110, 0.18);
 }

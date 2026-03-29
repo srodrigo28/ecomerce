@@ -1,293 +1,218 @@
-# Hierarquia - Plataforma Multiloja Preparada para API
+# Plano de evolucao do Hierarquia
 
-## Visao Geral
+## Visao do produto
 
-O projeto Hierarquia sera uma plataforma de catalogo online multiloja voltada para lojas de roupas, com foco em crescimento por fases e integracao desacoplada com API.
+O Hierarquia sera um e-commerce multiloja com foco inicial em moda, pensado para conectar lojas, catalogos, parceiros e pedidos em uma experiencia simples de navegar e operar.
 
-A proposta desta base inicial e:
+A decisao atual do projeto e correta: primeiro validar frontend, navegacao, proposta comercial e fluxo de operacao. A API entra depois, quando a interface ja estiver madura o bastante para evitar retrabalho.
 
-- organizar o dominio do negocio desde o comeco;
-- separar configuracoes de ambiente da interface;
-- permitir trocar a origem dos dados apenas ajustando o `.env`;
-- preparar o frontend para ser testado antes da API existir.
+## Diagnostico atual do projeto
 
-## Objetivo do Produto
+Hoje a base ja possui bons fundamentos:
 
-Criar uma plataforma onde:
+- App Router com estrutura limpa;
+- configuracao centralizada para futura API;
+- mocks locais para nao travar o produto;
+- painel do lojista com formulario e preview;
+- home publica funcional.
 
-- lojistas cadastram suas lojas e produtos com facilidade;
-- clientes navegam, pesquisam e fazem pedidos rapidamente;
-- pedidos avancam por um fluxo claro de atendimento;
-- a aplicacao possa receber dados de API externa sem retrabalho estrutural.
+Mas ainda havia alguns gaps de produto e interface:
 
-## Principio de Construcao Atual
+- faltava um menu superior mais forte para desktop web;
+- a home estava mais tecnica do que comercial;
+- o caminho principal do usuario nao estava explicito;
+- README e plano ainda nao refletiam a prioridade real do projeto;
+- a sequencia do e-commerce precisava ficar mais objetiva.
 
-A prioridade desta fase e um frontend testavel sem dependencia imediata de backend.
+## Objetivo desta fase
 
-Isso significa:
+Consolidar o frontend publico e operacional para provar quatro coisas antes da API:
 
-- usar mocks locais para validar fluxos e usabilidade;
-- centralizar a futura conexao com API na camada de servicos;
-- construir telas ja pensadas para dados reais;
-- reduzir retrabalho quando a integracao oficial entrar.
+1. o lojista entende a proposta em poucos segundos;
+2. a vitrine transmite confianca e organizacao;
+3. o painel permite testar o fluxo de cadastro real;
+4. o time sabe exatamente qual tela vem antes da integracao backend.
 
-## Perfis Principais
+## Sequencia recomendada do e-commerce
 
-### Administrador
+### Fase 1 - Home publica forte
 
-- gerencia lojas, clientes e pedidos;
-- acompanha metricas e relatorios;
-- supervisiona o funcionamento geral da plataforma.
+Objetivo: transformar a pagina inicial em uma entrada comercial clara.
 
-### Lojista
+Entregas:
 
-- cadastra e edita sua loja;
-- gerencia categorias e produtos;
-- acompanha pedidos recebidos;
-- configura Pix, WhatsApp e informacoes operacionais.
+- menu superior responsivo com boa leitura no desktop;
+- navegacao centralizada e moderna;
+- CTA para `Cadastrar-se como loja`;
+- CTA para `Login`;
+- secao `Nossos parceiros`;
+- bloco explicando como a plataforma funciona;
+- reforco visual da vitrine e do valor para o lojista.
 
-### Cliente
+Resultado esperado:
 
-- navega entre lojas e produtos;
-- pesquisa itens por nome e categoria;
-- monta carrinho e finaliza pedidos;
-- acompanha historico e status.
+- qualquer visitante entende o que e a Hierarquia;
+- o lojista sabe qual botao clicar;
+- o projeto comeca a parecer um produto e nao apenas uma base tecnica.
 
-## Stack Inicial
+### Fase 2 - Onboarding do lojista
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- futura integracao com Prisma e PostgreSQL
-- futura autenticacao por perfis
-- futura integracao com API externa para catalogo e pedidos
+Objetivo: estruturar a entrada do lojista no sistema.
 
-## Estrutura Tecnica Sugerida
+Entregas:
 
-```bash
-src/
-  app/
-    (public)/
-    (auth)/
-    (lojista)/
-    (cliente)/
-    (admin)/
-    painel-lojista/
-  components/
-  lib/
-    config.ts
-    mock-data.ts
-    services/
-  types/
-```
+- pagina dedicada de cadastro de loja;
+- pagina de login com visual consistente;
+- formulario de dados da loja;
+- captura de nome, CNPJ, WhatsApp, Pix e endereco;
+- validacoes de campos no frontend;
+- confirmacao visual de sucesso.
 
-## Estrategia de Integracao com API
+Resultado esperado:
 
-A integracao com API deve ficar centralizada e configuravel por ambiente.
+- fluxo de entrada do lojista validado antes da API;
+- base pronta para depois ligar autenticacao e persistencia.
 
-### Variaveis previstas no `.env`
+### Fase 3 - Catalogo da loja
 
-- URL publica do app
-- URL base da API
-- endpoints de auth, lojas, categorias, produtos e pedidos
-- timeout de requisicao
-- token de autenticacao server-to-server
-- chave para ativar mocks locais
+Objetivo: amadurecer o nucleo comercial.
 
-### Regra de implementacao
+Entregas:
 
-- a interface nao deve conhecer URLs fixas da API;
-- todos os endpoints devem sair da camada central de configuracao;
-- a camada de servicos deve decidir entre mock local e API real;
-- recursos futuros devem reutilizar o mesmo padrao.
+- cadastro e listagem de categorias;
+- cadastro, edicao e remocao visual de produtos;
+- cards de produto consistentes;
+- status de estoque;
+- precos varejo, atacado e promocional;
+- galeria de imagens mais polida;
+- pagina da loja com seus produtos.
 
-## Modulos do Sistema
+Resultado esperado:
 
-### 1. Autenticacao
+- o frontend passa a refletir a operacao principal do negocio;
+- o payload da API fica mais facil de definir porque a interface ja pediu os dados certos.
 
-- login e cadastro
-- controle por `role`
-- protecao de rotas
+### Fase 4 - Vitrine e descoberta
 
-### 2. Lojas
+Objetivo: melhorar a experiencia do cliente final.
 
-Campos:
+Entregas:
 
-- nome
-- CNPJ
-- foto de capa
-- WhatsApp
-- chave Pix
-- endereco via CEP
+- listagem de lojas com filtros;
+- pagina publica de loja;
+- pagina de produto;
+- busca por nome, categoria e loja;
+- destaques, lancamentos e campanhas;
+- organizacao visual para mobile e desktop.
 
-### 3. Categorias
+Resultado esperado:
 
-- nome
-- slug
-- loja vinculada
-- status ativo ou inativo
+- jornada publica pronta para navegacao real;
+- usuarios conseguem descobrir produtos sem depender do backend finalizado.
 
-### 4. Produtos
+### Fase 5 - Carrinho e checkout frontend-first
 
-- nome
-- descricao
-- imagens
-- categoria
-- preco varejo
-- preco atacado
-- preco promocional
-- estoque
+Objetivo: validar a compra completa sem ainda depender da API real.
 
-#### Regras de imagens no cadastro do lojista
+Entregas:
 
-- cada produto deve ter no minimo 1 imagem;
-- cada produto pode ter no maximo 5 imagens;
-- o lojista pode adicionar imagens por upload local;
-- o lojista pode adicionar imagens por URL;
-- toda imagem precisa aparecer com preview imediato;
-- o lojista deve conseguir remover imagens antes de salvar;
-- a primeira imagem funciona como capa principal no preview.
+- carrinho lateral ou pagina dedicada;
+- resumo de itens;
+- alteracao de quantidade;
+- retirada ou entrega;
+- bloco de endereco;
+- resumo financeiro;
+- tela de confirmacao do pedido;
+- fluxo de Pix manual no MVP.
 
-#### Experiencia esperada no painel do lojista
+Resultado esperado:
 
-- formulario simples e direto, sem excesso de passos;
-- precificacao organizada por varejo, atacado e promocional;
-- categoria e estoque visiveis no mesmo bloco de cadastro;
-- area de imagens separada, com status claro da quantidade ja usada;
-- preview lateral para o lojista revisar como o produto sera exibido.
+- o time prova a jornada ponta a ponta;
+- a API futura pode ser desenhada em cima de um checkout ja testado.
 
-### 5. Vitrine Publica
+### Fase 6 - Painel operacional completo
 
-- home com lista de lojas
-- pagina da loja
-- pagina do produto
-- busca global
+Objetivo: expandir a area logada depois que a base comercial estiver consolidada.
 
-### 6. Carrinho e Pedido
+Entregas:
 
-Fluxo:
+- dashboard do lojista com pedidos;
+- historico do cliente;
+- indicadores administrativos;
+- estados de loading, erro e vazio em todos os modulos;
+- componentes reaproveitaveis para tabelas, cards e formularios.
 
-1. cliente adiciona produtos
-2. define quantidade
-3. escolhe entrega ou retirada
-4. confirma dados
-5. gera pedido
+Resultado esperado:
 
-### 7. Pagamento
+- produto com cara de sistema operacional real;
+- terreno preparado para integracao de autenticao e autorizacao.
 
-- Pix manual no MVP
-- QR Code Pix em fase posterior
-- futura automacao por API
+### Fase 7 - API e persistencia
 
-### 8. Pos-pedido
+Objetivo: conectar o que ja foi validado visualmente.
 
-- geracao de PDF
-- resumo para WhatsApp
-- historico de acompanhamento
+Entregas:
 
-### 9. Paineis
+- substituir mocks por servicos reais gradualmente;
+- ligar autenticacao;
+- persistir loja, categorias, produtos e pedidos;
+- adicionar tratamento de erros da API;
+- revisar contratos de dados com base nos fluxos ja aprovados.
 
-#### Painel do lojista
+Resultado esperado:
 
-- dashboard operacional com indicadores locais ou reais;
-- cadastro de produtos testavel sem API;
-- upload de fotos por arquivo e URL com preview;
-- formulario preparado para virar payload de API depois;
-- validacoes visuais antes da persistencia real.
+- menos retrabalho;
+- backend servindo uma UX que ja foi provada.
 
-#### Painel do cliente
+## Ordem pratica de implementacao imediata
 
-- historico de pedidos
-- status dos pedidos
-- repeticao de compra
+Se continuarmos focando no frontend agora, eu seguiria esta ordem curta:
 
-#### Painel administrativo
+1. home publica e navegacao;
+2. cadastro e login;
+3. pagina publica da loja;
+4. listagem e detalhe de produto;
+5. filtros e busca;
+6. carrinho;
+7. checkout;
+8. area de pedidos;
+9. integracao com API.
 
-- indicadores gerais
-- gestao de lojas
-- gestao de clientes
-- gestao de pedidos
+## Melhorias de UX que valem manter como regra
 
-## Fases de Desenvolvimento
+- sempre ter CTA principal e CTA secundario nas telas chave;
+- evitar paginas com texto muito tecnico na area publica;
+- manter menu de desktop bem distribuido e menu mobile simples;
+- dar contexto visual para lojista, cliente e parceiro;
+- validar estados vazio, carregando e erro desde cedo;
+- construir componentes reaproveitaveis antes de espalhar estilos.
 
-### Fase 1 - Fundacao visual e tecnica
+## Componentes recomendados para criar na proxima etapa
 
-- limpar boilerplate inicial
-- estruturar ambiente
-- configurar camada central para API
-- definir tipos basicos do dominio
-- disponibilizar mocks para frontend testavel
+- `site-header`
+- `hero-home`
+- `partner-strip`
+- `store-card`
+- `product-card`
+- `section-heading`
+- `empty-state`
+- `status-badge`
+- `cta-group`
 
-### Fase 2 - Painel do lojista primeiro
+## Definicao de pronto para sair do frontend e ir para API
 
-- construir cadastro amigavel de produtos
-- implementar preview com imagens locais e remotas
-- validar regras de 1 a 5 imagens por produto
-- organizar servicos para futura persistencia na API
+So vale iniciar a fase forte de API quando estes pontos estiverem resolvidos:
 
-### Fase 3 - Dominio comercial
+- home e paginas publicas com proposta clara;
+- onboarding do lojista navegavel;
+- cadastro de loja e produto coerentes;
+- vitrine e produto com boa leitura responsiva;
+- carrinho e checkout testados visualmente;
+- estrutura de componentes estabilizada;
+- contratos de dados inferidos com pouca incerteza.
 
-- modelar lojas, categorias e produtos em profundidade
-- criar servicos de leitura da API
-- preparar componentes de listagem e detalhes
+## Resumo executivo
 
-### Fase 4 - Fluxo de pedido
+O Hierarquia ja tem uma base promissora. O melhor caminho agora nao e correr para o backend, e sim fechar a experiencia principal do frontend ate que a jornada do lojista e do cliente esteja clara, bonita e consistente.
 
-- carrinho
-- checkout
-- endereco e frete
-- criacao do pedido
-
-### Fase 5 - Operacao completa
-
-- autenticacao por perfil
-- painel do lojista conectado a backend
-- painel do cliente
-- painel admin
-
-### Fase 6 - Expansao
-
-- pagamento automatizado
-- notificacoes
-- cupons
-- analytics
-
-## MVP Inicial
-
-- cadastro de lojista
-- cadastro da loja
-- produtos e categorias
-- vitrine publica
-- carrinho
-- pedido
-- Pix manual
-- painel do lojista
-- fluxo de imagens com preview no cadastro de produto
-
-## Regras de Negocio Iniciais
-
-### Loja
-
-- deve ter Pix e WhatsApp
-- deve possuir endereco valido
-
-### Produto
-
-- pertence a uma loja
-- deve ter estoque controlado
-- preco promocional e opcional
-- deve possuir de 1 a 5 imagens no cadastro
-
-### Pedido
-
-- precisa ter ao menos um item
-- exige endereco quando for entrega
-- retirada nao cobra frete
-
-## Observacoes Praticas
-
-- comecar pelo fluxo principal antes das automacoes;
-- manter a API desacoplada da camada visual;
-- validar usabilidade com mocks antes da integracao real;
-- documentar variaveis de ambiente antes de integrar servicos reais;
-- evoluir cada painel com base no fluxo mais critico do usuario.
+Quando isso acontecer, a API deixa de ser uma aposta e vira apenas a camada que conecta algo que ja funciona como produto.
