@@ -12,6 +12,9 @@ export type OrderStatus =
   | "cancelado";
 
 export type ProductImageSource = "upload" | "url";
+export type StockMovementType = "entrada" | "saida" | "ajuste";
+export type StockMovementSource = "manual" | "pedido" | "reposicao" | "cancelamento";
+export type ReportPeriod = "dia" | "semana" | "mes";
 
 export interface StoreSummary {
   id: string;
@@ -25,12 +28,20 @@ export interface StoreSummary {
   status: StoreStatus;
 }
 
+export interface CategoryBase {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+}
+
 export interface Category {
   id: string;
   storeId: string;
   name: string;
   slug: string;
   active: boolean;
+  origin?: "base" | "custom";
 }
 
 export interface ProductImage {
@@ -52,8 +63,66 @@ export interface Product {
   priceWholesale?: number;
   pricePromotion?: number;
   stock: number;
+  minStock?: number;
   imageUrls: string[];
   featured?: boolean;
+}
+
+export interface StockMovement {
+  id: string;
+  storeId: string;
+  productId: string;
+  type: StockMovementType;
+  source: StockMovementSource;
+  quantity: number;
+  previousStock: number;
+  currentStock: number;
+  createdAt: string;
+  note?: string;
+}
+
+export interface SellerOrderItem {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  categoryId: string;
+}
+
+export interface SellerOrder {
+  id: string;
+  code: string;
+  storeId: string;
+  storeName: string;
+  customerName: string;
+  createdAt: string;
+  paymentStatus: "pendente" | "pago" | "falhou";
+  status: OrderStatus;
+  total: number;
+  itemCount: number;
+  deliveryType: "entrega" | "retirada";
+  items: SellerOrderItem[];
+}
+
+export interface SellerReportByCategory {
+  categoryId: string;
+  categoryName: string;
+  revenue: number;
+  orders: number;
+  units: number;
+}
+
+export interface SellerReportSnapshot {
+  period: ReportPeriod;
+  revenue: number;
+  orders: number;
+  averageTicket: number;
+}
+
+export interface SellerReportSummary {
+  snapshots: SellerReportSnapshot[];
+  byCategory: SellerReportByCategory[];
 }
 
 export interface SellerStats {
@@ -61,23 +130,63 @@ export interface SellerStats {
   lowStockProducts: number;
   pendingOrders: number;
   catalogViews: number;
+  salesToday: number;
+  salesWeek: number;
+  salesMonth: number;
 }
 
 export interface SellerWorkspace {
   store: StoreSummary;
+  categoryBases: CategoryBase[];
   categories: Category[];
   products: Product[];
+  stockMovements: StockMovement[];
+  orders: SellerOrder[];
+  reportSummary: SellerReportSummary;
   stats: SellerStats;
+}
+
+export interface AdminSummaryStats {
+  totalStores: number;
+  totalProducts: number;
+  totalOrders: number;
+  totalCustomers: number;
+  salesToday: number;
+  salesWeek: number;
+  salesMonth: number;
+}
+
+export interface AdminStoreSnapshot {
+  storeId: string;
+  storeName: string;
+  sales: number;
+  orders: number;
+  newProducts: number;
+  newCustomers: number;
+}
+
+export interface AdminReportSummary {
+  periodSnapshots: SellerReportSnapshot[];
+  byStore: AdminStoreSnapshot[];
+}
+
+export interface AdminWorkspace {
+  stats: AdminSummaryStats;
+  stores: StoreSummary[];
+  orders: SellerOrder[];
+  reportSummary: AdminReportSummary;
 }
 
 export interface ProductFormDraft {
   name: string;
   description: string;
   categoryId: string;
+  newCategoryName: string;
   priceRetail: string;
   priceWholesale: string;
   pricePromotion: string;
   stock: string;
+  minStock: string;
   whatsapp: string;
   pixKey: string;
   images: ProductImage[];

@@ -1,4 +1,13 @@
-import type { Category, Product, SellerWorkspace, StoreSummary } from "@/types/catalog";
+import type {
+  AdminWorkspace,
+  Category,
+  CategoryBase,
+  Product,
+  SellerOrder,
+  SellerWorkspace,
+  StockMovement,
+  StoreSummary,
+} from "@/types/catalog";
 
 export const mockStores: StoreSummary[] = [
   {
@@ -27,11 +36,18 @@ export const mockStores: StoreSummary[] = [
   },
 ];
 
+export const mockCategoryBases: CategoryBase[] = [
+  { id: "base-calcas", name: "Calcas", slug: "calcas", active: true },
+  { id: "base-camisas", name: "Camisas", slug: "camisas", active: true },
+  { id: "base-shorts", name: "Shorts", slug: "shorts", active: true },
+];
+
 export const mockCategories: Category[] = [
-  { id: "cat-vestidos", storeId: "store-aurora", name: "Vestidos", slug: "vestidos", active: true },
-  { id: "cat-blazers", storeId: "store-aurora", name: "Blazers", slug: "blazers", active: true },
-  { id: "cat-camisas", storeId: "store-aurora", name: "Camisas", slug: "camisas", active: true },
-  { id: "cat-jeans", storeId: "store-linha-fina", name: "Jeans", slug: "jeans", active: true },
+  { id: "cat-vestidos", storeId: "store-aurora", name: "Vestidos", slug: "vestidos", active: true, origin: "custom" },
+  { id: "cat-blazers", storeId: "store-aurora", name: "Blazers", slug: "blazers", active: true, origin: "custom" },
+  { id: "cat-camisas-aurora", storeId: "store-aurora", name: "Camisas", slug: "camisas", active: true, origin: "base" },
+  { id: "cat-calcas-linha-fina", storeId: "store-linha-fina", name: "Calcas", slug: "calcas", active: true, origin: "base" },
+  { id: "cat-jeans", storeId: "store-linha-fina", name: "Jeans", slug: "jeans", active: true, origin: "custom" },
 ];
 
 export const mockProducts: Product[] = [
@@ -46,6 +62,7 @@ export const mockProducts: Product[] = [
     priceWholesale: 189.9,
     pricePromotion: 219.9,
     stock: 12,
+    minStock: 5,
     imageUrls: [
       "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80",
     ],
@@ -61,6 +78,7 @@ export const mockProducts: Product[] = [
     priceRetail: 329.9,
     priceWholesale: 259.9,
     stock: 4,
+    minStock: 6,
     imageUrls: [
       "https://images.unsplash.com/photo-1591369822096-ffd140ec948f?auto=format&fit=crop&w=900&q=80",
     ],
@@ -68,26 +86,285 @@ export const mockProducts: Product[] = [
   {
     id: "prod-aurora-3",
     storeId: "store-aurora",
-    categoryId: "cat-camisas",
+    categoryId: "cat-camisas-aurora",
     name: "Camisa Essencial Linho",
     slug: "camisa-essencial-linho",
     description: "Camisa de linho com modelagem ampla e acabamento premium.",
     priceRetail: 189.9,
     stock: 20,
+    minStock: 8,
     imageUrls: [
       "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80",
+    ],
+  },
+  {
+    id: "prod-linha-1",
+    storeId: "store-linha-fina",
+    categoryId: "cat-calcas-linha-fina",
+    name: "Calca Urban Fit",
+    slug: "calca-urban-fit",
+    description: "Calca reta com modelagem urbana e tecido confortavel.",
+    priceRetail: 219.9,
+    stock: 9,
+    minStock: 4,
+    imageUrls: [
+      "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=900&q=80",
+    ],
+  },
+  {
+    id: "prod-linha-2",
+    storeId: "store-linha-fina",
+    categoryId: "cat-jeans",
+    name: "Jeans Skyline",
+    slug: "jeans-skyline",
+    description: "Jeans premium com lavagem escura e caimento moderno.",
+    priceRetail: 269.9,
+    stock: 15,
+    minStock: 5,
+    imageUrls: [
+      "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=900&q=80",
+    ],
+  },
+];
+
+export const mockStockMovements: StockMovement[] = [
+  {
+    id: "move-1",
+    storeId: "store-aurora",
+    productId: "prod-aurora-1",
+    type: "entrada",
+    source: "reposicao",
+    quantity: 8,
+    previousStock: 4,
+    currentStock: 12,
+    createdAt: "2026-03-25T10:00:00.000Z",
+    note: "Reposicao do fornecedor",
+  },
+  {
+    id: "move-2",
+    storeId: "store-aurora",
+    productId: "prod-aurora-2",
+    type: "saida",
+    source: "pedido",
+    quantity: 2,
+    previousStock: 6,
+    currentStock: 4,
+    createdAt: "2026-03-28T14:30:00.000Z",
+    note: "Pedido #1042 confirmado",
+  },
+  {
+    id: "move-3",
+    storeId: "store-aurora",
+    productId: "prod-aurora-3",
+    type: "ajuste",
+    source: "manual",
+    quantity: 1,
+    previousStock: 19,
+    currentStock: 20,
+    createdAt: "2026-03-29T09:15:00.000Z",
+    note: "Ajuste de conferencia",
+  },
+];
+
+export const mockSellerOrders: SellerOrder[] = [
+  {
+    id: "order-1042",
+    code: "#1042",
+    storeId: "store-aurora",
+    storeName: "Aurora Atelier",
+    customerName: "Marina Lopes",
+    createdAt: "2026-03-29T11:20:00.000Z",
+    paymentStatus: "pago",
+    status: "em_preparo",
+    total: 439.8,
+    itemCount: 2,
+    deliveryType: "entrega",
+    items: [
+      {
+        id: "item-1",
+        productId: "prod-aurora-1",
+        productName: "Vestido Midi Aurora",
+        quantity: 1,
+        unitPrice: 219.9,
+        categoryId: "cat-vestidos",
+      },
+      {
+        id: "item-2",
+        productId: "prod-aurora-3",
+        productName: "Camisa Essencial Linho",
+        quantity: 1,
+        unitPrice: 219.9,
+        categoryId: "cat-camisas-aurora",
+      },
+    ],
+  },
+  {
+    id: "order-1041",
+    code: "#1041",
+    storeId: "store-aurora",
+    storeName: "Aurora Atelier",
+    customerName: "Renata Costa",
+    createdAt: "2026-03-28T16:40:00.000Z",
+    paymentStatus: "pendente",
+    status: "aguardando_pagamento",
+    total: 329.9,
+    itemCount: 1,
+    deliveryType: "retirada",
+    items: [
+      {
+        id: "item-3",
+        productId: "prod-aurora-2",
+        productName: "Blazer Verona",
+        quantity: 1,
+        unitPrice: 329.9,
+        categoryId: "cat-blazers",
+      },
+    ],
+  },
+  {
+    id: "order-1038",
+    code: "#1038",
+    storeId: "store-aurora",
+    storeName: "Aurora Atelier",
+    customerName: "Patricia Menezes",
+    createdAt: "2026-03-24T13:05:00.000Z",
+    paymentStatus: "pago",
+    status: "concluido",
+    total: 499.8,
+    itemCount: 2,
+    deliveryType: "entrega",
+    items: [
+      {
+        id: "item-4",
+        productId: "prod-aurora-1",
+        productName: "Vestido Midi Aurora",
+        quantity: 2,
+        unitPrice: 249.9,
+        categoryId: "cat-vestidos",
+      },
+    ],
+  },
+  {
+    id: "order-2081",
+    code: "#2081",
+    storeId: "store-linha-fina",
+    storeName: "Linha Fina Store",
+    customerName: "Bruno Nascimento",
+    createdAt: "2026-03-29T10:05:00.000Z",
+    paymentStatus: "pago",
+    status: "concluido",
+    total: 489.8,
+    itemCount: 2,
+    deliveryType: "entrega",
+    items: [
+      {
+        id: "item-5",
+        productId: "prod-linha-1",
+        productName: "Calca Urban Fit",
+        quantity: 1,
+        unitPrice: 219.9,
+        categoryId: "cat-calcas-linha-fina",
+      },
+      {
+        id: "item-6",
+        productId: "prod-linha-2",
+        productName: "Jeans Skyline",
+        quantity: 1,
+        unitPrice: 269.9,
+        categoryId: "cat-jeans",
+      },
+    ],
+  },
+  {
+    id: "order-2076",
+    code: "#2076",
+    storeId: "store-linha-fina",
+    storeName: "Linha Fina Store",
+    customerName: "Camila Prado",
+    createdAt: "2026-03-27T15:50:00.000Z",
+    paymentStatus: "pendente",
+    status: "aguardando_pagamento",
+    total: 219.9,
+    itemCount: 1,
+    deliveryType: "retirada",
+    items: [
+      {
+        id: "item-7",
+        productId: "prod-linha-1",
+        productName: "Calca Urban Fit",
+        quantity: 1,
+        unitPrice: 219.9,
+        categoryId: "cat-calcas-linha-fina",
+      },
     ],
   },
 ];
 
 export const mockSellerWorkspace: SellerWorkspace = {
   store: mockStores[0],
+  categoryBases: mockCategoryBases,
   categories: mockCategories.filter((category) => category.storeId === "store-aurora"),
   products: mockProducts.filter((product) => product.storeId === "store-aurora"),
+  stockMovements: mockStockMovements.filter((movement) => movement.storeId === "store-aurora"),
+  orders: mockSellerOrders.filter((order) => order.storeId === "store-aurora"),
+  reportSummary: {
+    snapshots: [
+      { period: "dia", revenue: 1240, orders: 3, averageTicket: 413.33 },
+      { period: "semana", revenue: 6840, orders: 19, averageTicket: 360 },
+      { period: "mes", revenue: 24890, orders: 68, averageTicket: 366.03 },
+    ],
+    byCategory: [
+      { categoryId: "cat-vestidos", categoryName: "Vestidos", revenue: 11890, orders: 22, units: 31 },
+      { categoryId: "cat-blazers", categoryName: "Blazers", revenue: 6890, orders: 15, units: 18 },
+      { categoryId: "cat-camisas-aurora", categoryName: "Camisas", revenue: 6110, orders: 17, units: 24 },
+    ],
+  },
   stats: {
     activeProducts: 18,
     lowStockProducts: 3,
     pendingOrders: 7,
     catalogViews: 1248,
+    salesToday: 1240,
+    salesWeek: 6840,
+    salesMonth: 24890,
+  },
+};
+
+export const mockAdminWorkspace: AdminWorkspace = {
+  stats: {
+    totalStores: 28,
+    totalProducts: 486,
+    totalOrders: 912,
+    totalCustomers: 643,
+    salesToday: 5840,
+    salesWeek: 32890,
+    salesMonth: 129400,
+  },
+  stores: mockStores,
+  orders: mockSellerOrders,
+  reportSummary: {
+    periodSnapshots: [
+      { period: "dia", revenue: 5840, orders: 16, averageTicket: 365 },
+      { period: "semana", revenue: 32890, orders: 91, averageTicket: 361.43 },
+      { period: "mes", revenue: 129400, orders: 352, averageTicket: 367.61 },
+    ],
+    byStore: [
+      {
+        storeId: "store-aurora",
+        storeName: "Aurora Atelier",
+        sales: 6840,
+        orders: 19,
+        newProducts: 4,
+        newCustomers: 12,
+      },
+      {
+        storeId: "store-linha-fina",
+        storeName: "Linha Fina Store",
+        sales: 5290,
+        orders: 14,
+        newProducts: 3,
+        newCustomers: 8,
+      },
+    ],
   },
 };

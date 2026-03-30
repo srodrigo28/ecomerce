@@ -5,13 +5,19 @@ import { getSellerWorkspace } from "@/lib/services/catalog-service";
 
 const quickActions = [
   "Criar produtos com preview local",
-  "Testar categorias sem backend",
-  "Revisar imagens antes do envio real",
-  "Validar estoque e precificacao no frontend",
+  "Usar categorias base ou criar categorias da propria loja",
+  "Testar estoque minimo e alertas de ruptura",
+  "Validar a operacao antes da API entrar",
 ];
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
 export default async function SellerProductsPage() {
   const workspace = await getSellerWorkspace();
+  const lowStockProducts = workspace.products.filter(
+    (product) => product.stock <= (product.minStock ?? 0),
+  );
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10 2xl:px-12">
@@ -19,11 +25,11 @@ export default async function SellerProductsPage() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Painel do lojista</p>
           <h1 className="mt-3 max-w-4xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl xl:text-5xl">
-            Cadastro de produtos sem depender da API
+            Catalogo, categorias e estoque sem depender da API
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--muted)] sm:text-base sm:leading-8">
-            Esta area foi desenhada para testes reais de usabilidade desde ja. O lojista consegue cadastrar dados,
-            experimentar imagens por upload local ou URL e revisar tudo com preview antes de existir integracao definitiva.
+            Esta area evoluiu para refletir o nucleo do negocio: categorias por lojista, cadastro de produto, estoque
+            minimo, alertas operacionais e leitura inicial de vendas antes da integracao definitiva.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/" className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
@@ -49,10 +55,66 @@ export default async function SellerProductsPage() {
             <strong className="mt-2 block text-3xl text-slate-900">{workspace.stats.lowStockProducts}</strong>
           </div>
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
-            <p className="text-sm text-[var(--muted)]">Visualizacoes do catalogo</p>
-            <strong className="mt-2 block text-3xl text-slate-900">{workspace.stats.catalogViews}</strong>
+            <p className="text-sm text-[var(--muted)]">Vendas do mes</p>
+            <strong className="mt-2 block text-3xl text-slate-900">{formatCurrency(workspace.stats.salesMonth)}</strong>
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-900">Categorias da loja</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                Cada categoria pertence a esta loja. O uso de categorias base acelera o cadastro sem compartilhar dados entre lojistas.
+              </p>
+            </div>
+            <span className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white">
+              {workspace.categories.length} categorias ativas
+            </span>
+          </div>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {workspace.categories.map((category) => (
+              <article key={category.id} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <strong className="text-slate-900">{category.name}</strong>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${category.origin === "base" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-700"}`}>
+                    {category.origin === "base" ? "Base" : "Custom"}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs font-mono text-[var(--muted)]">/{category.slug}</p>
+              </article>
+            ))}
+          </div>
+        </article>
+
+        <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-900">Leitura rapida de vendas</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                Mesmo com mocks, ja conseguimos simular a leitura do periodo para o lojista entender a operacao comercial.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <p className="text-sm text-[var(--muted)]">Hoje</p>
+              <strong className="mt-2 block text-2xl text-slate-900">{formatCurrency(workspace.stats.salesToday)}</strong>
+            </div>
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <p className="text-sm text-[var(--muted)]">Semana</p>
+              <strong className="mt-2 block text-2xl text-slate-900">{formatCurrency(workspace.stats.salesWeek)}</strong>
+            </div>
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <p className="text-sm text-[var(--muted)]">Mes</p>
+              <strong className="mt-2 block text-2xl text-slate-900">{formatCurrency(workspace.stats.salesMonth)}</strong>
+            </div>
+          </div>
+        </article>
       </section>
 
       <section className="grid gap-6 2xl:grid-cols-[minmax(320px,0.7fr)_minmax(0,1.3fr)]">
@@ -70,8 +132,42 @@ export default async function SellerProductsPage() {
               </div>
             ))}
           </div>
-          <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
-            Fluxo pensado para reduzir retrabalho: primeiro validamos UX e regras no frontend, depois apenas conectamos a API.
+
+          <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5">
+            <h3 className="text-lg font-semibold text-amber-900">Produtos em alerta</h3>
+            <div className="mt-4 grid gap-3 text-sm leading-6 text-amber-900">
+              {lowStockProducts.length ? (
+                lowStockProducts.map((product) => (
+                  <div key={product.id} className="rounded-2xl bg-white px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <strong>{product.name}</strong>
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                        {product.stock}/{product.minStock ?? 0}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-amber-800">Abaixo do minimo recomendado para reposicao.</p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl bg-white px-4 py-3 text-sm">Nenhum produto em ruptura nesta leitura local.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
+            <h3 className="text-lg font-semibold text-slate-900">Movimentacoes recentes</h3>
+            <div className="mt-4 grid gap-3 text-sm leading-6 text-[var(--muted)]">
+              {workspace.stockMovements.map((movement) => (
+                <div key={movement.id} className="rounded-2xl bg-slate-50 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-slate-900">{movement.type}</span>
+                    <span className="text-xs font-medium text-slate-500">{new Date(movement.createdAt).toLocaleDateString("pt-BR")}</span>
+                  </div>
+                  <p className="mt-1">Saldo {movement.previousStock} para {movement.currentStock}</p>
+                  <p className="text-xs">{movement.note ?? "Sem observacao"}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </aside>
 

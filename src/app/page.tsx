@@ -6,7 +6,7 @@ import { apiConfig, appConfig, endpointMap, hasServerApiToken, resolvedEndpoints
 const navLinks = [
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#vitrine-demo", label: "Lojas" },
-  { href: "#parceiros", label: "Parceiros" },
+  { href: "/lojas-parceiras", label: "Parceiros" },
   { href: "/painel-lojista", label: "Painel" },
 ];
 
@@ -50,16 +50,16 @@ const envChecks = [
 
 const highlights = [
   "Menu superior pronto para leitura em desktop e mobile",
-  "Entrada comercial clara para lojistas, login e parceiros",
+  "Entrada comercial clara para lojistas, login e lojas parceiras",
   "Vitrine local com lojas e produtos de exemplo",
-  "Painel do lojista com cadastro e preview de imagens",
+  "Painel do lojista com cadastro, estoque, pedidos e preview de imagens",
 ];
 
 const partnerPillars = [
-  "Marcas e fabricantes",
-  "Lojas parceiras",
-  "Representantes comerciais",
-  "Operacao de catalogo",
+  "Lojas parceiras cadastradas",
+  "Catalogo vivo",
+  "Operacao com pedidos",
+  "Crescimento multiloja",
 ];
 
 const commerceJourney = [
@@ -109,13 +109,13 @@ export default async function Home() {
 
           <div className="order-2 flex flex-wrap items-center justify-center gap-3 lg:order-3 lg:justify-end">
             <Link
-              href="/painel-lojista"
+              href="/login"
               className="rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
             >
               Login
             </Link>
             <Link
-              href="/painel-lojista/produtos"
+              href="/cadastro-loja"
               className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
             >
               Cadastrar-se como loja
@@ -134,8 +134,8 @@ export default async function Home() {
               Um menu moderno no topo, uma vitrine comercial clara e um caminho direto para lojas venderem melhor.
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
-              A home agora passa a comunicar o negocio: cadastro de lojistas, login operacional, area para parceiros e
-              entrada para a vitrine. Mantemos os mocks e a estrutura atual para validar o produto antes da API.
+              A home agora comunica o negocio com clareza: cadastro de lojistas, login operacional, pagina publica para
+              lojas parceiras e entrada para a vitrine. Mantemos os mocks e a estrutura atual para validar o produto antes da API.
             </p>
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
@@ -147,15 +147,15 @@ export default async function Home() {
             ))}
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/painel-lojista/produtos" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
+            <Link href="/cadastro-loja" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
               Cadastrar-se como loja
             </Link>
-            <Link href="/painel-lojista" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
+            <Link href="/login" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
               Login do lojista
             </Link>
-            <a href="#parceiros" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
-              Nossos parceiros
-            </a>
+            <Link href="/lojas-parceiras" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
+              Nossas lojas parceiras
+            </Link>
           </div>
         </div>
 
@@ -172,10 +172,10 @@ export default async function Home() {
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
               <p className="text-sm text-[var(--muted)]">Acesso rapido</p>
               <div className="mt-4 grid gap-3">
-                <Link href="/painel-lojista/produtos" className="rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-700">
+                <Link href="/cadastro-loja" className="rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-700">
                   Quero cadastrar minha loja
                 </Link>
-                <Link href="/painel-lojista" className="rounded-2xl border border-[var(--border)] px-4 py-3 text-center text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+                <Link href="/login" className="rounded-2xl border border-[var(--border)] px-4 py-3 text-center text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
                   Ja tenho acesso
                 </Link>
               </div>
@@ -184,11 +184,14 @@ export default async function Home() {
               <p className="text-sm font-semibold text-slate-900">Base tecnica atual</p>
               <div className="mt-3 space-y-3">
                 {envChecks.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-3">
-                    <span className="text-sm text-slate-700">{item.label}</span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                      {item.ready ? "ok" : "pendente"}
-                    </span>
+                  <div key={item.label} className="rounded-2xl bg-slate-50 px-3 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-slate-700">{item.label}</span>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                        {item.ready ? "ok" : "pendente"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">{item.value}</p>
                   </div>
                 ))}
               </div>
@@ -252,11 +255,11 @@ export default async function Home() {
         </article>
 
         <article id="parceiros" className="rounded-[2rem] border border-[var(--border)] bg-slate-900 p-5 text-white shadow-[var(--shadow)] sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">Nossos parceiros</p>
-          <h2 className="mt-3 text-2xl font-semibold">A Hierarquia pode unir operacao, marca e distribuicao em um so lugar</h2>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">Lojas parceiras</p>
+          <h2 className="mt-3 text-2xl font-semibold">As parceiras da Hierarquia sao as lojas cadastradas na plataforma</h2>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-            Esta secao abre espaco para apresentar quem vende, quem fornece e quem ajuda a plataforma a crescer. Mesmo
-            enquanto o backend nao entra, a home ja pode comunicar autoridade comercial.
+            Esta secao agora comunica o conceito certo do produto: parceiro e a loja que vende conosco. Enquanto a API nao entra,
+            a vitrine publica ja apresenta presenca comercial, prova social e caminho para novos cadastros.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             {partnerPillars.map((pillar) => (
@@ -272,13 +275,16 @@ export default async function Home() {
             </div>
             <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
               <p className="text-sm text-slate-300">Frente visual</p>
-              <strong className="mt-2 block text-xl">Catalogo com identidade</strong>
+              <strong className="mt-2 block text-xl">Vitrine de lojas participantes</strong>
             </div>
             <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
               <p className="text-sm text-slate-300">Frente operacional</p>
               <strong className="mt-2 block text-xl">Pedido e atendimento</strong>
             </div>
           </div>
+          <Link href="/lojas-parceiras" className="mt-8 inline-flex rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-200">
+            Ver lojas parceiras
+          </Link>
         </article>
       </section>
 
@@ -289,7 +295,9 @@ export default async function Home() {
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Vitrine local</p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-900">Lojas de exemplo</h2>
             </div>
-            <span className="text-sm text-[var(--muted)]">{stores.length} lojas carregadas por mock</span>
+            <Link href="/lojas-parceiras" className="text-sm font-semibold text-[var(--accent-strong)]">
+              Ver todas as lojas parceiras
+            </Link>
           </div>
           <div className="mt-6 grid gap-4">
             {stores.map((store) => (
@@ -310,6 +318,9 @@ export default async function Home() {
                     <p className="text-sm leading-6 text-[var(--muted)]">
                       Chave Pix: <span className="font-medium text-slate-800">{store.pixKey}</span>
                     </p>
+                    <Link href={`/lojas/${store.slug}`} className="inline-flex rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+                      Abrir vitrine da loja
+                    </Link>
                   </div>
                 </div>
               </article>
@@ -350,3 +361,4 @@ export default async function Home() {
     </main>
   );
 }
+
