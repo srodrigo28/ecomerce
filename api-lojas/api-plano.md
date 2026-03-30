@@ -241,19 +241,21 @@ Resultado esperado:
 
 ### Fase 3 - Modulos centrais do catalogo
 
-Status atual: em andamento com PostgreSQL, CRUD real de `stores`, `categories`, `products` e endpoint de `category_bases`.
+Status atual: em andamento com PostgreSQL, CRUD real de `stores`, `categories`, `products`, endpoint de `category_bases` e dominio inicial de `product_images` implementado na API.
 
 Criar nesta ordem:
 
 1. lojas;
 2. categorias base;
 3. categorias da loja;
-4. produtos.
+4. produtos;
+5. imagens do produto.
 
 Resultado esperado:
 
 - frontend consegue trocar mocks do catalogo por API real depois;
-- base publica e operacional passa a ter persistencia real.
+- base publica e operacional passa a ter persistencia real;
+- produto deixa de depender de uma unica `main_image_url` e passa a ter galeria real.
 
 ### Fase 4 - Pedidos e clientes
 
@@ -322,6 +324,114 @@ Resultado esperado:
 - frontend admin e lojista passam a consumir leitura real consolidada.
 
 ## Plano de tabelas
+
+## Planejamento novo: imagens de produto
+
+O modulo de imagens de produto ja entrou no codigo da API, mas ainda precisa de validacao final com migration aplicada no PostgreSQL e integracao do frontend. O estado atual desta frente e este:
+
+- `products` ainda mantem `main_image_url` por compatibilidade;
+- a API agora aceita upload em rotas aninhadas de produto;
+- a tabela `product_images` ja esta modelada e migrada no codigo;
+- a validacao backend de 1 a 5 imagens com principal obrigatoria ja entrou no service;
+- o proximo passo e aplicar a migration e validar o fluxo ponta a ponta.
+
+Isso fecha a lacuna principal do catalogo antes de considerarmos o modulo de produto realmente completo.
+
+### Objetivo do modulo de imagens
+
+Cada produto deve poder ter:
+
+- minimo de 1 imagem;
+- maximo de 5 imagens;
+- uma imagem principal obrigatoria;
+- ordenacao visual da galeria;
+- suporte a upload real de arquivo;
+- suporte opcional a imagem por URL enquanto o upload evolui;
+- resposta da API com galeria completa para o frontend.
+
+### Regras de negocio para imagens
+
+- produto nao pode ser publicado sem ao menos 1 imagem;
+- produto nao pode ultrapassar 5 imagens;
+- apenas 1 imagem pode estar marcada como principal;
+- ao remover a imagem principal, outra precisa assumir ou a operacao deve ser bloqueada;
+- a ordem das imagens precisa ser persistida;
+- arquivos invalidos devem ser rejeitados antes de gravar;
+- extensoes permitidas devem ser controladas pela API;
+- tamanho maximo por arquivo deve ser validado;
+- o retorno deve expor a imagem principal e a lista completa.
+
+### Sequencia recomendada para fechar imagens
+
+1. aplicar a migration `product_images`;
+2. validar model `ProductImage` e relacionamento `Product -> ProductImage`;
+3. validar o service de galeria `1..5`;
+4. validar upload por produto em `multipart/form-data`;
+5. validar listagem, troca de principal e remocao;
+6. confirmar retorno do produto com galeria completa;
+7. integrar o frontend de produto com multipart real.
+
+### Rotas recomendadas para imagens
+
+Base principal:
+
+- `GET /api/v1/products/<product_id>/images`
+- `POST /api/v1/products/<product_id>/images`
+- `PATCH /api/v1/products/<product_id>/images/<image_id>`
+- `DELETE /api/v1/products/<product_id>/images/<image_id>`
+- `POST /api/v1/products/<product_id>/images/<image_id>/set-main`
+
+Opcional complementar:
+
+- `POST /api/v1/products/with-images`
+
+Essa rota complementar so vale se quisermos criar produto e imagens em um fluxo unico logo no inicio.
+
+### Contrato minimo esperado do upload
+
+Entrada inicial recomendada:
+
+- `multipart/form-data`;
+- campo `files` aceitando 1 ou mais arquivos;
+- campo `is_main` opcional por imagem no primeiro envio;
+- campo `sort_order` opcional.
+
+Saida esperada:
+
+- `product_id`;
+- `images[]`;
+- `main_image`;
+- contagem atual de imagens;
+- status da validacao da galeria.
+
+### Validacoes recomendadas do backend
+
+- aceitar apenas `jpg`, `jpeg`, `png`, `webp`;
+- limitar tamanho por arquivo;
+- rejeitar upload acima de 5 imagens por produto;
+- garantir pelo menos 1 imagem antes de publicar o produto;
+- impedir duas imagens principais ao mesmo tempo;
+- recalcular principal automaticamente se a atual for removida quando fizer sentido.
+
+### Estrategia de storage inicial
+
+Para a fase atual, a estrategia mais simples e segura e:
+
+- salvar arquivo localmente em uma pasta controlada da API em desenvolvimento;
+- persistir no banco apenas os metadados e a URL/caminho publico;
+- deixar S3, Cloudinary ou storage externo para a fase seguinte.
+
+### Critico para o frontend
+
+O frontend ja trabalha com galeria, preview e imagem principal. Entao a API precisa refletir exatamente isso:
+
+- `images[]`;
+- `main_image_url`;
+- `sort_order`;
+- `is_main`;
+- limite `1..5`.
+
+Sem esse modulo, o cadastro de produto permanece incompleto do ponto de vista real de operacao.
 
 ## Tabela `users`
 
@@ -447,9 +557,21 @@ Campos sugeridos:
 - `id`
 - `product_id`
 - `image_url`
+- `storage_path`
+- `file_name`
+- `mime_type`
+- `file_size`
 - `sort_order`
 - `is_main`
 - `created_at`
+- `updated_at`
+
+Observacoes:
+
+- produto deve ter entre 1 e 5 imagens;
+- apenas 1 imagem principal por produto;
+- `sort_order` precisa refletir a ordem da galeria;
+- `image_url` e `storage_path` devem permitir montar URL publica depois.
 
 ## Tabela `customers`
 
@@ -759,17 +881,24 @@ Estado confirmado em 2026-03-30:
 - conexao validada via `scripts/dev_setup.py`;
 - migration inicial aplicada com `stores`, `categories` e `products`;
 - segunda migration aplicada com `category_bases`, `customers`, `addresses`, `orders` e `order_items`;
-- revisao atual do Alembic no PostgreSQL: `f0443b08fb00`;
+- revisao atual do Alembic no PostgreSQL: `a9c8d7e6f5b4`;
 - endpoints ativos e respondendo: `/`, `/api/v1`, `/api/v1/health`, `/api/v1/stores`, `/api/v1/categories`, `/api/v1/products`, `/api/v1/category-bases`, `/api/v1/customers`, `/api/v1/addresses`, `/api/v1/orders`, `/api/v1/order-items`, `/api/v1/stock/movements`, `/api/v1/sales`, `/api/v1/reports/seller` e `/api/v1/reports/admin`;
 - smoke test completo passando com criacao real de cliente, endereco, pedido e item do pedido no PostgreSQL remoto;
 - checkout transacional validado no endpoint `/api/v1/orders/checkout` com calculo real de subtotal, frete e total no backend;
 - `GET /api/v1/orders/:id` e a resposta do checkout ja retornam dados embutidos de cliente, endereco, loja e itens;
+- modulo de imagens de produto implementado, migration aplicada no PostgreSQL e rotas validadas com smoke test real;
 - checkout validado com baixa real de estoque e criacao de `stock_movements` no PostgreSQL remoto;
 - cancelamento validado com reposicao automatica de estoque e movimentacao `entrada/cancelamento`;
 - venda derivada validada com registro automatico em `sales` e marcacao como `cancelled` quando o pedido e cancelado;
 - endpoints iniciais de relatorio respondendo com resumo do lojista e resumo admin baseados em `sales`;
 - frontend de relatorios do lojista e admin ja consumindo a API real de `reports`, com fallback visual para mocks enquanto a base operacional evolui;
 - rota raiz e `/api/v1` agora entregam um indice agrupado por rotas para visualizar todos os endpoints criados.
+
+## Proxima sequencia recomendada de execucao
+
+1. integrar o frontend de cadastro de produto com multipart real;
+2. substituir o armazenamento local temporario de imagens do frontend pelo fluxo da API;
+3. depois seguir com o restante da autenticacao e dos refinamentos operacionais.
 
 ## Resumo objetivo
 

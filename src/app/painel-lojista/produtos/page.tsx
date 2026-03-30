@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import { SellerProductForm } from "@/components/seller-product-form";
+import { SellerProductsShowcase } from "@/components/seller-products-showcase";
 import { getSellerWorkspace } from "@/lib/services/catalog-service";
 
 const quickActions = [
@@ -31,14 +30,6 @@ export default async function SellerProductsPage() {
             Esta area evoluiu para refletir o nucleo do negocio: categorias por lojista, cadastro de produto, estoque
             minimo, alertas operacionais e leitura inicial de vendas antes da integracao definitiva.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/" className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
-              Voltar para a visao geral
-            </Link>
-            <span className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-700">
-              Loja em teste: {workspace.store.name}
-            </span>
-          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -70,8 +61,14 @@ export default async function SellerProductsPage() {
                 Cada categoria pertence a esta loja. O uso de categorias base acelera o cadastro sem compartilhar dados entre lojistas.
               </p>
             </div>
-            <span className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white">
-              {workspace.categories.length} categorias ativas
+            <span className="inline-flex items-center gap-3 rounded-[1.25rem] border border-[var(--border)] theme-surface-card px-4 py-2.5 text-sm font-semibold theme-text shadow-[var(--shadow-soft)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                  <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z" stroke="currentColor" strokeWidth="1.8"/>
+                  <path d="M8 9h8M8 12h8M8 15h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+              </span>
+              <span>{workspace.categories.length} categorias ativas</span>
             </span>
           </div>
 
@@ -116,6 +113,8 @@ export default async function SellerProductsPage() {
           </div>
         </article>
       </section>
+
+      <SellerProductsShowcase workspace={workspace} />
 
       <section className="grid gap-6 2xl:grid-cols-[minmax(320px,0.7fr)_minmax(0,1.3fr)]">
         <aside className="space-y-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6 2xl:sticky 2xl:top-6 2xl:self-start">

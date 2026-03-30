@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
+import { saveLocalSellerProduct } from "@/lib/local-product-storage";
+import { submitSellerProduct } from "@/lib/services/catalog-service";
 import type { Category, ProductFormDraft, ProductImage, SellerWorkspace } from "@/types/catalog";
 
 const MAX_IMAGES = 5;
@@ -47,7 +50,11 @@ const isValidUrl = (value: string) => {
 
 const formatCurrency = (value: string) => (value ? `R$ ${value}` : "R$ 0,00");
 
+const shortenImageName = (value: string, max = 28) =>
+  value.length > max ? `${value.slice(0, max - 3)}...` : value;
+
 export function SellerProductForm({ workspace }: { workspace: SellerWorkspace }) {
+  const router = useRouter();
   const [draft, setDraft] = useState<ProductFormDraft>(() => initialDraft(workspace));
   const [categories, setCategories] = useState<Category[]>(() => workspace.categories);
   const [step, setStep] = useState(0);
@@ -56,17 +63,82 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
   const [submittedPreview, setSubmittedPreview] = useState<ProductFormDraft | null>(null);
   const [mainImageId, setMainImageId] = useState<string | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const latestImagesRef = useRef<ProductImage[]>([]);
+
+  useEffect(() => {
+    latestImagesRef.current = draft.images;
+  }, [draft.images]);
 
   useEffect(() => {
     return () => {
-      draft.images.forEach((image) => {
+      latestImagesRef.current.forEach((image) => {
         if (image.source === "upload") {
           URL.revokeObjectURL(image.previewUrl);
         }
       });
     };
-  }, [draft.images]);
+  }, []);
+
+  useEffect(() => {
+    const handleEditProduct = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        id: string;
+        source: "api" | "local";
+        name: string;
+        slug: string;
+        description: string;
+        categoryId: string;
+        priceRetail: number;
+        priceWholesale?: number;
+        pricePromotion?: number;
+        stock: number;
+        minStock: number;
+        imageUrl?: string;
+      }>;
+      const detail = customEvent.detail;
+      if (!detail) return;
+
+      const nextImages = detail.imageUrl
+        ? [
+            {
+              id: `existing-${detail.id}`,
+              source: "url" as const,
+              name: detail.name,
+              previewUrl: detail.imageUrl,
+            },
+          ]
+        : [];
+
+      setEditingProductId(detail.id);
+      setDraft({
+        name: detail.name,
+        description: detail.description,
+        categoryId: detail.categoryId,
+        newCategoryName: "",
+        priceRetail: String(detail.priceRetail),
+        priceWholesale: detail.priceWholesale ? String(detail.priceWholesale) : "",
+        pricePromotion: detail.pricePromotion ? String(detail.pricePromotion) : "",
+        stock: String(detail.stock),
+        minStock: String(detail.minStock),
+        images: nextImages,
+      });
+      setMainImageId(nextImages[0]?.id ?? null);
+      setStep(0);
+      setSubmittedPreview(null);
+      setFeedback(`Produto ${detail.name} carregado para edicao. Revise os campos e salve as alteracoes.`);
+      const form = document.getElementById("cadastro-produto-form");
+      form?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    window.addEventListener("seller-product-edit", handleEditProduct as EventListener);
+    return () => {
+      window.removeEventListener("seller-product-edit", handleEditProduct as EventListener);
+    };
+  }, []);
 
   const updateField = <K extends keyof ProductFormDraft>(field: K, value: ProductFormDraft[K]) => {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -166,6 +238,7 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
       categoryId: newCategory.id,
       newCategoryName: "",
     }));
+    setIsCategoryModalOpen(false);
     setFeedback(`Categoria ${trimmed} adicionada localmente para esta loja.`);
   };
 
@@ -175,6 +248,7 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
 
     if (existingCategory) {
       setDraft((current) => ({ ...current, categoryId: existingCategory.id }));
+      setIsCategoryModalOpen(false);
       setFeedback(`Categoria ${existingCategory.name} selecionada para este produto.`);
       return;
     }
@@ -190,6 +264,7 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
 
     setCategories((current) => [...current, newCategory]);
     setDraft((current) => ({ ...current, categoryId: newCategory.id }));
+    setIsCategoryModalOpen(false);
     setFeedback(`Categoria base ${baseName} adicionada localmente a esta loja.`);
   };
 
@@ -261,13 +336,89 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
     setFeedback("Sequencia de imagens validada. Agora revise o produto antes de finalizar.");
   };
 
-  const handleSubmit = () => {
-    if (!validateStep(2)) {
+  const handleSubmit = async () => {
+    if (!validateStep(2) || isSubmitting) {
       return;
     }
 
+    const productName = draft.name.trim();
+    const productSlug = slugify(productName);
+    const categoryName = selectedCategory?.name ?? "Sem categoria";
+
+    setIsSubmitting(true);
+
+    try {
+      const createdProduct = await submitSellerProduct({
+        productId: editingProductId ?? undefined,
+        storeId: workspace.store.id,
+        categoryId: draft.categoryId,
+        name: productName,
+        slug: productSlug,
+        description: draft.description.trim(),
+        priceRetail: Number(draft.priceRetail || 0),
+        priceWholesale: draft.priceWholesale ? Number(draft.priceWholesale) : undefined,
+        pricePromotion: draft.pricePromotion ? Number(draft.pricePromotion) : undefined,
+        stock: Number(draft.stock || 0),
+        minStock: Number(draft.minStock || 0),
+        images: draft.images,
+        mainImageId: mainImageId ?? undefined,
+      });
+
+      setSubmittedPreview(draft);
+      setFeedback(`Produto ${createdProduct.name} ${editingProductId ? "atualizado" : "cadastrado"} na API com sucesso. Abrindo a vitrine interna da loja.`);
+      setEditingProductId(null);
+
+      router.replace("/painel-lojista/produtos#produtos-cadastrados");
+      router.refresh();
+      window.setTimeout(() => {
+        const showcase = document.getElementById("produtos-cadastrados");
+        showcase?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setIsSubmitting(false);
+      }, 300);
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Nao foi possivel concluir o cadastro do produto.";
+
+      if (!message.includes("nao esta configurada")) {
+        setFeedback(message);
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    saveLocalSellerProduct({
+      id: editingProductId ?? window.crypto.randomUUID(),
+      storeId: workspace.store.id,
+      storeName: workspace.store.name,
+      name: productName,
+      slug: productSlug,
+      description: draft.description.trim(),
+      categoryId: draft.categoryId,
+      categoryName,
+      priceRetail: Number(draft.priceRetail || 0),
+      priceWholesale: draft.priceWholesale ? Number(draft.priceWholesale) : undefined,
+      pricePromotion: draft.pricePromotion ? Number(draft.pricePromotion) : undefined,
+      stock: Number(draft.stock || 0),
+      minStock: Number(draft.minStock || 0),
+      images: draft.images.map((image) => ({
+        id: image.id,
+        name: image.name,
+        previewUrl: image.previewUrl,
+      })),
+      mainImageUrl: mainImage?.previewUrl,
+      createdAt: new Date().toISOString(),
+    });
+
     setSubmittedPreview(draft);
-    setFeedback("Produto validado localmente em formato step-by-step. O frontend esta pronto para evoluir com a API depois.");
+    setFeedback(`Produto ${productName || "sem nome"} ${editingProductId ? "atualizado" : "cadastrado"} localmente. Abrindo a vitrine interna da loja.`);
+    setEditingProductId(null);
+
+    router.replace("/painel-lojista/produtos#produtos-cadastrados");
+    window.setTimeout(() => {
+      const showcase = document.getElementById("produtos-cadastrados");
+      showcase?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setIsSubmitting(false);
+    }, 250);
   };
 
   const selectedCategory = categories.find((category) => category.id === draft.categoryId);
@@ -284,12 +435,12 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
   const mainImage = draft.images.find((image) => image.id === mainImageId) ?? draft.images[0];
 
   return (
-    <div className="space-y-6 rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)] sm:p-6 lg:p-8">
+    <div id="cadastro-produto-form" className="space-y-6 rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)] sm:p-6 lg:p-8">
       <div className="space-y-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Cadastro guiado</p>
-            <h2 className="mt-2 text-3xl font-semibold text-slate-900">Novo produto em etapas</h2>
+            <h2 className="mt-2 text-3xl font-semibold text-slate-900">{editingProductId ? "Editar produto em etapas" : "Novo produto em etapas"}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
               O fluxo agora guia o lojista por blocos curtos, sem distracao, ate finalizar o cadastro com mais clareza e mais elegancia.
             </p>
@@ -348,38 +499,25 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Agora organizamos a parte comercial e operacional do produto.</p>
             </div>
 
-            <div className="space-y-4 rounded-[1.5rem] border border-[var(--border)] bg-slate-50 p-5">
-              <div>
-                <h4 className="text-lg font-semibold text-slate-900">Categorias da loja</h4>
-                <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Use uma categoria base ou crie uma nova sem sair do fluxo.</p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {workspace.categoryBases.map((base) => (
-                  <button key={base.id} type="button" onClick={() => handleUseBaseCategory(base.name)} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]">
-                    Usar {base.name}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-                <input value={draft.newCategoryName} onChange={(event) => updateField("newCategoryName", event.target.value)} placeholder="Adicionar nova categoria da loja" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                <button type="button" onClick={handleAddCategory} className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
-                  Adicionar categoria
-                </button>
-              </div>
-            </div>
-
             <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-900">Categoria</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-slate-900">Categoria</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCategoryModalOpen(true)}
+                    className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
+                  >
+                    Adicionar categoria
+                  </button>
+                </div>
                 <select value={draft.categoryId} onChange={(event) => updateField("categoryId", event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]">
                   <option value="">Selecione uma categoria</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>{category.name}</option>
                   ))}
                 </select>
-              </label>
+              </div>
               <label className="space-y-2">
                 <span className="text-sm font-medium text-slate-900">Preco varejo</span>
                 <input type="number" min="0" step="0.01" value={draft.priceRetail} onChange={(event) => updateField("priceRetail", event.target.value)} placeholder="0,00" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
@@ -484,9 +622,9 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Revise o produto completo antes de validar o cadastro localmente.</p>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white p-4">
-                <div className="aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-slate-100">
+            <div className="grid gap-5 lg:grid-cols-[minmax(360px,0.95fr)_minmax(0,1.05fr)]">
+              <div className="overflow-hidden rounded-[1.9rem] border border-[var(--border)] bg-white p-4">
+                <div className="aspect-[4/5] overflow-hidden rounded-[1.4rem] bg-slate-100">
                   {mainImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={mainImage.previewUrl} alt={mainImage.name} className="h-full w-full object-cover" />
@@ -494,21 +632,35 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
                     <div className="flex h-full items-center justify-center px-6 text-center text-sm leading-6 text-[var(--muted)]">A imagem principal aparecera aqui.</div>
                   )}
                 </div>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Imagem principal</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{mainImage ? shortenImageName(mainImage.name, 36) : "Nenhuma imagem definida"}</p>
+                  </div>
+                  <span className="rounded-full theme-badge-success px-3 py-1 text-xs font-semibold">Vitrine</span>
+                </div>
               </div>
 
               <div className="grid gap-3">
-                <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+                <div className="rounded-[1.6rem] border border-[var(--border)] bg-white p-5">
                   <p className="text-sm text-[var(--muted)]">Nome</p>
-                  <strong className="mt-2 block text-xl text-slate-900">{draft.name || "Produto sem nome"}</strong>
-                </div>
-                <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-                  <p className="text-sm text-[var(--muted)]">Categoria</p>
-                  <strong className="mt-2 block text-xl text-slate-900">{selectedCategory?.name ?? "Nao definida"}</strong>
+                  <strong className="mt-2 block text-2xl text-slate-900">{draft.name || "Produto sem nome"}</strong>
+                  <p className="mt-2 text-sm text-[var(--muted)]">/{slugify(draft.name || "produto")}</p>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+                    <p className="text-sm text-[var(--muted)]">Categoria</p>
+                    <strong className="mt-2 block text-xl text-slate-900">{selectedCategory?.name ?? "Nao definida"}</strong>
+                  </div>
+                  <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
                     <p className="text-sm text-[var(--muted)]">Preco varejo</p>
                     <strong className="mt-2 block text-xl text-slate-900">{formatCurrency(draft.priceRetail)}</strong>
+                  </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+                    <p className="text-sm text-[var(--muted)]">Estoque</p>
+                    <strong className="mt-2 block text-xl text-slate-900">{draft.stock || "0"}</strong>
                   </div>
                   <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
                     <p className="text-sm text-[var(--muted)]">Imagens</p>
@@ -517,6 +669,16 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
                 </div>
                 <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
                   {draft.description || "Adicione uma descricao para o produto ficar mais claro na vitrine e na operacao interna."}
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {draft.images.slice(0, 3).map((image) => (
+                    <div key={image.id} className={`overflow-hidden rounded-[1.2rem] border ${image.id === mainImageId ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
+                      <div className="aspect-[4/5] bg-slate-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={image.previewUrl} alt={image.name} className="h-full w-full object-cover" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -539,8 +701,8 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
               Continuar
             </button>
           ) : (
-            <button type="button" onClick={handleSubmit} className="rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
-              Finalizar cadastro
+            <button type="button" onClick={handleSubmit} disabled={isSubmitting} className={`rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] ${isSubmitting ? "cursor-not-allowed opacity-70" : ""}`}>
+              {isSubmitting ? "Salvando..." : editingProductId ? "Salvar alteracoes" : "Finalizar cadastro"}
             </button>
           )}
         </div>
@@ -548,7 +710,53 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
 
       {submittedPreview ? (
         <div className="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-5 text-sm leading-6 text-emerald-900">
-          Ultima validacao local concluida para <strong>{submittedPreview.name || "produto sem nome"}</strong> com {submittedPreview.images.length} imagem(ns) e imagem principal definida.
+          Produto <strong>{submittedPreview.name || "produto sem nome"}</strong> salvo na vitrine interna com {submittedPreview.images.length} imagem(ns) e imagem principal definida.
+        </div>
+      ) : null}
+
+      {isCategoryModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-8">
+          <div className="w-full max-w-xl rounded-[2rem] border border-white/10 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.3)] sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Nova categoria</p>
+                <h3 className="mt-2 text-2xl font-semibold text-slate-900">Adicionar sem sair do produto</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Cadastre uma categoria comercial da loja e volte direto para o formulario sem perder os dados preenchidos.</p>
+              </div>
+              <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-[var(--accent)]">Fechar</button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-slate-900">Nome da categoria</span>
+                <input value={draft.newCategoryName} onChange={(event) => updateField("newCategoryName", event.target.value)} placeholder="Ex.: Vestidos, Blusas, Calcas femininas" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                {workspace.categoryBases.map((base) => (
+                  <button key={base.id} type="button" onClick={() => handleUseBaseCategory(base.name)} className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">
+                    Usar {base.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">Cancelar</button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleAddCategory();
+                  if (draft.newCategoryName.trim()) {
+                    setIsCategoryModalOpen(false);
+                  }
+                }}
+                className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
+              >
+                Salvar categoria
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -566,17 +774,20 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
               </button>
             </div>
 
-            <div className="mt-6 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="rounded-[1.75rem] border border-[var(--border)] bg-slate-50 p-4">
-                <div className="aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-white">
+            <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.1fr)]">
+              <div className="rounded-[1.9rem] border border-[var(--border)] bg-slate-50 p-5">
+                <div className="aspect-[4/5] overflow-hidden rounded-[1.4rem] bg-white">
                   {mainImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={mainImage.previewUrl} alt={mainImage.name} className="h-full w-full object-cover" />
                   ) : null}
                 </div>
-                <div className="mt-4">
-                  <p className="text-sm font-semibold text-slate-900">Imagem principal</p>
-                  <p className="mt-1 text-sm text-[var(--muted)]">{mainImage?.name ?? "Nenhuma imagem principal escolhida"}</p>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Imagem principal</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{mainImage ? shortenImageName(mainImage.name, 34) : "Nenhuma imagem principal escolhida"}</p>
+                  </div>
+                  <span className="rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-white">Principal</span>
                 </div>
               </div>
 
@@ -585,20 +796,26 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
                   const isMain = image.id === mainImageId;
 
                   return (
-                    <article key={image.id} className={`overflow-hidden rounded-[1.5rem] border bg-slate-50 ${isMain ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
-                      <div className="aspect-[4/5] bg-white">
+                    <article key={image.id} className={`overflow-hidden rounded-[1.5rem] border bg-white ${isMain ? "border-[var(--accent)] shadow-[0_0_0_2px_rgba(37,99,235,0.08)]" : "border-[var(--border)]"}`}>
+                      <div className="aspect-[4/5] bg-slate-100">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={image.previewUrl} alt={image.name} className="h-full w-full object-cover" />
                       </div>
                       <div className="space-y-3 p-4">
                         <div className="flex items-center justify-between gap-3">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isMain ? "bg-[var(--accent)] text-white" : "bg-white text-slate-700"}`}>{isMain ? "Principal" : `Ordem ${index + 1}`}</span>
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isMain ? "bg-[var(--accent)] text-white" : "theme-badge-neutral"}`}>{isMain ? "Principal" : `Ordem ${index + 1}`}</span>
                           <span className="text-xs text-[var(--muted)]">{image.source === "upload" ? "Upload" : "URL"}</span>
                         </div>
-                        <p className="line-clamp-2 text-sm text-[var(--muted)]">{image.name}</p>
-                        <button type="button" onClick={() => setMainImageId(image.id)} className="w-full rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
-                          {isMain ? "Imagem principal" : "Usar como principal"}
-                        </button>
+                        <p className="text-sm text-[var(--muted)]" title={image.name}>{shortenImageName(image.name)}</p>
+                        {!isMain ? (
+                          <button type="button" onClick={() => setMainImageId(image.id)} className="w-full rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+                            Usar como principal
+                          </button>
+                        ) : (
+                          <div className="rounded-2xl bg-slate-100 px-4 py-2.5 text-center text-sm font-semibold text-slate-700">
+                            Selecionada como principal
+                          </div>
+                        )}
                       </div>
                     </article>
                   );

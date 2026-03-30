@@ -406,6 +406,22 @@ export interface LocalOrderDraft {
   status: "rascunho_local";
 }
 
+export interface SellerProductSubmitInput {
+  productId?: string;
+  storeId: string;
+  categoryId: string;
+  name: string;
+  slug: string;
+  description: string;
+  priceRetail: number;
+  priceWholesale?: number;
+  pricePromotion?: number;
+  stock: number;
+  minStock: number;
+  images: ProductImage[];
+  mainImageId?: string;
+}
+
 export interface ProductFormDraft {
   name: string;
   description: string;

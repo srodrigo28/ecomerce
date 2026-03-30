@@ -629,7 +629,7 @@ Responsavel pela operacao comercial da loja.
 Entregas esperadas:
 
 - cadastro e edicao da loja;
-- cadastro de categorias;
+- cadastro de categorias comerciais da loja como vestidos, calcas, blusas, bermudas e shorts;
 - cadastro de produtos;
 - controle de imagens com preview;
 - controle de estoque e precificacao;
@@ -719,7 +719,12 @@ Objetivo: amadurecer o nucleo comercial e operacional da loja.
 Entregas:
 
 - cadastro e listagem de categorias;
+- tela propria para cadastro, edicao e remocao visual de categorias da loja;
 - cadastro, edicao e remocao visual de produtos;
+- busca por nome, slug e categoria na gestao de produtos;
+- filtros por categoria, status, estoque baixo e produtos sem imagem;
+- alternancia entre visualizacao em vitrine e visualizacao em lista horizontal;
+- acoes de gerenciamento por produto com editar, excluir, duplicar e abrir vitrine publica;
 - cards de produto consistentes;
 - status de estoque;
 - estoque minimo e alerta de reposicao;
@@ -893,7 +898,13 @@ Componentes:
 - `seller-dashboard-header`
 - `category-form`
 - `category-list`
+- `category-manager-board`
 - `product-card`
+- `product-management-toolbar`
+- `product-view-toggle`
+- `product-list-row`
+- `product-actions-menu`
+- `product-delete-dialog`
 - `image-upload-preview`
 - `stock-alert-card`
 - `stock-movement-table`
@@ -906,14 +917,23 @@ Objetivos tecnicos:
 - melhorar a manutencao dos componentes do catalogo;
 - estruturar a leitura de estoque como parte do painel principal;
 - garantir CRUD individual de categoria por lojista;
-- permitir categorias base padrao e criacao rapida de categoria no fluxo do produto.
+- permitir categorias base padrao e criacao rapida de categoria no fluxo do produto;
+- transformar a vitrine interna de produtos em modulo real de gestao;
+- permitir busca rapida por nome, slug e categoria;
+- permitir filtros por status operacional do produto;
+- permitir alternancia entre cards de vitrine e lista horizontal de gestao;
+- permitir editar, excluir, duplicar e abrir a vitrine publica de cada produto;
+- garantir um modulo dedicado de categorias da loja para nomes comerciais reais como vestidos, calcas, blusas, bermudas e shorts.
 
 Criterio de pronto:
 
 - lojista consegue criar e revisar loja, categorias e produtos em fluxo local;
 - lojista consegue ver estoque atual, minimo e alertas;
 - categoria de um lojista nao impacta outra loja;
-- formulario de produto permite selecionar categoria existente ou adicionar nova.
+- formulario de produto permite selecionar categoria existente ou adicionar nova;
+- lojista consegue abrir uma tela propria de categorias para cadastrar, editar, ativar, desativar e organizar categorias comerciais da loja.
+- lojista consegue gerenciar os produtos por busca, filtro e modos de visualizacao distintos.
+- lojista consegue abrir acoes por item para editar, excluir, duplicar e revisar a vitrine publica do produto.
 
 ### Sprint 4 - Vitrine e descoberta
 
@@ -1111,7 +1131,7 @@ Quando isso acontecer, a API em Flask deixa de ser uma aposta e vira apenas a ca
 - carrinho visual por loja;
 - checkout visual com cliente, endereco e resumo;
 - tela final de pedido confirmado;
-- painel do lojista com categorias, produtos, estoque, pedidos e vendas;
+- painel do lojista com categorias comerciais da loja, produtos, estoque, pedidos e vendas;
 - painel admin com filtros por periodo e lojista.
 
 ### O que ainda falta antes de irmos para API
@@ -1285,6 +1305,7 @@ Regra de implementacao:
 - jornada publica completa com loja, produto, carrinho, checkout e pedido confirmado;
 - busca publica por nome de loja, categoria e produto;
 - filtros visuais na vitrine publica e na pagina da loja;
+- modulo dedicado de categorias da loja agora aberto no painel, conectado ao cadastro de categorias comerciais reais;
 - modulo dedicado de pedidos do lojista;
 - modulo dedicado de estoque e movimentacoes;
 - modulo dedicado de relatorios do lojista;
@@ -1300,6 +1321,81 @@ Regra de implementacao:
 
 ### O que ainda falta antes da API
 
+### Prioridade nova: gestao de produtos no painel do lojista
+
+A rota `/painel-lojista/produtos` nao pode ficar apenas como vitrine bonita. Ela precisa virar um modulo operacional de gestao de catalogo.
+
+Objetivo desta frente:
+
+- permitir localizar produto rapidamente;
+- permitir revisar apresentacao visual em formato vitrine;
+- permitir operar a lista em formato horizontal de gestao;
+- permitir editar, excluir, duplicar e abrir o link publico do produto;
+- manter preview de imagem visivel tanto na vitrine quanto na lista.
+
+#### Controles que esse modulo precisa ter
+
+Barra de gestao no topo da vitrine interna:
+
+- busca por nome do produto;
+- busca por slug;
+- filtro por categoria;
+- filtro por status do produto;
+- filtro por estoque baixo;
+- filtro por produtos sem imagem;
+- ordenacao por mais novos, nome, preco e estoque;
+- contador de resultados;
+- alternancia de visualizacao entre `vitrine` e `lista`.
+
+#### Modo vitrine
+
+O modo vitrine continua importante para revisao visual e comercial.
+
+Ele deve priorizar:
+
+- imagem principal do produto;
+- nome e categoria;
+- preco e estoque;
+- selo de status;
+- botao de gerenciamento por card.
+
+#### Modo lista
+
+O modo lista deve ser horizontal, mais compacto e orientado a operacao.
+
+Estrutura recomendada por linha:
+
+- lado esquerdo com preview da imagem, nome, slug e categoria;
+- centro com preco, estoque, data e status;
+- lado direito com acoes de gerenciamento.
+
+Acoes por item:
+
+- editar;
+- excluir;
+- duplicar;
+- abrir vitrine publica;
+- copiar link;
+- marcar destaque quando fizer sentido.
+
+#### Sequencia recomendada para implementar a gestao de produtos
+
+1. criar barra de busca e filtros da vitrine interna;
+2. criar toggle entre `Vitrine` e `Lista`;
+3. implementar lista horizontal com preview de imagem;
+4. criar menu `Gerenciar` por produto;
+5. ligar `Editar` para preencher o formulario com dados existentes;
+6. ligar `Excluir` com confirmacao segura;
+7. ligar `Duplicar` para acelerar cadastro de produtos parecidos;
+8. depois evoluir para paginacao e filtros mais ricos quando a base estiver estavel.
+
+#### Criterio de pronto dessa frente
+
+- o lojista consegue encontrar produto por nome sem rolar toda a pagina;
+- o lojista consegue alternar entre revisao visual e visao de gestao;
+- o lojista consegue editar e excluir sem sair perdido da tela;
+- o modulo deixa de parecer apenas preview e passa a funcionar como area real de operacao do catalogo.
+
 - iniciar a estrutura real da API em Python Flask em `api-lojas`;
 - conectar primeiro lojas, categorias e produtos;
 - depois integrar pedidos, estoque, vendas e relatorios;
@@ -1308,11 +1404,11 @@ Regra de implementacao:
 
 ## Nova sequencia sugerida para continuar agora
 
-1. estruturar a base da API Flask dentro de `api-lojas`;
-2. criar os modulos iniciais de lojas e categorias;
-3. seguir para produtos;
-4. depois ligar pedidos, estoque e vendas;
-5. por fim conectar autenticacao e troca gradual dos mocks.
+1. transformar `/painel-lojista/produtos` em modulo real de gestao com busca, filtros e alternancia `vitrine/lista`;
+2. adicionar acoes por produto: editar, excluir, duplicar e abrir vitrine publica;
+3. consolidar a integracao do cadastro de produto com a API real, incluindo imagens;
+4. depois continuar a troca gradual de mocks por servicos reais nas outras frentes;
+5. manter o plano e README alinhados a cada fechamento de etapa.
 
 ## Ponto de retomada
 Quando retomarmos, o melhor ponto de entrada e este:

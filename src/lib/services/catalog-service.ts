@@ -1,5 +1,5 @@
 import { apiConfig, resolvedEndpoints } from "@/lib/config";
-import { mockAdminWorkspace, mockCategories, mockProducts, mockSellerWorkspace, mockStores } from "@/lib/mock-data";
+import { mockAdminWorkspace, mockCategories, mockProducts, mockStores } from "@/lib/mock-data";
 import type {
   AdminWorkspace,
   AdminApiReportBundle,
@@ -18,7 +18,9 @@ import type {
   SellerApiReportBundle,
   SellerApiReportResult,
   SellerOrder,
+  SellerProductSubmitInput,
   SellerWorkspace,
+  StockMovement,
   StorePurchasePreview,
   StoreSummary,
 } from "@/types/catalog";
@@ -49,6 +51,14 @@ export interface StoreSignupSubmitInput {
   complement?: string;
 }
 
+export interface SellerCategoryUpsertInput {
+  storeId: string;
+  name: string;
+  slug: string;
+  active: boolean;
+  categoryBaseId?: string | null;
+}
+
 const normalizeSearchValue = (value: string) =>
   value
     .normalize("NFD")
@@ -64,6 +74,37 @@ const toNumberValue = (value: unknown) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const toNullableString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
+
+const emptySellerStore: StoreSummary = {
+  id: "store-empty",
+  name: "Sua loja",
+  slug: "sua-loja",
+  status: "ativo",
+};
+
+const createEmptySellerWorkspace = (store: StoreSummary = emptySellerStore): SellerWorkspace => ({
+  store,
+  categoryBases: [],
+  categories: [],
+  products: [],
+  stockMovements: [],
+  orders: [],
+  reportSummary: {
+    snapshots: reportPeriods.map((period) => ({ period, revenue: 0, orders: 0, averageTicket: 0 })),
+    byCategory: [],
+  },
+  stats: {
+    activeProducts: 0,
+    lowStockProducts: 0,
+    pendingOrders: 0,
+    catalogViews: 0,
+    salesToday: 0,
+    salesWeek: 0,
+    salesMonth: 0,
+  },
+});
 
 const mapCheckoutApiOrderResult = (payload: unknown): CheckoutApiOrderResult => {
   const source = payload as Record<string, unknown>;
@@ -223,6 +264,177 @@ export async function submitStoreSignup(input: StoreSignupSubmitInput) {
   };
 }
 
+export async function createSellerCategory(input: SellerCategoryUpsertInput): Promise<Category> {
+  if (shouldUseMocks) {
+    throw new Error("A API real de categorias ainda nao esta configurada neste ambiente.");
+  }
+
+  const response = await fetch(resolvedEndpoints.categories, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      store_id: Number(input.storeId),
+      category_base_id: input.categoryBaseId ? Number(input.categoryBaseId) : null,
+      name: input.name,
+      slug: input.slug,
+      description: null,
+      status: input.active ? "active" : "inactive",
+      sort_order: 0,
+    }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as { data?: Record<string, unknown>; message?: string; details?: string[] };
+
+  if (!response.ok || !payload.data) {
+    const detailLabel = Array.isArray(payload.details) && payload.details.length > 0 ? ` ${payload.details.join(" ")}` : "";
+    throw new Error(`${payload.message ?? "Nao foi possivel criar a categoria na API."}${detailLabel}`.trim());
+  }
+
+  return mapApiCategory(payload.data);
+}
+
+export async function updateSellerCategory(categoryId: string, input: Partial<SellerCategoryUpsertInput>): Promise<Category> {
+  if (shouldUseMocks) {
+    throw new Error("A API real de categorias ainda nao esta configurada neste ambiente.");
+  }
+
+  const response = await fetch(`${resolvedEndpoints.categories}/${categoryId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      ...(input.storeId ? { store_id: Number(input.storeId) } : {}),
+      ...(input.categoryBaseId !== undefined ? { category_base_id: input.categoryBaseId ? Number(input.categoryBaseId) : null } : {}),
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.slug !== undefined ? { slug: input.slug } : {}),
+      ...(input.active !== undefined ? { status: input.active ? "active" : "inactive" } : {}),
+    }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as { data?: Record<string, unknown>; message?: string; details?: string[] };
+
+  if (!response.ok || !payload.data) {
+    const detailLabel = Array.isArray(payload.details) && payload.details.length > 0 ? ` ${payload.details.join(" ")}` : "";
+    throw new Error(`${payload.message ?? "Nao foi possivel atualizar a categoria na API."}${detailLabel}`.trim());
+  }
+
+  return mapApiCategory(payload.data);
+}
+
+export async function submitSellerProduct(input: SellerProductSubmitInput): Promise<Product> {
+  if (shouldUseMocks) {
+    throw new Error("A API real de produtos ainda nao esta configurada neste ambiente.");
+  }
+
+  const uploadImages = input.images.filter((image) => image.source === "upload" && image.file);
+  const targetProductId = input.productId ? Number(input.productId) : null;
+
+  if (!targetProductId && uploadImages.length === 0) {
+    throw new Error("Adicione pelo menos 1 imagem por upload local para concluir o cadastro real do produto.");
+  }
+
+  const createResponse = await fetch(targetProductId ? `${resolvedEndpoints.products}/${targetProductId}` : resolvedEndpoints.products, {
+    method: targetProductId ? "PATCH" : "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      store_id: Number(input.storeId),
+      category_id: Number(input.categoryId),
+      name: input.name,
+      slug: input.slug,
+      description_short: input.description || null,
+      description_long: input.description || null,
+      sku: null,
+      price_retail: input.priceRetail,
+      price_wholesale: input.priceWholesale ?? null,
+      price_promotion: input.pricePromotion ?? null,
+      stock: input.stock,
+      min_stock: input.minStock,
+      status: "draft",
+      is_featured: false,
+      ...(targetProductId ? {} : { main_image_url: null }),
+      notes: null,
+    }),
+    cache: "no-store",
+  });
+
+  const createPayload = (await createResponse.json()) as { data?: Record<string, unknown>; message?: string; details?: string[] };
+
+  if (!createResponse.ok || !createPayload.data) {
+    const detailLabel = Array.isArray(createPayload.details) && createPayload.details.length > 0 ? ` ${createPayload.details.join(" ")}` : "";
+    throw new Error(`${createPayload.message ?? (targetProductId ? "Nao foi possivel atualizar o produto na API." : "Nao foi possivel criar o produto na API.")}${detailLabel}`.trim());
+  }
+
+  const createdProductId = Number(createPayload.data.id ?? targetProductId);
+
+  if (uploadImages.length > 0) {
+    const formData = new FormData();
+    uploadImages.forEach((image) => {
+      if (image.file) {
+        formData.append("images", image.file, image.file.name);
+      }
+    });
+
+    const uploadResponse = await fetch(`${resolvedEndpoints.products}/${createdProductId}/images`, {
+      method: "POST",
+      body: formData,
+      cache: "no-store",
+    });
+
+    const uploadPayload = (await uploadResponse.json()) as { data?: Array<Record<string, unknown>>; message?: string; details?: string[] };
+
+    if (!uploadResponse.ok) {
+      const detailLabel = Array.isArray(uploadPayload.details) && uploadPayload.details.length > 0 ? ` ${uploadPayload.details.join(" ")}` : "";
+      throw new Error(`${uploadPayload.message ?? "Nao foi possivel enviar as imagens do produto para a API."}${detailLabel}`.trim());
+    }
+
+    const selectedMainIndex = input.mainImageId
+      ? uploadImages.findIndex((image) => image.id === input.mainImageId)
+      : 0;
+
+    if (selectedMainIndex > 0 && Array.isArray(uploadPayload.data) && uploadPayload.data[selectedMainIndex]?.id) {
+      await fetch(`${resolvedEndpoints.products}/${createdProductId}/images/${String(uploadPayload.data[selectedMainIndex].id)}/set-main`, {
+        method: "POST",
+        cache: "no-store",
+      });
+    }
+  }
+
+  const productResponse = await fetch(`${resolvedEndpoints.products}/${createdProductId}`, { cache: "no-store" });
+  const productPayload = (await productResponse.json()) as { data?: Record<string, unknown>; message?: string };
+
+  if (!productResponse.ok || !productPayload.data) {
+    throw new Error(productPayload.message ?? "Produto criado, mas nao foi possivel recarregar os dados finais da API.");
+  }
+
+  return mapApiProduct(productPayload.data);
+}
+
+
+export async function deleteSellerProduct(productId: string): Promise<void> {
+  if (shouldUseMocks) {
+    throw new Error("A API real de produtos ainda nao esta configurada neste ambiente.");
+  }
+
+  const response = await fetch(`${resolvedEndpoints.products}/${productId}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as { message?: string; details?: string[] };
+
+  if (!response.ok) {
+    const detailLabel = Array.isArray(payload.details) && payload.details.length > 0 ? ` ${payload.details.join(" ")}` : "";
+    throw new Error(`${payload.message ?? "Nao foi possivel remover o produto na API."}${detailLabel}`.trim());
+  }
+}
+
 export async function submitCheckoutOrder(input: CheckoutSubmitInput): Promise<CheckoutApiOrderResult> {
   if (shouldUseMocks) {
     throw new Error("A API real de checkout ainda nao esta configurada neste ambiente.");
@@ -298,6 +510,71 @@ const mapApiStoreSummaryRecord = (payload: Record<string, unknown>): ApiStoreSum
   id: Number(payload.id),
   name: String(payload.name),
   slug: String(payload.slug),
+});
+
+const mapApiStoreSummary = (payload: Record<string, unknown>): StoreSummary => ({
+  id: String(payload.id),
+  name: String(payload.name),
+  slug: String(payload.slug),
+  city: toNullableString(payload.city),
+  state: toNullableString(payload.state),
+  district: toNullableString(payload.district),
+  street: toNullableString(payload.street),
+  number: toNullableString(payload.number),
+  zipCode: toNullableString(payload.zip_code ?? payload.zipCode),
+  complement: toNullableString(payload.complement),
+  whatsapp: toNullableString(payload.whatsapp),
+  pixKey: toNullableString(payload.pix_key ?? payload.pixKey),
+  status: String(payload.status ?? "ativo") === "inativo" ? "inativo" : "ativo",
+});
+
+const mapApiCategory = (payload: Record<string, unknown>): Category => ({
+  id: String(payload.id),
+  storeId: String(payload.store_id ?? payload.storeId),
+  name: String(payload.name),
+  slug: String(payload.slug),
+  active: String(payload.status ?? "active") !== "inactive",
+  origin: payload.category_base_id ?? payload.categoryBaseId ? "base" : "custom",
+});
+
+const mapApiProduct = (payload: Record<string, unknown>): Product => {
+  const images = Array.isArray(payload.images) ? payload.images : [];
+  const imageUrls = images
+    .map((image) => {
+      if (!image || typeof image !== "object") return undefined;
+      return toNullableString((image as Record<string, unknown>).image_url ?? (image as Record<string, unknown>).imageUrl);
+    })
+    .filter((value): value is string => Boolean(value));
+  const fallbackMainImage = toNullableString(payload.main_image_url ?? payload.mainImageUrl);
+
+  return {
+    id: String(payload.id),
+    storeId: String(payload.store_id ?? payload.storeId),
+    categoryId: String(payload.category_id ?? payload.categoryId),
+    name: String(payload.name),
+    slug: String(payload.slug),
+    description: toNullableString(payload.description_short ?? payload.descriptionShort ?? payload.description_long ?? payload.descriptionLong),
+    priceRetail: toNumberValue(payload.price_retail ?? payload.priceRetail),
+    priceWholesale: payload.price_wholesale ?? payload.priceWholesale ? toNumberValue(payload.price_wholesale ?? payload.priceWholesale) : undefined,
+    pricePromotion: payload.price_promotion ?? payload.pricePromotion ? toNumberValue(payload.price_promotion ?? payload.pricePromotion) : undefined,
+    stock: Number(payload.stock ?? 0),
+    minStock: Number(payload.min_stock ?? payload.minStock ?? 0),
+    imageUrls: imageUrls.length ? imageUrls : [fallbackMainImage].filter((value): value is string => Boolean(value)),
+    featured: Boolean(payload.is_featured ?? payload.isFeatured),
+  };
+};
+
+const mapApiStockMovement = (payload: Record<string, unknown>): StockMovement => ({
+  id: String(payload.id),
+  storeId: String(payload.store_id ?? payload.storeId),
+  productId: String(payload.product_id ?? payload.productId),
+  type: String(payload.movement_type ?? payload.movementType) as StockMovement["type"],
+  source: String(payload.source) as StockMovement["source"],
+  quantity: Number(payload.quantity ?? 0),
+  previousStock: Number(payload.previous_stock ?? payload.previousStock ?? 0),
+  currentStock: Number(payload.current_stock ?? payload.currentStock ?? 0),
+  createdAt: String(payload.created_at ?? payload.createdAt ?? new Date().toISOString()),
+  note: toNullableString(payload.note),
 });
 
 const mapSellerApiReportResult = (payload: unknown): SellerApiReportResult => {
@@ -521,15 +798,68 @@ export async function getFeaturedStores(): Promise<StoreSummary[]> {
     return mockStores;
   }
 
-  return mockStores;
+  try {
+    const stores = await fetchApiList<Record<string, unknown>>(resolvedEndpoints.stores);
+    return stores.map(mapApiStoreSummary);
+  } catch {
+    return [];
+  }
 }
 
 export async function getSellerWorkspace(): Promise<SellerWorkspace> {
   if (shouldUseMocks) {
-    return mockSellerWorkspace;
+    return createEmptySellerWorkspace(mockStores[0]);
   }
 
-  return mockSellerWorkspace;
+  try {
+    const stores = await fetchApiList<Record<string, unknown>>(resolvedEndpoints.stores);
+
+    if (stores.length === 0) {
+      return createEmptySellerWorkspace();
+    }
+
+    const primaryStorePayload = stores[0];
+    const primaryStore = mapApiStoreSummary(primaryStorePayload);
+    const storeId = Number(primaryStorePayload.id);
+
+    const [categoriesPayload, productsPayload, stockPayload, sellerOrdersData, sellerReportData] = await Promise.all([
+      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.categories}?store_id=${storeId}`),
+      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.products}?store_id=${storeId}`),
+      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.stock}/movements?store_id=${storeId}`),
+      getSellerApiOrdersByStoreSlug(primaryStore.slug),
+      getSellerApiReportByStoreSlug(primaryStore.slug),
+    ]);
+
+    const categories = categoriesPayload.map(mapApiCategory);
+    const products = productsPayload.map(mapApiProduct);
+    const stockMovements = stockPayload.map(mapApiStockMovement);
+    const orders = sellerOrdersData.orders;
+    const pendingOrders = orders.filter((order) => order.status !== "concluido" && order.status !== "cancelado").length;
+
+    return {
+      store: primaryStore,
+      categoryBases: [],
+      categories,
+      products,
+      stockMovements,
+      orders,
+      reportSummary: {
+        snapshots: sellerReportData.snapshots,
+        byCategory: sellerReportData.byCategory,
+      },
+      stats: {
+        activeProducts: products.length,
+        lowStockProducts: products.filter((product) => product.stock <= (product.minStock ?? 0)).length,
+        pendingOrders,
+        catalogViews: 0,
+        salesToday: sellerReportData.snapshots.find((snapshot) => snapshot.period === "dia")?.revenue ?? 0,
+        salesWeek: sellerReportData.snapshots.find((snapshot) => snapshot.period === "semana")?.revenue ?? 0,
+        salesMonth: sellerReportData.snapshots.find((snapshot) => snapshot.period === "mes")?.revenue ?? 0,
+      },
+    };
+  } catch {
+    return createEmptySellerWorkspace();
+  }
 }
 
 export async function getAdminWorkspace(): Promise<AdminWorkspace> {

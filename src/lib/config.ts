@@ -38,6 +38,7 @@ export const endpointMap = {
   ),
   orders: normalizePath(process.env.NEXT_PUBLIC_API_ORDERS_ENDPOINT, "/orders"),
   reports: normalizePath(process.env.NEXT_PUBLIC_API_REPORTS_ENDPOINT, "/reports"),
+  stock: normalizePath(process.env.NEXT_PUBLIC_API_STOCK_ENDPOINT, "/stock"),
 };
 
 export const resolvedEndpoints = Object.fromEntries(
