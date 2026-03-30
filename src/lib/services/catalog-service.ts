@@ -1,6 +1,6 @@
 import { apiConfig } from "@/lib/config";
 import { mockAdminWorkspace, mockCategories, mockProducts, mockSellerWorkspace, mockStores } from "@/lib/mock-data";
-import type { AdminWorkspace, Category, Product, SellerWorkspace, StoreSummary } from "@/types/catalog";
+import type { AdminWorkspace, CartPreview, Category, CheckoutPreview, OrderSuccessPreview, Product, SellerWorkspace, StoreSummary } from "@/types/catalog";
 
 const shouldUseMocks = apiConfig.useMocks || !apiConfig.baseUrl;
 
@@ -80,5 +80,111 @@ export async function getStoreProductBySlugs(
     store: catalog.store,
     product,
     category,
+  };
+}
+
+export async function getCartPreviewByStoreSlug(
+  storeSlug: string,
+  selectedProductSlug?: string,
+  quantity = 1,
+): Promise<CartPreview | undefined> {
+  const catalog = await getPublicStoreCatalogBySlug(storeSlug);
+
+  if (!catalog) {
+    return undefined;
+  }
+
+  const chosenProduct = selectedProductSlug
+    ? catalog.products.find((product) => product.slug === selectedProductSlug)
+    : catalog.products[0];
+
+  const fallbackProduct = catalog.products.find((product) => product.slug !== chosenProduct?.slug);
+  const previewProducts = [chosenProduct, fallbackProduct].filter((product): product is Product => Boolean(product));
+
+  const items = previewProducts.map((product, index) => {
+    const itemQuantity = index === 0 ? Math.max(1, quantity) : 1;
+    const category = catalog.categories.find((entry) => entry.id === product.categoryId);
+    const totalPrice = product.priceRetail * itemQuantity;
+
+    return {
+      id: `cart-${product.id}`,
+      productId: product.id,
+      productSlug: product.slug,
+      productName: product.name,
+      imageUrl: product.imageUrls[0],
+      quantity: itemQuantity,
+      unitPrice: product.priceRetail,
+      totalPrice,
+      categoryName: category?.name,
+    };
+  });
+
+  const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+  const deliveryType = subtotal >= 400 ? "retirada" : "entrega";
+  const shippingFee = deliveryType === "entrega" ? 22 : 0;
+
+  return {
+    store: catalog.store,
+    items,
+    subtotal,
+    shippingFee,
+    total: subtotal + shippingFee,
+    deliveryType,
+    paymentLabel: "Pix manual com confirmacao no painel",
+  };
+}
+
+export async function getCheckoutPreviewByStoreSlug(
+  storeSlug: string,
+  selectedProductSlug?: string,
+  quantity = 1,
+): Promise<CheckoutPreview | undefined> {
+  const cart = await getCartPreviewByStoreSlug(storeSlug, selectedProductSlug, quantity);
+
+  if (!cart) {
+    return undefined;
+  }
+
+  const storeCity = cart.store.city ?? "Sao Paulo";
+  const storeState = cart.store.state ?? "SP";
+
+  return {
+    cart,
+    customer: {
+      fullName: "Cliente em validacao",
+      whatsapp: "(11) 98888-7788",
+      email: "cliente@exemplo.com",
+    },
+    address: {
+      street: "Rua das Vitrines, 120",
+      district: "Centro",
+      city: storeCity,
+      state: storeState,
+      zipCode: "01000-000",
+    },
+    orderCode: `PED-${cart.store.slug.toUpperCase().slice(0, 5)}-001`,
+    note: cart.deliveryType === "entrega"
+      ? "Entrega local em validacao visual com confirmacao por WhatsApp."
+      : "Retirada em loja com janela de atendimento confirmada no WhatsApp.",
+    confirmationLabel: "Pedido pronto para confirmacao manual no frontend",
+  };
+}
+
+export async function getOrderSuccessPreviewByStoreSlug(
+  storeSlug: string,
+  selectedProductSlug?: string,
+  quantity = 1,
+): Promise<OrderSuccessPreview | undefined> {
+  const checkout = await getCheckoutPreviewByStoreSlug(storeSlug, selectedProductSlug, quantity);
+
+  if (!checkout) {
+    return undefined;
+  }
+
+  return {
+    checkout,
+    etaLabel: checkout.cart.deliveryType === "entrega" ? "Entrega prevista para hoje ate 18h" : "Retirada disponivel em ate 40 minutos",
+    supportLabel: `Acompanhamento inicial pelo WhatsApp ${checkout.cart.store.whatsapp}`,
+    nextStepLabel: "Pedido confirmado no frontend e pronto para futura integracao com API e status reais.",
   };
 }

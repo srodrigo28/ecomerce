@@ -1104,3 +1104,100 @@ Principalmente, a loja precisa conseguir operar seu negocio com tres controles m
 Tambem precisamos garantir duas bases operacionais simples e obrigatorias: relatorios filtraveis e categorias isoladas por lojista com apoio de categorias padrao iniciais.
 
 Quando isso acontecer, a API deixa de ser uma aposta e vira apenas a camada que conecta algo que ja funciona como produto.
+
+## Status real do frontend antes da API
+
+### O que ja esta validado no projeto
+
+- home publica com navegacao centralizada e CTA para lojista;
+- pagina de login;
+- pagina de cadastro de loja;
+- pagina de lojas parceiras;
+- vitrine publica por loja;
+- pagina publica de produto;
+- carrinho visual por loja;
+- checkout visual com cliente, endereco e resumo;
+- tela final de pedido confirmado;
+- painel do lojista com categorias, produtos, estoque, pedidos e vendas;
+- painel admin com filtros por periodo e lojista.
+
+### O que ainda falta antes de irmos para API
+
+#### 1. Refinar UX e consistencia do fluxo publico
+
+Ainda precisamos:
+
+- revisar textos, hierarquia visual e CTAs do fluxo publico completo;
+- melhorar estados de vazio, carregando e erro nas paginas publicas;
+- padronizar melhor feedback visual entre carrinho, checkout e pedido confirmado;
+- revisar responsividade fina em mobile e desktop em todas as etapas.
+
+#### 2. Fechar melhor busca, filtros e descoberta
+
+Ainda precisamos:
+
+- criar busca publica real por nome de loja, categoria e produto;
+- adicionar filtros visuais na vitrine publica;
+- melhorar descoberta por categoria dentro da loja;
+- preparar organizacao para destaques, lancamentos e campanhas.
+
+#### 3. Evoluir o painel do lojista para operacao mais completa
+
+Ainda precisamos:
+
+- criar tela dedicada de pedidos da loja;
+- refinar tela dedicada de estoque e movimentacoes;
+- melhorar visual de vendas e indicadores do periodo;
+- criar estados mais claros para pedido, pagamento e ruptura de estoque;
+- revisar o fluxo de edicao da loja como modulo proprio.
+
+#### 4. Refinar relatorios do lojista e admin
+
+Ainda precisamos:
+
+- fortalecer visualmente os relatorios por dia, semana e mes;
+- melhorar leitura por categoria no painel do lojista;
+- deixar o admin com leitura mais clara de cadastros, pedidos e vendas;
+- organizar melhor comparativos por lojista no dashboard admin.
+
+#### 5. Consolidar componentes e contratos de interface
+
+Ainda precisamos:
+
+- extrair mais blocos reutilizaveis para header, cards, tabelas e filtros;
+- reduzir repeticao visual nas paginas publicas e operacionais;
+- estabilizar nomes, campos e estruturas que ja servirao de contrato para a API;
+- revisar README e plano sempre que uma fase importante for concluida.
+
+## Sequencia sugerida para continuar amanha
+
+1. revisar UX do fluxo publico completo: loja, produto, carrinho, checkout e pedido confirmado;
+2. criar busca e filtros da vitrine publica;
+3. abrir tela dedicada de pedidos da loja;
+4. abrir tela dedicada de estoque e movimentacoes;
+5. refinar relatorios do lojista;
+6. refinar relatorios e leitura do admin;
+7. consolidar componentes reutilizaveis;
+8. so depois iniciar desenho final da API.
+
+## Ponto de retomada para amanha
+
+Quando retomarmos, o melhor ponto de entrada e este:
+
+- revisar a jornada publica completa no frontend;
+- ajustar detalhes de UX, textos e navegacao;
+- depois partir para busca, filtros e descoberta;
+- em seguida voltar ao painel do lojista para pedidos e estoque dedicados.
+
+## Checklist final antes da API
+
+So devemos seguir para API quando estes pontos estiverem realmente confortaveis no frontend:
+
+- jornada publica completa navegavel e coerente;
+- busca e filtros publicos funcionando localmente;
+- painel do lojista com pedidos, estoque e vendas bem resolvidos;
+- relatorios do lojista com leitura clara por periodo e categoria;
+- painel admin com leitura clara por lojista e periodo;
+- componentes principais estabilizados;
+- campos das entidades sem grande duvida de modelagem;
+- plano e README refletindo o estado real do produto.

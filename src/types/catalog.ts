@@ -15,6 +15,7 @@ export type ProductImageSource = "upload" | "url";
 export type StockMovementType = "entrada" | "saida" | "ajuste";
 export type StockMovementSource = "manual" | "pedido" | "reposicao" | "cancelamento";
 export type ReportPeriod = "dia" | "semana" | "mes";
+export type CartDeliveryType = "entrega" | "retirada";
 
 export interface StoreSummary {
   id: string;
@@ -175,6 +176,58 @@ export interface AdminWorkspace {
   stores: StoreSummary[];
   orders: SellerOrder[];
   reportSummary: AdminReportSummary;
+}
+
+export interface CartPreviewItem {
+  id: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  imageUrl: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  categoryName?: string;
+}
+
+export interface CartPreview {
+  store: StoreSummary;
+  items: CartPreviewItem[];
+  subtotal: number;
+  shippingFee: number;
+  total: number;
+  deliveryType: CartDeliveryType;
+  paymentLabel: string;
+}
+
+export interface CheckoutCustomerPreview {
+  fullName: string;
+  whatsapp: string;
+  email: string;
+}
+
+export interface CheckoutAddressPreview {
+  street: string;
+  district: string;
+  city: string;
+  state: string;
+  zipCode: string;
+}
+
+export interface CheckoutPreview {
+  cart: CartPreview;
+  customer: CheckoutCustomerPreview;
+  address: CheckoutAddressPreview;
+  orderCode: string;
+  note: string;
+  confirmationLabel: string;
+}
+
+export interface OrderSuccessPreview {
+  checkout: CheckoutPreview;
+  etaLabel: string;
+  supportLabel: string;
+  nextStepLabel: string;
 }
 
 export interface ProductFormDraft {

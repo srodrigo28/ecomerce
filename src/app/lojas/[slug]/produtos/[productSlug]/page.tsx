@@ -79,6 +79,14 @@ export default async function ProdutoPublicoPage({
                 <p>WhatsApp: <span className="font-medium text-slate-800">{store.whatsapp}</span></p>
                 <p>Pix: <span className="font-medium text-slate-800">{store.pixKey}</span></p>
               </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Link href={`/lojas/${store.slug}/carrinho?product=${product.slug}&quantity=1`} className="rounded-full bg-[var(--accent)] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
+                  Adicionar ao carrinho
+                </Link>
+                <Link href={`/lojas/${store.slug}/carrinho?product=${product.slug}&quantity=2`} className="rounded-full border border-[var(--border)] px-4 py-3 text-center text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+                  Comprar 2 unidades
+                </Link>
+              </div>
             </div>
           </article>
 
@@ -91,8 +99,8 @@ export default async function ProdutoPublicoPage({
               <Link href={`/lojas/${store.slug}`} className="rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-200">
                 Voltar para a loja
               </Link>
-              <Link href="/cadastro-loja" className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
-                Cadastrar nova loja
+              <Link href={`/lojas/${store.slug}/carrinho?product=${product.slug}&quantity=1`} className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
+                Ir para o carrinho
               </Link>
             </div>
           </article>

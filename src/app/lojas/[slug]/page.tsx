@@ -58,7 +58,12 @@ export default async function LojaPublicaPage({
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Catalogo da loja</p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-900">Produtos em destaque</h2>
             </div>
-            <span className="text-sm text-[var(--muted)]">{products.length} produtos ativos</span>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
+              <span>{products.length} produtos ativos</span>
+              <Link href={`/lojas/${store.slug}/carrinho`} className="font-semibold text-[var(--accent-strong)] transition hover:text-[var(--accent)]">
+                Ver resumo do carrinho
+              </Link>
+            </div>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {(featuredProducts.length > 0 ? featuredProducts : products).map((product) => (
@@ -74,12 +79,20 @@ export default async function LojaPublicaPage({
                     <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">Estoque {product.stock}</span>
                     <strong className="text-slate-900">R$ {product.priceRetail.toFixed(2)}</strong>
                   </div>
-                  <Link
-                    href={`/lojas/${store.slug}/produtos/${product.slug}`}
-                    className="inline-flex rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-                  >
-                    Ver produto
-                  </Link>
+                  <div className="flex flex-wrap gap-3">
+                    <Link
+                      href={`/lojas/${store.slug}/produtos/${product.slug}`}
+                      className="inline-flex rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                    >
+                      Ver produto
+                    </Link>
+                    <Link
+                      href={`/lojas/${store.slug}/carrinho?product=${product.slug}&quantity=1`}
+                      className="inline-flex rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]"
+                    >
+                      Ir para carrinho
+                    </Link>
+                  </div>
                 </div>
               </article>
             ))}
