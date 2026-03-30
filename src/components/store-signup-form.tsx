@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+
+import { submitStoreSignup } from "@/lib/services/catalog-service";
 
 const onlyDigits = (value: string) => value.replace(/\D/g, "");
 
@@ -34,11 +37,20 @@ const formatCep = (value: string) => {
   return digits.replace(/^(\d{5})(\d)/, "$1-$2");
 };
 
+const slugify = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+
 const stepLabels = [
   "Loja",
   "Contato e Pix",
   "Endereco",
-  "Revisao",
+  "Seguranca",
 ] as const;
 
 interface AddressState {
@@ -52,16 +64,20 @@ interface AddressState {
 }
 
 export function StoreSignupForm() {
+  const router = useRouter();
   const [storeName, setStoreName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [pixKey, setPixKey] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [step, setStep] = useState(0);
   const [feedback, setFeedback] = useState("Vamos montar a configuracao da loja em etapas curtas, com foco total em uma decisao por vez.");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [createdStore, setCreatedStore] = useState<{ id: number; name: string; slug: string } | null>(null);
   const [address, setAddress] = useState<AddressState>({
     zipCode: "",
     state: "",
@@ -78,6 +94,8 @@ export function StoreSignupForm() {
     () => Boolean(address.state && address.city && address.street),
     [address.city, address.state, address.street],
   );
+
+  const generatedSlug = useMemo(() => slugify(storeName), [storeName]);
 
   const updateAddressField = <K extends keyof AddressState>(field: K, value: AddressState[K]) => {
     setAddress((current) => ({ ...current, [field]: value }));
@@ -140,6 +158,23 @@ export function StoreSignupForm() {
       }
     }
 
+    if (targetStep === 3) {
+      if (!generatedSlug) {
+        setFeedback("Informe um nome valido para gerar o link principal da loja.");
+        return false;
+      }
+
+      if (password.length < 6) {
+        setFeedback("Crie uma senha com pelo menos 6 caracteres para concluir o cadastro.");
+        return false;
+      }
+
+      if (password !== confirmPassword) {
+        setFeedback("A confirmacao de senha precisa ser igual a senha criada.");
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -157,15 +192,40 @@ export function StoreSignupForm() {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(2)) {
+    if (!validateStep(3)) {
       return;
     }
 
-    setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setIsSubmitting(false);
-    setSubmitted(true);
-    setFeedback("Cadastro validado localmente. Agora voce pode continuar navegando pelas telas para revisar a experiencia completa.");
+    try {
+      setIsSubmitting(true);
+      const created = await submitStoreSignup({
+        name: storeName.trim(),
+        slug: generatedSlug,
+        ownerName: ownerName.trim(),
+        ownerEmail: email.trim(),
+        whatsapp,
+        cnpj,
+        pixKey: pixKey.trim(),
+        zipCode: address.zipCode,
+        state: address.state.trim(),
+        city: address.city.trim(),
+        district: address.district.trim(),
+        street: address.street.trim(),
+        number: address.number.trim(),
+        complement: address.complement.trim(),
+      });
+
+      setCreatedStore(created);
+      setSubmitted(true);
+      setFeedback(`Loja criada na API com sucesso. Redirecionando para o painel do lojista com a loja /lojas/${created.slug}.`);
+      window.setTimeout(() => {
+        router.push("/painel-lojista");
+      }, 1200);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Nao foi possivel salvar a loja na API.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -316,8 +376,19 @@ export function StoreSignupForm() {
         {step === 3 ? (
           <div className="space-y-5">
             <div>
-              <h3 className="text-xl font-semibold text-slate-900">Revisao final da loja</h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Antes de continuar para o painel, confira se a configuracao principal da loja esta do jeito certo.</p>
+              <h3 className="text-xl font-semibold text-slate-900">Seguranca e revisao final</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Crie a senha de acesso do responsavel e confira os dados principais antes de concluir.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-slate-900">Senha de acesso</span>
+                <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="Minimo de 6 caracteres" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-slate-900">Confirmar senha</span>
+                <input value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} type="password" placeholder="Repita a senha" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              </label>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
@@ -326,6 +397,7 @@ export function StoreSignupForm() {
                 <strong className="mt-2 block text-xl text-slate-900">{storeName || "Loja sem nome"}</strong>
                 <p className="mt-2 text-sm text-[var(--muted)]">Responsavel: {ownerName || "Nao informado"}</p>
                 <p className="mt-1 text-sm text-[var(--muted)]">CNPJ: {cnpj || "Nao informado"}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">Slug da loja: /lojas/{generatedSlug || "sua-loja"}</p>
               </div>
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-slate-50 p-4">
                 <p className="text-sm text-[var(--muted)]">Contato e recebimento</p>
@@ -363,23 +435,21 @@ export function StoreSignupForm() {
             </button>
           ) : (
             <button type="button" onClick={handleSubmit} className="rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]" disabled={isSubmitting}>
-              {isSubmitting ? "Validando..." : "Continuar cadastro"}
+              {isSubmitting ? "Salvando loja..." : "Concluir cadastro"}
             </button>
           )}
-          <Link href="/painel-lojista/produtos" className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
-            Ver formulario de produtos
-          </Link>
         </div>
       </div>
 
       {submitted ? (
         <div className="mt-6 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
-          Cadastro validado localmente com sucesso. Para teste do fluxo, voce pode seguir para o <Link href="/painel-lojista" className="font-semibold underline">painel do lojista</Link> e continuar navegando pelas telas.
+          Loja criada com sucesso na API. {createdStore ? <>Registro <span className="font-semibold">#{createdStore.id}</span> criado para <span className="font-semibold">{createdStore.name}</span>. Link principal preparado em <span className="font-semibold">/lojas/{createdStore.slug}</span>. </> : null}
+          Para teste do fluxo, voce pode seguir para o <Link href="/painel-lojista" className="font-semibold underline">painel do lojista</Link> e continuar navegando pelas telas.
         </div>
       ) : null}
 
       <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
-        Este cadastro continua frontend-first. A proxima etapa sera conectar validacoes reais e persistencia, depois que fecharmos bem a experiencia completa.
+        O cadastro agora persiste a loja na API. A senha ja entra no fluxo final de validacao e sera conectada ao modulo real de autenticacao assim que fecharmos a fase de usuarios.
       </div>
     </article>
   );

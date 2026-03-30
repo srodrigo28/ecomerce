@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 const accessCards = [
   {
@@ -16,6 +20,31 @@ const accessCards = [
 ];
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [feedback, setFeedback] = useState(
+    "O login definitivo entra depois. Neste momento estamos validando experiencia, navegacao e entradas de negocio.",
+  );
+
+  const handleFrontendLogin = () => {
+    if (!email.trim() || !password.trim()) {
+      setFeedback("Preencha e-mail e senha para continuar para o painel de teste.");
+      return;
+    }
+
+    const nextPath = email.toLowerCase().includes("admin") ? "/painel-admin" : "/painel-lojista";
+    setFeedback(
+      nextPath === "/painel-admin"
+        ? "Acesso frontend validado. Redirecionando para o painel admin de teste..."
+        : "Acesso frontend validado. Redirecionando para o painel do lojista de teste...",
+    );
+
+    window.setTimeout(() => {
+      router.push(nextPath);
+    }, 500);
+  };
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <section className="rounded-[2rem] border border-[var(--border)] bg-[rgba(255,252,247,0.92)] p-4 shadow-[var(--shadow)] backdrop-blur sm:p-6">
@@ -66,10 +95,18 @@ export default function LoginPage() {
 
         <aside className="rounded-[1.75rem] border border-[rgba(245,158,11,0.3)] bg-[rgba(255,255,255,0.94)] p-5">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Acesso rapido</p>
-          <form className="mt-5 space-y-4">
+          <form
+            className="mt-5 space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleFrontendLogin();
+            }}
+          >
             <label className="block space-y-2">
               <span className="text-sm font-medium text-slate-800">E-mail</span>
               <input
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 type="email"
                 placeholder="contato@minhaloja.com"
                 className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[var(--accent)]"
@@ -78,20 +115,22 @@ export default function LoginPage() {
             <label className="block space-y-2">
               <span className="text-sm font-medium text-slate-800">Senha</span>
               <input
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
                 type="password"
                 placeholder="Digite sua senha"
                 className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[var(--accent)]"
               />
             </label>
             <button
-              type="button"
+              type="submit"
               className="w-full rounded-2xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
             >
               Continuar no frontend
             </button>
           </form>
           <div className="mt-5 rounded-[1.5rem] border border-[var(--border)] bg-slate-50 p-4 text-sm leading-6 text-[var(--muted)]">
-            O login definitivo entra depois. Neste momento estamos validando experiencia, navegacao e entradas de negocio.
+            {feedback}
           </div>
         </aside>
       </section>

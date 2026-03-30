@@ -32,6 +32,23 @@ export interface PublicStoreCatalog {
   featuredProducts: Product[];
 }
 
+export interface StoreSignupSubmitInput {
+  name: string;
+  slug: string;
+  ownerName: string;
+  ownerEmail: string;
+  whatsapp: string;
+  cnpj: string;
+  pixKey: string;
+  zipCode: string;
+  state: string;
+  city: string;
+  district: string;
+  street: string;
+  number: string;
+  complement?: string;
+}
+
 const normalizeSearchValue = (value: string) =>
   value
     .normalize("NFD")
@@ -41,6 +58,7 @@ const normalizeSearchValue = (value: string) =>
 
 
 const normalizeWhatsappDigits = (value: string) => value.replace(/\D/g, "");
+const onlyDigits = (value: string) => value.replace(/\D/g, "");
 
 const toNumberValue = (value: unknown) => {
   const parsed = Number(value);
@@ -160,6 +178,50 @@ const mapCheckoutApiOrderResult = (payload: unknown): CheckoutApiOrderResult => 
     updatedAt: String(source.updated_at ?? source.updatedAt),
   };
 };
+
+export async function submitStoreSignup(input: StoreSignupSubmitInput) {
+  if (shouldUseMocks) {
+    throw new Error("A API real de lojas ainda nao esta configurada neste ambiente.");
+  }
+
+  const response = await fetch(resolvedEndpoints.stores, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: input.name,
+      slug: input.slug,
+      owner_name: input.ownerName,
+      owner_email: input.ownerEmail,
+      whatsapp: normalizeWhatsappDigits(input.whatsapp),
+      cnpj: onlyDigits(input.cnpj),
+      pix_key: input.pixKey,
+      zip_code: input.zipCode,
+      state: input.state,
+      city: input.city,
+      district: input.district,
+      street: input.street,
+      number: input.number,
+      complement: input.complement || null,
+      status: "draft",
+    }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as { data?: Record<string, unknown>; message?: string; details?: string[] };
+
+  if (!response.ok || !payload.data) {
+    const detailLabel = Array.isArray(payload.details) && payload.details.length > 0 ? ` ${payload.details.join(" ")}` : "";
+    throw new Error(`${payload.message ?? "Nao foi possivel cadastrar a loja na API."}${detailLabel}`.trim());
+  }
+
+  return {
+    id: Number(payload.data.id),
+    name: String(payload.data.name ?? input.name),
+    slug: String(payload.data.slug ?? input.slug),
+  };
+}
 
 export async function submitCheckoutOrder(input: CheckoutSubmitInput): Promise<CheckoutApiOrderResult> {
   if (shouldUseMocks) {
