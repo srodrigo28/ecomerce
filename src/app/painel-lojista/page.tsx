@@ -21,7 +21,16 @@ export default async function SellerDashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/painel-lojista/produtos" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
+            <Link href="/painel-lojista/pedidos" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
+              Abrir modulo de pedidos
+            </Link>
+            <Link href="/painel-lojista/estoque" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+              Abrir modulo de estoque
+            </Link>
+            <Link href="/painel-lojista/relatorios" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+              Abrir relatorios
+            </Link>
+            <Link href="/painel-lojista/produtos" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
               Ir para cadastro de produtos
             </Link>
             <Link href="/" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">

@@ -6,6 +6,14 @@ interface PublicCartSummaryProps {
   cart: CartPreview;
 }
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
+const deliveryLabel = {
+  entrega: "Entrega",
+  retirada: "Retirada",
+};
+
 export function PublicCartSummary({ cart }: PublicCartSummaryProps) {
   const firstItem = cart.items[0];
 
@@ -16,6 +24,9 @@ export function PublicCartSummary({ cart }: PublicCartSummaryProps) {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Carrinho em validacao</p>
             <h2 className="mt-2 text-2xl font-semibold text-slate-900">Resumo do pedido</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+              Antes de seguir para o checkout, o cliente consegue revisar itens, valores e a forma inicial de entrega.
+            </p>
           </div>
           <span className="text-sm text-[var(--muted)]">{cart.items.length} itens no fluxo</span>
         </div>
@@ -33,11 +44,11 @@ export function PublicCartSummary({ cart }: PublicCartSummaryProps) {
                     <h3 className="text-lg font-semibold text-slate-900">{item.productName}</h3>
                     <p className="text-sm text-[var(--muted)]">{item.categoryName ?? "Categoria da loja"}</p>
                   </div>
-                  <strong className="text-slate-900">R$ {item.totalPrice.toFixed(2)}</strong>
+                  <strong className="text-slate-900">{formatCurrency(item.totalPrice)}</strong>
                 </div>
                 <div className="flex flex-wrap gap-3 text-sm text-slate-600">
                   <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">Quantidade {item.quantity}</span>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">Unitario R$ {item.unitPrice.toFixed(2)}</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">Unitario {formatCurrency(item.unitPrice)}</span>
                 </div>
                 <Link href={`/lojas/${cart.store.slug}/produtos/${item.productSlug}`} className="inline-flex text-sm font-semibold text-[var(--accent-strong)] transition hover:text-[var(--accent)]">
                   Voltar para o produto
@@ -54,20 +65,20 @@ export function PublicCartSummary({ cart }: PublicCartSummaryProps) {
           <div className="mt-5 space-y-4 rounded-[1.75rem] border border-[var(--border)] bg-white p-5">
             <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
               <span>Subtotal</span>
-              <strong className="text-slate-900">R$ {cart.subtotal.toFixed(2)}</strong>
+              <strong className="text-slate-900">{formatCurrency(cart.subtotal)}</strong>
             </div>
             <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
               <span>Entrega</span>
-              <strong className="text-slate-900">R$ {cart.shippingFee.toFixed(2)}</strong>
+              <strong className="text-slate-900">{formatCurrency(cart.shippingFee)}</strong>
             </div>
             <div className="h-px bg-[var(--border)]" />
             <div className="flex items-center justify-between gap-3 text-base font-semibold text-slate-900">
               <span>Total</span>
-              <strong>R$ {cart.total.toFixed(2)}</strong>
+              <strong>{formatCurrency(cart.total)}</strong>
             </div>
           </div>
           <div className="mt-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
-            <p>Entrega escolhida: <span className="font-medium text-slate-800">{cart.deliveryType}</span></p>
+            <p>Entrega escolhida: <span className="font-medium text-slate-800">{deliveryLabel[cart.deliveryType]}</span></p>
             <p>Pagamento inicial: <span className="font-medium text-slate-800">{cart.paymentLabel}</span></p>
             <p>Contato da loja: <span className="font-medium text-slate-800">{cart.store.whatsapp}</span></p>
           </div>

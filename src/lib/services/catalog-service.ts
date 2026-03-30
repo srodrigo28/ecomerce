@@ -1,6 +1,18 @@
 import { apiConfig } from "@/lib/config";
 import { mockAdminWorkspace, mockCategories, mockProducts, mockSellerWorkspace, mockStores } from "@/lib/mock-data";
-import type { AdminWorkspace, CartPreview, Category, CheckoutPreview, OrderSuccessPreview, Product, SellerWorkspace, StoreSummary } from "@/types/catalog";
+import type {
+  AdminWorkspace,
+  CartPreview,
+  Category,
+  CheckoutPreview,
+  OrderSuccessPreview,
+  Product,
+  PublicCatalogSearchResult,
+  PublicSearchProductMatch,
+  PublicSearchStoreResult,
+  SellerWorkspace,
+  StoreSummary,
+} from "@/types/catalog";
 
 const shouldUseMocks = apiConfig.useMocks || !apiConfig.baseUrl;
 
@@ -10,6 +22,13 @@ export interface PublicStoreCatalog {
   products: Product[];
   featuredProducts: Product[];
 }
+
+const normalizeSearchValue = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
 export async function getFeaturedStores(): Promise<StoreSummary[]> {
   if (shouldUseMocks) {
@@ -55,6 +74,87 @@ export async function getPublicStoreCatalogBySlug(slug: string): Promise<PublicS
     categories,
     products,
     featuredProducts: products.filter((product) => product.featured),
+  };
+}
+
+export async function searchPublicCatalog(query: string): Promise<PublicCatalogSearchResult> {
+  const normalizedQuery = normalizeSearchValue(query);
+  const stores = await getFeaturedStores();
+
+  if (!normalizedQuery) {
+    return {
+      query: query.trim(),
+      totalStores: stores.length,
+      results: await Promise.all(
+        stores.map(async (store) => {
+          const catalog = await getPublicStoreCatalogBySlug(store.slug);
+
+          return {
+            store,
+            matchedCategories: catalog?.categories.map((category) => category.name) ?? [],
+            matchedProducts: (catalog?.products ?? []).slice(0, 3).map<PublicSearchProductMatch>((product) => ({
+              id: product.id,
+              name: product.name,
+              slug: product.slug,
+              imageUrl: product.imageUrls[0],
+              categoryName: catalog?.categories.find((category) => category.id === product.categoryId)?.name,
+              priceRetail: product.priceRetail,
+            })),
+          } satisfies PublicSearchStoreResult;
+        }),
+      ),
+    };
+  }
+
+  const results = (await Promise.all(
+    stores.map(async (store) => {
+      const catalog = await getPublicStoreCatalogBySlug(store.slug);
+
+      if (!catalog) {
+        return null;
+      }
+
+      const storeMatches = [store.name, store.city, store.state, store.slug].filter(Boolean).some((value) =>
+        normalizeSearchValue(value ?? "").includes(normalizedQuery),
+      );
+
+      const matchedCategories = catalog.categories
+        .filter((category) => normalizeSearchValue(category.name).includes(normalizedQuery))
+        .map((category) => category.name);
+
+      const matchedProducts = catalog.products
+        .filter((product) => {
+          const categoryName = catalog.categories.find((category) => category.id === product.categoryId)?.name ?? "";
+
+          return [product.name, product.description ?? "", product.slug, categoryName].some((value) =>
+            normalizeSearchValue(value).includes(normalizedQuery),
+          );
+        })
+        .map<PublicSearchProductMatch>((product) => ({
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          imageUrl: product.imageUrls[0],
+          categoryName: catalog.categories.find((category) => category.id === product.categoryId)?.name,
+          priceRetail: product.priceRetail,
+        }));
+
+      if (!storeMatches && matchedCategories.length === 0 && matchedProducts.length === 0) {
+        return null;
+      }
+
+      return {
+        store,
+        matchedCategories,
+        matchedProducts,
+      } satisfies PublicSearchStoreResult;
+    }),
+  )).filter((result): result is PublicSearchStoreResult => Boolean(result));
+
+  return {
+    query: query.trim(),
+    totalStores: results.length,
+    results,
   };
 }
 

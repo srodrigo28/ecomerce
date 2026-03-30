@@ -1,4 +1,4 @@
-# Plano de evolucao do Hierarquia
+﻿# Plano de evolucao do Hierarquia
 
 ## Visao do produto
 
@@ -1017,23 +1017,17 @@ Criterio de pronto:
 - relatorio do admin filtra por lojista, pedidos, vendas, cadastros e periodo.
 
 ## Ordem pratica de implementacao imediata
-
-Se continuarmos focando no frontend agora, eu seguiria esta ordem curta:
-
-1. home publica e navegacao;
-2. cadastro e login do lojista;
-3. categorias da loja com base padrao inicial;
-4. cadastro de produto e estrutura de estoque;
-5. pagina publica da loja;
-6. listagem e detalhe de produto;
-7. filtros e busca;
-8. carrinho;
-9. checkout e status inicial de pedido;
-10. painel da loja com pedidos, estoque e vendas;
-11. relatorios do lojista;
-12. painel admin com filtros por lojista e periodo;
-13. integracao com API.
-
+Como o frontend ja avancou bem, a ordem curta agora muda para esta:
+1. revisar UX do fluxo publico completo;
+2. criar busca publica por loja, categoria e produto;
+3. adicionar filtros visuais na vitrine e na pagina da loja;
+4. abrir tela dedicada de pedidos da loja;
+5. abrir tela dedicada de estoque e movimentacoes;
+6. refinar relatorios do lojista;
+7. refinar relatorios e comparativos do admin;
+8. consolidar componentes reutilizaveis;
+9. revisar README e contratos de interface;
+10. por ultimo criar a API em Python Flask.
 ## Ambiente de desenvolvimento
 
 Para ambiente local, podemos sim prever um acesso administrativo default, mas com uma regra importante: isso deve existir apenas como configuracao de desenvolvimento e nunca como credencial fixa exposta em producao.
@@ -1080,8 +1074,7 @@ Regra recomendada:
 - `seller-report-filter`
 
 ## Definicao de pronto para sair do frontend e ir para API
-
-So vale iniciar a fase forte de API quando estes pontos estiverem resolvidos:
+So vale iniciar a fase forte da API em Python Flask quando estes pontos estiverem resolvidos:
 
 - home e paginas publicas com proposta clara;
 - onboarding do lojista navegavel;
@@ -1103,7 +1096,7 @@ Principalmente, a loja precisa conseguir operar seu negocio com tres controles m
 
 Tambem precisamos garantir duas bases operacionais simples e obrigatorias: relatorios filtraveis e categorias isoladas por lojista com apoio de categorias padrao iniciais.
 
-Quando isso acontecer, a API deixa de ser uma aposta e vira apenas a camada que conecta algo que ja funciona como produto.
+Quando isso acontecer, a API em Flask deixa de ser uma aposta e vira apenas a camada que conecta algo que ja funciona como produto.
 
 ## Status real do frontend antes da API
 
@@ -1169,29 +1162,42 @@ Ainda precisamos:
 - estabilizar nomes, campos e estruturas que ja servirao de contrato para a API;
 - revisar README e plano sempre que uma fase importante for concluida.
 
-## Sequencia sugerida para continuar amanha
-
+## Sequencia sugerida para continuar agora
 1. revisar UX do fluxo publico completo: loja, produto, carrinho, checkout e pedido confirmado;
-2. criar busca e filtros da vitrine publica;
-3. abrir tela dedicada de pedidos da loja;
-4. abrir tela dedicada de estoque e movimentacoes;
-5. refinar relatorios do lojista;
-6. refinar relatorios e leitura do admin;
-7. consolidar componentes reutilizaveis;
-8. so depois iniciar desenho final da API.
-
-## Ponto de retomada para amanha
-
+2. criar busca publica real por nome de loja, categoria e produto;
+3. adicionar filtros visuais na vitrine publica e na pagina da loja;
+4. abrir tela dedicada de pedidos da loja;
+5. abrir tela dedicada de estoque e movimentacoes;
+6. refinar relatorios do lojista;
+7. refinar relatorios e leitura do admin;
+8. consolidar componentes reutilizaveis;
+9. revisar README e alinhar contratos de dados;
+10. so por ultimo iniciar a API em Python Flask.
+## Ponto de retomada
 Quando retomarmos, o melhor ponto de entrada e este:
-
 - revisar a jornada publica completa no frontend;
 - ajustar detalhes de UX, textos e navegacao;
 - depois partir para busca, filtros e descoberta;
 - em seguida voltar ao painel do lojista para pedidos e estoque dedicados.
-
+## Direcao da futura API
+Quando o frontend estiver confortavel, a etapa final sera construir a API em Python Flask.
+Direcao recomendada para essa fase:
+- manter o frontend Next consumindo servicos gradualmente sem quebrar os mocks;
+- criar a API Flask por modulos de dominio, com rotas separadas para lojas, categorias, produtos, pedidos, estoque e vendas;
+- comecar por leitura e escrita das entidades principais antes de autenticao mais completa;
+- preservar os contratos que ja foram validados nas telas;
+- adicionar autenticacao e autorizacao depois que os recursos centrais estiverem estaveis.
+Ordem recomendada da API Flask:
+1. estrutura base do projeto Flask;
+2. rotas de lojas e categorias;
+3. rotas de produtos;
+4. rotas de pedidos;
+5. rotas de estoque e movimentos;
+6. rotas de vendas e relatorios;
+7. autenticacao;
+8. troca gradual dos mocks por chamadas reais.
 ## Checklist final antes da API
-
-So devemos seguir para API quando estes pontos estiverem realmente confortaveis no frontend:
+So devemos seguir para a API Flask quando estes pontos estiverem realmente confortaveis no frontend:
 
 - jornada publica completa navegavel e coerente;
 - busca e filtros publicos funcionando localmente;
@@ -1201,3 +1207,4 @@ So devemos seguir para API quando estes pontos estiverem realmente confortaveis 
 - componentes principais estabilizados;
 - campos das entidades sem grande duvida de modelagem;
 - plano e README refletindo o estado real do produto.
+

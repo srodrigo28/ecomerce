@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PublicFlowProgress } from "@/components/public-flow-progress";
 import { getFeaturedStores, getPublicStoreCatalogBySlug } from "@/lib/services/catalog-service";
 
 export async function generateStaticParams() {
@@ -10,10 +11,13 @@ export async function generateStaticParams() {
 
 export default async function LojaPublicaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ category?: string }>;
 }) {
   const { slug } = await params;
+  const { category = "all" } = await searchParams;
   const catalog = await getPublicStoreCatalogBySlug(slug);
 
   if (!catalog) {
@@ -21,10 +25,17 @@ export default async function LojaPublicaPage({
   }
 
   const { store, categories, products, featuredProducts } = catalog;
-  const activeCount = products.filter((product) => product.stock > 0).length;
+  const leadProduct = (featuredProducts[0] ?? products[0])?.slug;
+  const selectedCategory = category === "all" ? undefined : categories.find((item) => item.slug === category);
+  const filteredProducts = category === "all"
+    ? (featuredProducts.length > 0 ? featuredProducts : products)
+    : products.filter((product) => product.categoryId === selectedCategory?.id);
+  const activeCount = filteredProducts.filter((product) => product.stock > 0).length;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+      <PublicFlowProgress currentStep="loja" storeSlug={store.slug} productSlug={leadProduct} />
+
       <section className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-slate-900 text-white shadow-[var(--shadow)]">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
           <div className="space-y-5 p-6 lg:p-8">
@@ -53,50 +64,81 @@ export default async function LojaPublicaPage({
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.8fr)]">
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)]">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Catalogo da loja</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Produtos em destaque</h2>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+                {selectedCategory ? `Produtos em ${selectedCategory.name}` : "Produtos em destaque"}
+              </h2>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
-              <span>{products.length} produtos ativos</span>
+              <span>{filteredProducts.length} produto(s) visivel(is)</span>
               <Link href={`/lojas/${store.slug}/carrinho`} className="font-semibold text-[var(--accent-strong)] transition hover:text-[var(--accent)]">
                 Ver resumo do carrinho
               </Link>
             </div>
           </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {(featuredProducts.length > 0 ? featuredProducts : products).map((product) => (
-              <article key={product.id} className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white">
-                <div className="aspect-[4/5] bg-slate-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={product.imageUrls[0]} alt={product.name} className="h-full w-full object-cover" />
-                </div>
-                <div className="space-y-3 p-4">
-                  <h3 className="text-lg font-semibold text-slate-900">{product.name}</h3>
-                  <p className="text-sm leading-6 text-[var(--muted)]">{product.description}</p>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">Estoque {product.stock}</span>
-                    <strong className="text-slate-900">R$ {product.priceRetail.toFixed(2)}</strong>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <Link
-                      href={`/lojas/${store.slug}/produtos/${product.slug}`}
-                      className="inline-flex rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-                    >
-                      Ver produto
-                    </Link>
-                    <Link
-                      href={`/lojas/${store.slug}/carrinho?product=${product.slug}&quantity=1`}
-                      className="inline-flex rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]"
-                    >
-                      Ir para carrinho
-                    </Link>
-                  </div>
-                </div>
-              </article>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link
+              href={`/lojas/${store.slug}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${category === "all" ? "bg-slate-900 text-white" : "border border-[var(--border)] bg-white text-slate-700 hover:border-[var(--accent)]"}`}
+            >
+              Todas
+            </Link>
+            {categories.map((item) => (
+              <Link
+                key={item.id}
+                href={`/lojas/${store.slug}?category=${item.slug}`}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${category === item.slug ? "bg-slate-900 text-white" : "border border-[var(--border)] bg-white text-slate-700 hover:border-[var(--accent)]"}`}
+              >
+                {item.name}
+              </Link>
             ))}
           </div>
+
+          {filteredProducts.length > 0 ? (
+            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredProducts.map((product) => (
+                <article key={product.id} className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white">
+                  <div className="aspect-[4/5] bg-slate-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={product.imageUrls[0]} alt={product.name} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="space-y-3 p-4">
+                    <h3 className="text-lg font-semibold text-slate-900">{product.name}</h3>
+                    <p className="text-sm leading-6 text-[var(--muted)]">{product.description}</p>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">Estoque {product.stock}</span>
+                      <strong className="text-slate-900">R$ {product.priceRetail.toFixed(2)}</strong>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <Link
+                        href={`/lojas/${store.slug}/produtos/${product.slug}`}
+                        className="inline-flex rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                      >
+                        Ver produto
+                      </Link>
+                      <Link
+                        href={`/lojas/${store.slug}/carrinho?product=${product.slug}&quantity=1`}
+                        className="inline-flex rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]"
+                      >
+                        Ir para carrinho
+                      </Link>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6 rounded-[1.75rem] border border-dashed border-[var(--border)] bg-white px-6 py-10 text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Nenhum produto</p>
+              <h3 className="mt-3 text-xl font-semibold text-slate-900">Nao encontramos produtos para essa categoria.</h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+                Troque o filtro para ver todas as categorias da loja ou explorar outra parte da vitrine.
+              </p>
+            </div>
+          )}
         </article>
 
         <aside className="space-y-6">
@@ -117,10 +159,10 @@ export default async function LojaPublicaPage({
           <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)]">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Categorias</p>
             <div className="mt-4 flex flex-wrap gap-3">
-              {categories.map((category) => (
-                <span key={category.id} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-slate-700">
-                  {category.name}
-                </span>
+              {categories.map((item) => (
+                <Link key={item.id} href={`/lojas/${store.slug}?category=${item.slug}`} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]">
+                  {item.name}
+                </Link>
               ))}
             </div>
           </article>

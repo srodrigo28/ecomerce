@@ -245,6 +245,27 @@ export interface ProductFormDraft {
   images: ProductImage[];
 }
 
+export interface PublicSearchProductMatch {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string;
+  categoryName?: string;
+  priceRetail: number;
+}
+
+export interface PublicSearchStoreResult {
+  store: StoreSummary;
+  matchedCategories: string[];
+  matchedProducts: PublicSearchProductMatch[];
+}
+
+export interface PublicCatalogSearchResult {
+  query: string;
+  totalStores: number;
+  results: PublicSearchStoreResult[];
+}
+
 export interface ApiListResponse<T> {
   data: T[];
   total: number;

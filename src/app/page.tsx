@@ -138,6 +138,28 @@ export default async function Home() {
               lojas parceiras e entrada para a vitrine. Mantemos os mocks e a estrutura atual para validar o produto antes da API.
             </p>
           </div>
+          <form action="/lojas-parceiras" className="rounded-[1.75rem] border border-[var(--border)] bg-white p-4 shadow-sm">
+            <label className="block space-y-3">
+              <span className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Busca publica</span>
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                <input
+                  type="search"
+                  name="q"
+                  placeholder="Buscar loja, categoria ou produto"
+                  className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[var(--accent)]"
+                />
+                <button
+                  type="submit"
+                  className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+                >
+                  Buscar na vitrine
+                </button>
+              </div>
+            </label>
+            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+              A busca publica ja encontra lojas, categorias e produtos mockados para validar descoberta antes da API.
+            </p>
+          </form>
           <div className="grid gap-4 lg:grid-cols-3">
             {phases.map((phase) => (
               <article key={phase.title} className="rounded-3xl border border-[var(--border)] bg-[var(--surface-strong)] p-5">
@@ -361,4 +383,3 @@ export default async function Home() {
     </main>
   );
 }
-

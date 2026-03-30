@@ -6,6 +6,14 @@ interface PublicCheckoutSummaryProps {
   checkout: CheckoutPreview;
 }
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
+const deliveryLabel = {
+  entrega: "Entrega",
+  retirada: "Retirada",
+};
+
 export function PublicCheckoutSummary({ checkout }: PublicCheckoutSummaryProps) {
   const { cart, customer, address } = checkout;
   const firstItem = cart.items[0];
@@ -15,6 +23,9 @@ export function PublicCheckoutSummary({ checkout }: PublicCheckoutSummaryProps) 
       <article className="space-y-6">
         <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)]">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Dados do cliente</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+            O checkout continua visual, mas ja organiza os campos que a API vai precisar receber depois.
+          </p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <label className="block space-y-2 md:col-span-2">
               <span className="text-sm font-medium text-slate-800">Nome completo</span>
@@ -56,7 +67,7 @@ export function PublicCheckoutSummary({ checkout }: PublicCheckoutSummaryProps) 
             </label>
           </div>
           <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-600">
-            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">Entrega: {cart.deliveryType}</span>
+            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">Entrega: {deliveryLabel[cart.deliveryType]}</span>
             <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">Pagamento: {cart.paymentLabel}</span>
           </div>
         </div>
@@ -72,16 +83,16 @@ export function PublicCheckoutSummary({ checkout }: PublicCheckoutSummaryProps) 
             </div>
             <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
               <span>Subtotal</span>
-              <strong className="text-slate-900">R$ {cart.subtotal.toFixed(2)}</strong>
+              <strong className="text-slate-900">{formatCurrency(cart.subtotal)}</strong>
             </div>
             <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
               <span>Entrega</span>
-              <strong className="text-slate-900">R$ {cart.shippingFee.toFixed(2)}</strong>
+              <strong className="text-slate-900">{formatCurrency(cart.shippingFee)}</strong>
             </div>
             <div className="h-px bg-[var(--border)]" />
             <div className="flex items-center justify-between gap-3 text-base font-semibold text-slate-900">
               <span>Total</span>
-              <strong>R$ {cart.total.toFixed(2)}</strong>
+              <strong>{formatCurrency(cart.total)}</strong>
             </div>
           </div>
           <div className="mt-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">

@@ -6,6 +6,14 @@ interface PublicOrderSuccessProps {
   preview: OrderSuccessPreview;
 }
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
+const deliveryLabel = {
+  entrega: "Entrega",
+  retirada: "Retirada",
+};
+
 export function PublicOrderSuccess({ preview }: PublicOrderSuccessProps) {
   const { checkout, etaLabel, supportLabel, nextStepLabel } = preview;
 
@@ -26,11 +34,11 @@ export function PublicOrderSuccess({ preview }: PublicOrderSuccessProps) {
           </div>
           <div className="rounded-[1.5rem] border border-emerald-200 bg-white p-4">
             <p className="text-sm text-slate-500">Total</p>
-            <strong className="mt-2 block text-xl text-slate-900">R$ {checkout.cart.total.toFixed(2)}</strong>
+            <strong className="mt-2 block text-xl text-slate-900">{formatCurrency(checkout.cart.total)}</strong>
           </div>
           <div className="rounded-[1.5rem] border border-emerald-200 bg-white p-4">
             <p className="text-sm text-slate-500">Entrega</p>
-            <strong className="mt-2 block text-xl capitalize text-slate-900">{checkout.cart.deliveryType}</strong>
+            <strong className="mt-2 block text-xl text-slate-900">{deliveryLabel[checkout.cart.deliveryType]}</strong>
           </div>
         </div>
       </article>
