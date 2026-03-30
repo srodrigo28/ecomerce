@@ -1173,12 +1173,153 @@ Ainda precisamos:
 8. consolidar componentes reutilizaveis;
 9. revisar README e alinhar contratos de dados;
 10. so por ultimo iniciar a API em Python Flask.
+## Nova prioridade comercial da vitrine da loja
+
+Toda loja precisa ter uma vitrine publica forte, pronta para compartilhamento e conversao, com dois objetivos comerciais claros:
+
+- apresentar a identidade da loja com seus produtos e categorias de forma bonita e confiavel;
+- gerar links diretos que o lojista possa compartilhar por categoria ou para a loja completa.
+
+Essa frente passa a ser prioridade alta antes da API, porque influencia descoberta, conversao, operacao via WhatsApp e o proprio desenho dos pedidos.
+
+### Requisitos obrigatorios da vitrine da loja
+
+Cada loja deve ter:
+
+- link publico principal da loja, por exemplo `/lojas/nome-da-loja`;
+- links publicos por categoria, por exemplo `/lojas/nome-da-loja?categoria=calcas-masculinas`;
+- pagina com apresentacao visual da loja no formato comercial aprovado;
+- secao organizada por categorias reais da loja;
+- acao de compartilhamento com foco em WhatsApp;
+- CTA claro para compra e para falar com a loja;
+- endereco completo da loja visivel quando relevante para retirada ou visita;
+- chave Pix ja associada a loja para instrucao de pagamento;
+- fluxo que registre pedido mesmo quando a conversa final acontece no WhatsApp.
+
+### Estrategia de links publicos por categoria
+
+A plataforma precisa permitir que o lojista compartilhe links especificos por categoria.
+
+Exemplos esperados:
+
+- `/lojas/aurora-atelier`;
+- `/lojas/aurora-atelier?categoria=calcas-masculinas`;
+- `/lojas/aurora-atelier?categoria=calcas-femininas`;
+- `/lojas/aurora-atelier?categoria=blusas`;
+- `/lojas/aurora-atelier?categoria=bermudas`;
+- `/lojas/aurora-atelier?categoria=shorts`.
+
+Regras importantes:
+
+- a categoria precisa ter slug amigavel para URL;
+- o link por categoria deve abrir a vitrine da mesma loja ja filtrada;
+- o link principal da loja deve continuar mostrando a vitrine completa;
+- a categoria deve continuar isolada por lojista;
+- a loja precisa conseguir copiar e compartilhar esses links com facilidade.
+
+### Compartilhamento comercial
+
+A vitrine da loja precisa incluir acoes de compartilhamento pensadas para operacao real.
+
+Entregas obrigatorias:
+
+- botao para compartilhar a loja completa;
+- botao para compartilhar categoria atual;
+- botao para compartilhar produto quando estiver no detalhe;
+- acao orientada a WhatsApp com mensagem pronta;
+- uso do WhatsApp da loja cadastrado previamente como referencia comercial da conversa.
+
+### Fluxo de compra com apoio de WhatsApp e Pix
+
+No fluxo comercial da loja, comprar nao deve significar apenas navegar para checkout.
+
+O fluxo esperado passa a considerar:
+
+- ao clicar em comprar, abrir um modal mais comercial e direto;
+- o modal deve mostrar a loja selecionada;
+- o modal deve mostrar o endereco completo da loja;
+- o modal deve permitir confirmar retirada ou entrega quando aplicavel;
+- ao seguir, gerar mensagem para o WhatsApp da loja com resumo do pedido;
+- incluir chave Pix da loja na mensagem ou na instrucao visual do pedido;
+- registrar os dados do pedido localmente mesmo antes da API real;
+- manter a estrutura pronta para depois persistir no backend Flask.
+
+### Estrutura minima de pedido para esse fluxo
+
+Mesmo no frontend-first, o pedido precisa salvar ao menos:
+
+- loja escolhida;
+- categoria de origem quando houver;
+- produto e quantidade;
+- cliente;
+- tipo de entrega ou retirada;
+- endereco da loja exibido ao cliente;
+- chave Pix apresentada;
+- status inicial do pedido;
+- mensagem base enviada ao WhatsApp.
+
+### Dependencia visual de referencia
+
+A pasta `preview-loja` passa a ser referencia obrigatoria para modelar a vitrine final da loja.
+
+Regra de implementacao:
+
+- a vitrine publica da loja deve ser montada com fidelidade ao material dessa pasta;
+- antes de fechar o layout final, precisamos conferir todos os arquivos de referencia presentes nela;
+- sem essa pasta no workspace, a implementacao visual final fica apenas parcial.
+
+### Nova sequencia recomendada antes da API
+
+1. receber e analisar a pasta `preview-loja`;
+2. redesenhar a vitrine publica da loja com fidelidade ao modelo aprovado;
+3. estruturar links publicos por categoria e link geral da loja;
+4. criar acoes de compartilhamento da loja, categoria e produto;
+5. criar modal comercial de compra com endereco, WhatsApp e Pix;
+6. registrar pedido localmente no frontend;
+7. so depois seguir com a integracao da API Flask.
+
+## Status atualizado do frontend
+
+### O que ja concluimos nesta etapa
+
+- jornada publica completa com loja, produto, carrinho, checkout e pedido confirmado;
+- busca publica por nome de loja, categoria e produto;
+- filtros visuais na vitrine publica e na pagina da loja;
+- modulo dedicado de pedidos do lojista;
+- modulo dedicado de estoque e movimentacoes;
+- modulo dedicado de relatorios do lojista;
+- modulo dedicado de relatorios admin;
+- cadastro da loja em formato step by step com mascaras e consulta de CEP;
+- cadastro de produto em formato step by step com imagens, preview e escolha de imagem principal;
+- sistema de temas com `light`, `dark`, `areia` e `grafite`;
+- revisao de contraste e padronizacao visual para o modo dark;
+- criacao de componentes reutilizaveis iniciais como `ui-button`, `ui-badge` e `ui-card`;
+- vitrine da loja em linguagem de marketplace com foco comercial;
+- links compartilhaveis da loja, categoria e produto via WhatsApp;
+- modal de compra na pagina de produto com endereco da loja, WhatsApp, Pix e salvamento local do pedido.
+
+### O que ainda falta antes da API
+
+- iniciar a estrutura real da API em Python Flask em `api-lojas`;
+- conectar primeiro lojas, categorias e produtos;
+- depois integrar pedidos, estoque, vendas e relatorios;
+- manter a troca de mocks por servicos reais de forma gradual;
+- seguir revisando README e plano conforme a transicao para backend.
+
+## Nova sequencia sugerida para continuar agora
+
+1. estruturar a base da API Flask dentro de `api-lojas`;
+2. criar os modulos iniciais de lojas e categorias;
+3. seguir para produtos;
+4. depois ligar pedidos, estoque e vendas;
+5. por fim conectar autenticacao e troca gradual dos mocks.
+
 ## Ponto de retomada
 Quando retomarmos, o melhor ponto de entrada e este:
-- revisar a jornada publica completa no frontend;
-- ajustar detalhes de UX, textos e navegacao;
-- depois partir para busca, filtros e descoberta;
-- em seguida voltar ao painel do lojista para pedidos e estoque dedicados.
+- iniciar a estrutura real da API Flask em `api-lojas`;
+- criar primeiro lojas, categorias e produtos;
+- depois ligar pedidos, estoque, vendas e relatorios;
+- substituir mocks gradualmente sem quebrar o frontend atual.
 ## Direcao da futura API
 Quando o frontend estiver confortavel, a etapa final sera construir a API em Python Flask.
 Direcao recomendada para essa fase:

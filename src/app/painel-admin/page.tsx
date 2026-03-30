@@ -12,7 +12,7 @@ export default async function AdminDashboardPage() {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Painel admin</p>
-            <h1 className="mt-3 max-w-4xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl xl:text-5xl">
+            <h1 className="mt-3 max-w-4xl text-3xl font-semibold tracking-tight theme-heading sm:text-4xl xl:text-5xl">
               Visao macro da plataforma com filtros por lojista e periodo
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--muted)] sm:text-base sm:leading-8">
@@ -23,10 +23,10 @@ export default async function AdminDashboardPage() {
             <Link href="/painel-admin/relatorios" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
               Abrir relatorios admin
             </Link>
-            <Link href="/painel-lojista" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+            <Link href="/painel-lojista" className="rounded-full theme-border-button px-5 py-3 text-sm font-semibold transition">
               Ver painel do lojista
             </Link>
-            <Link href="/" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+            <Link href="/" className="rounded-full theme-border-button px-5 py-3 text-sm font-semibold transition">
               Voltar para inicio
             </Link>
           </div>

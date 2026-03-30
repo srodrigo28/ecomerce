@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import type { OrderStatus, SellerWorkspace } from "@/types/catalog";
+import { FilterSelect } from "@/components/filter-select";
+import { SelectField } from "@/components/ui-form";
+import { loadLocalOrders } from "@/lib/local-order-storage";
+import type { LocalOrderDraft, OrderStatus, SellerWorkspace } from "@/types/catalog";
 
 const orderStatusOptions: OrderStatus[] = [
   "aguardando_pagamento",
@@ -24,34 +27,47 @@ const orderStatusLabels: Record<OrderStatus, string> = {
 };
 
 const paymentStatusClass = {
-  pago: "bg-emerald-100 text-emerald-700",
-  pendente: "bg-amber-100 text-amber-700",
-  falhou: "bg-rose-100 text-rose-700",
+  pago: "theme-badge-success",
+  pendente: "theme-badge-warning",
+  falhou: "theme-badge-danger",
 };
 
 const orderStatusClass: Record<OrderStatus, string> = {
-  rascunho: "bg-slate-100 text-slate-700",
-  aguardando_pagamento: "bg-amber-100 text-amber-700",
-  pago: "bg-emerald-100 text-emerald-700",
-  em_preparo: "bg-sky-100 text-sky-700",
-  enviado: "bg-indigo-100 text-indigo-700",
-  concluido: "bg-emerald-100 text-emerald-700",
-  cancelado: "bg-rose-100 text-rose-700",
+  rascunho: "theme-badge-neutral",
+  aguardando_pagamento: "theme-badge-warning",
+  pago: "theme-badge-success",
+  em_preparo: "theme-badge-info",
+  enviado: "theme-badge-indigo",
+  concluido: "theme-badge-success",
+  cancelado: "theme-badge-danger",
 };
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
 const deliveryLabel = {
   entrega: "Entrega",
   retirada: "Retirada",
 };
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
 export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace }) {
   const [orders, setOrders] = useState(workspace.orders);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [feedback, setFeedback] = useState("Modulo de pedidos pronto para validar fluxo operacional da loja antes da API.");
+  const [localOrders, setLocalOrders] = useState<LocalOrderDraft[]>([]);
+
+  useEffect(() => {
+    const syncLocalOrders = () => {
+      const browserOrders = loadLocalOrders().filter((order) => order.storeId === workspace.store.id);
+      setLocalOrders(browserOrders);
+    };
+
+    syncLocalOrders();
+    window.addEventListener("storage", syncLocalOrders);
+
+    return () => window.removeEventListener("storage", syncLocalOrders);
+  }, [workspace.store.id]);
 
   const filteredOrders = useMemo(() => {
     const byStatus = selectedStatus === "all" ? orders : orders.filter((order) => order.status === selectedStatus);
@@ -75,29 +91,43 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
     };
   }, [filteredOrders]);
 
+  const localSummary = useMemo(() => {
+    const total = localOrders.reduce((sum, order) => sum + order.total, 0);
+    const deliveryOrders = localOrders.filter((order) => order.deliveryType === "entrega").length;
+
+    return {
+      count: localOrders.length,
+      total,
+      deliveryOrders,
+    };
+  }, [localOrders]);
+
   const handleOrderStatusChange = (orderId: string, nextStatus: OrderStatus) => {
     setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, status: nextStatus } : order)));
     setFeedback(`Pedido atualizado localmente para ${orderStatusLabels[nextStatus]}.`);
   };
 
+  const statusOptions = [{ value: "all", label: "Todos os status" }, ...orderStatusOptions.map((status) => ({ value: status, label: orderStatusLabels[status] }))];
+  const categoryOptions = [{ value: "all", label: "Todas as categorias" }, ...workspace.categories.map((category) => ({ value: category.id, label: category.name }))];
+
   return (
     <div className="space-y-8">
       <section className="grid gap-4 md:grid-cols-4">
-        <article className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+        <article className="rounded-[1.75rem] theme-surface-card p-5 shadow-[var(--shadow)]">
           <p className="text-sm text-[var(--muted)]">Pedidos visiveis</p>
-          <strong className="mt-2 block text-3xl text-slate-900">{filteredOrders.length}</strong>
+          <strong className="mt-2 block text-3xl theme-heading">{filteredOrders.length}</strong>
         </article>
-        <article className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+        <article className="rounded-[1.75rem] theme-surface-card p-5 shadow-[var(--shadow)]">
           <p className="text-sm text-[var(--muted)]">Pagamentos pendentes</p>
-          <strong className="mt-2 block text-3xl text-slate-900">{summary.pendingPayment}</strong>
+          <strong className="mt-2 block text-3xl theme-heading">{summary.pendingPayment}</strong>
         </article>
-        <article className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+        <article className="rounded-[1.75rem] theme-surface-card p-5 shadow-[var(--shadow)]">
           <p className="text-sm text-[var(--muted)]">Pedidos em andamento</p>
-          <strong className="mt-2 block text-3xl text-slate-900">{summary.inProgress}</strong>
+          <strong className="mt-2 block text-3xl theme-heading">{summary.inProgress}</strong>
         </article>
-        <article className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+        <article className="rounded-[1.75rem] theme-surface-card p-5 shadow-[var(--shadow)]">
           <p className="text-sm text-[var(--muted)]">Total filtrado</p>
-          <strong className="mt-2 block text-3xl text-slate-900">{formatCurrency(summary.revenue)}</strong>
+          <strong className="mt-2 block text-3xl theme-heading">{formatCurrency(summary.revenue)}</strong>
         </article>
       </section>
 
@@ -106,7 +136,7 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Filtros operacionais</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Pedidos da loja</h2>
+              <h2 className="mt-2 text-2xl font-semibold theme-heading">Pedidos da loja</h2>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 Filtre por status e categoria para enxergar o que precisa de acao mais rapida no dia a dia.
               </p>
@@ -114,39 +144,104 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
           </div>
 
           <div className="mt-6 grid gap-3 md:grid-cols-2">
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Status do pedido</span>
-              <select value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]">
-                <option value="all">Todos os status</option>
-                {orderStatusOptions.map((status) => (
-                  <option key={status} value={status}>{orderStatusLabels[status]}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Categoria</span>
-              <select value={selectedCategoryId} onChange={(event) => setSelectedCategoryId(event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]">
-                <option value="all">Todas as categorias</option>
-                {workspace.categories.map((category) => (
-                  <option key={category.id} value={category.id}>{category.name}</option>
-                ))}
-              </select>
-            </label>
+            <FilterSelect label="Status do pedido" value={selectedStatus} onChange={setSelectedStatus} options={statusOptions} />
+            <FilterSelect label="Categoria" value={selectedCategoryId} onChange={setSelectedCategoryId} options={categoryOptions} />
           </div>
         </article>
 
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Feedback do modulo</p>
-          <div className="mt-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
+          <div className="mt-4 rounded-[1.5rem] theme-surface-card p-4 text-sm leading-6 text-[var(--muted)]">
             {feedback}
           </div>
-          <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
-            <p>Loja: <span className="font-medium text-slate-800">{workspace.store.name}</span></p>
-            <p>WhatsApp: <span className="font-medium text-slate-800">{workspace.store.whatsapp}</span></p>
-            <p>Pedidos totais mockados: <span className="font-medium text-slate-800">{workspace.orders.length}</span></p>
+          <div className="mt-6 rounded-[1.5rem] theme-surface-card p-4 text-sm leading-6 text-[var(--muted)]">
+            <p>Loja: <span className="font-medium theme-text">{workspace.store.name}</span></p>
+            <p>WhatsApp: <span className="font-medium theme-text">{workspace.store.whatsapp}</span></p>
+            <p>Pedidos mockados: <span className="font-medium theme-text">{workspace.orders.length}</span></p>
+            <p>Pedidos da vitrine: <span className="font-medium theme-text">{localSummary.count}</span></p>
           </div>
         </article>
+      </section>
+
+      <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Pedidos da vitrine</p>
+            <h2 className="mt-2 text-2xl font-semibold theme-heading">Leads convertidos pelo storefront</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--muted)]">
+              Aqui aparecem os pedidos locais salvos quando o cliente clica em comprar na vitrine e abre a conversa no WhatsApp da loja.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[1.25rem] theme-surface-card px-4 py-4 text-sm">
+              <p className="text-[var(--muted)]">Pedidos locais</p>
+              <strong className="mt-2 block text-2xl theme-heading">{localSummary.count}</strong>
+            </div>
+            <div className="rounded-[1.25rem] theme-surface-card px-4 py-4 text-sm">
+              <p className="text-[var(--muted)]">Com entrega</p>
+              <strong className="mt-2 block text-2xl theme-heading">{localSummary.deliveryOrders}</strong>
+            </div>
+            <div className="rounded-[1.25rem] theme-surface-card px-4 py-4 text-sm">
+              <p className="text-[var(--muted)]">Valor potencial</p>
+              <strong className="mt-2 block text-2xl theme-heading">{formatCurrency(localSummary.total)}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          {localOrders.map((order) => (
+            <article key={order.id} className="rounded-[1.75rem] border border-[var(--border)] theme-surface-card p-4 sm:p-5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-xl theme-heading">{order.code}</strong>
+                    <span className="rounded-full px-3 py-1 text-xs font-semibold theme-badge-info">Pedido da vitrine</span>
+                    <span className="rounded-full px-3 py-1 text-xs font-semibold theme-badge-neutral">{deliveryLabel[order.deliveryType]}</span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                    Cliente {order.customerName} · {new Date(order.createdAt).toLocaleDateString("pt-BR")} · {order.customerWhatsapp}
+                  </p>
+                </div>
+                <div className="text-left xl:text-right">
+                  <strong className="text-2xl theme-heading">{formatCurrency(order.total)}</strong>
+                  <p className="mt-2 text-sm text-[var(--muted)]">Status inicial: rascunho local</p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+                  <p className="text-sm font-semibold theme-heading">Resumo do pedido</p>
+                  <div className="mt-3 grid gap-2 text-sm text-[var(--muted)]">
+                    {order.items.map((item) => (
+                      <div key={`${order.id}-${item.productId}`} className="rounded-2xl theme-surface-soft px-3 py-3">
+                        {item.productName} · {item.quantity} x {formatCurrency(item.unitPrice)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+                  <p className="text-sm font-semibold theme-heading">Dados para atendimento</p>
+                  <div className="mt-3 grid gap-2 text-sm text-[var(--muted)]">
+                    <div className="rounded-2xl theme-surface-soft px-3 py-3">Endereco de apoio: <span className="font-medium theme-text">{order.addressLabel}</span></div>
+                    <div className="rounded-2xl theme-surface-soft px-3 py-3">Pix da loja: <span className="font-medium theme-text">{order.pixKey ?? "A confirmar"}</span></div>
+                    <div className="rounded-2xl theme-surface-soft px-3 py-3">Observacoes: <span className="font-medium theme-text">{order.notes || "Sem observacoes"}</span></div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+
+          {localOrders.length === 0 ? (
+            <article className="rounded-[1.75rem] border border-dashed border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-[var(--shadow)]">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Nenhum pedido local</p>
+              <h3 className="mt-3 text-2xl font-semibold theme-heading">A vitrine ainda nao gerou pedidos salvos neste navegador.</h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+                Assim que o cliente usar o modal de compra da pagina de produto, o pedido aparecera aqui para a loja acompanhar antes da API.
+              </p>
+            </article>
+          ) : null}
+        </div>
       </section>
 
       <section className="space-y-4">
@@ -155,47 +250,43 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-xl text-slate-900">{order.code}</strong>
+                  <strong className="text-xl theme-heading">{order.code}</strong>
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${orderStatusClass[order.status]}`}>{orderStatusLabels[order.status]}</span>
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${paymentStatusClass[order.paymentStatus]}`}>{order.paymentStatus}</span>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{deliveryLabel[order.deliveryType]}</span>
+                  <span className="rounded-full px-3 py-1 text-xs font-semibold theme-badge-neutral">{deliveryLabel[order.deliveryType]}</span>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
                   Cliente {order.customerName} · {new Date(order.createdAt).toLocaleDateString("pt-BR")} · {order.itemCount} item(ns)
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
-                <strong className="text-2xl text-slate-900">{formatCurrency(order.total)}</strong>
-                <select
-                  value={order.status}
-                  onChange={(event) => handleOrderStatusChange(order.id, event.target.value as OrderStatus)}
-                  className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
-                >
+                <strong className="text-2xl theme-heading">{formatCurrency(order.total)}</strong>
+                <SelectField value={order.status} onChange={(event) => handleOrderStatusChange(order.id, event.target.value as OrderStatus)}>
                   {orderStatusOptions.map((status) => (
                     <option key={status} value={status}>{orderStatusLabels[status]}</option>
                   ))}
-                </select>
+                </SelectField>
               </div>
             </div>
 
             <div className="mt-5 grid gap-3 lg:grid-cols-2">
-              <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-                <p className="text-sm font-semibold text-slate-900">Itens do pedido</p>
+              <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+                <p className="text-sm font-semibold theme-heading">Itens do pedido</p>
                 <div className="mt-3 grid gap-2 text-sm text-[var(--muted)]">
                   {order.items.map((item) => (
-                    <div key={item.id} className="rounded-2xl bg-slate-50 px-3 py-3">
+                    <div key={item.id} className="rounded-2xl theme-surface-soft px-3 py-3">
                       {item.productName} · {item.quantity} x {formatCurrency(item.unitPrice)}
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-                <p className="text-sm font-semibold text-slate-900">Leitura rapida</p>
+              <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+                <p className="text-sm font-semibold theme-heading">Leitura rapida</p>
                 <div className="mt-3 grid gap-2 text-sm text-[var(--muted)]">
-                  <div className="rounded-2xl bg-slate-50 px-3 py-3">Pagamento: <span className="font-medium text-slate-800">{order.paymentStatus}</span></div>
-                  <div className="rounded-2xl bg-slate-50 px-3 py-3">Entrega: <span className="font-medium text-slate-800">{deliveryLabel[order.deliveryType]}</span></div>
-                  <div className="rounded-2xl bg-slate-50 px-3 py-3">Cliente: <span className="font-medium text-slate-800">{order.customerName}</span></div>
+                  <div className="rounded-2xl theme-surface-soft px-3 py-3">Pagamento: <span className="font-medium theme-text">{order.paymentStatus}</span></div>
+                  <div className="rounded-2xl theme-surface-soft px-3 py-3">Entrega: <span className="font-medium theme-text">{deliveryLabel[order.deliveryType]}</span></div>
+                  <div className="rounded-2xl theme-surface-soft px-3 py-3">Cliente: <span className="font-medium theme-text">{order.customerName}</span></div>
                 </div>
               </div>
             </div>
@@ -205,7 +296,7 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
         {filteredOrders.length === 0 ? (
           <article className="rounded-[2rem] border border-dashed border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-[var(--shadow)]">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Nenhum pedido</p>
-            <h2 className="mt-3 text-2xl font-semibold text-slate-900">Nao ha pedidos para esse recorte agora.</h2>
+            <h2 className="mt-3 text-2xl font-semibold theme-heading">Nao ha pedidos para esse recorte agora.</h2>
             <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
               Ajuste os filtros para voltar a enxergar os pedidos mockados da loja e validar outros cenarios operacionais.
             </p>

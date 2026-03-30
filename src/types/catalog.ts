@@ -23,6 +23,12 @@ export interface StoreSummary {
   slug: string;
   city?: string;
   state?: string;
+  district?: string;
+  street?: string;
+  number?: string;
+  zipCode?: string;
+  complement?: string;
+  deliveryLabel?: string;
   coverImageUrl?: string;
   whatsapp?: string;
   pixKey?: string;
@@ -230,6 +236,47 @@ export interface OrderSuccessPreview {
   nextStepLabel: string;
 }
 
+export interface StorePurchasePreview {
+  store: StoreSummary;
+  product: Product;
+  category?: Category;
+  suggestedQuantity: number;
+  whatsappNumber: string;
+  pixKey?: string;
+  addressLabel: string;
+  deliveryLabel: string;
+  shareUrl: string;
+}
+
+export interface LocalOrderDraftItem {
+  productId: string;
+  productName: string;
+  productSlug: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface LocalOrderDraft {
+  id: string;
+  code: string;
+  createdAt: string;
+  storeId: string;
+  storeSlug: string;
+  storeName: string;
+  storeWhatsapp?: string;
+  pixKey?: string;
+  customerName: string;
+  customerWhatsapp: string;
+  notes?: string;
+  deliveryType: CartDeliveryType;
+  addressLabel: string;
+  items: LocalOrderDraftItem[];
+  subtotal: number;
+  total: number;
+  status: "rascunho_local";
+}
+
 export interface ProductFormDraft {
   name: string;
   description: string;
@@ -240,8 +287,6 @@ export interface ProductFormDraft {
   pricePromotion: string;
   stock: string;
   minStock: string;
-  whatsapp: string;
-  pixKey: string;
   images: ProductImage[];
 }
 

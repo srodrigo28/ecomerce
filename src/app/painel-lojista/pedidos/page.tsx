@@ -12,18 +12,18 @@ export default async function SellerOrdersPage() {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Pedidos da loja</p>
-            <h1 className="mt-3 max-w-4xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl xl:text-5xl">
-              Modulo dedicado para acompanhar pedidos, pagamentos e andamento operacional
+            <h1 className="mt-3 max-w-4xl text-3xl font-semibold tracking-tight theme-heading sm:text-4xl xl:text-5xl">
+              Modulo dedicado para acompanhar pedidos operacionais e pedidos vindos da vitrine
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--muted)] sm:text-base sm:leading-8">
-              Esta tela separa o fluxo de pedidos do dashboard geral para dar mais clareza ao dia a dia da loja: filtro rapido, leitura por status e mudanca local do andamento do pedido.
+              Esta tela agora reune os pedidos mockados da operacao com os pedidos locais gerados pela vitrine comercial, dando visibilidade ao funil de compra antes da API.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/painel-lojista" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
               Voltar para painel
             </Link>
-            <Link href="/painel-lojista/produtos" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+            <Link href="/painel-lojista/produtos" className="rounded-full theme-border-button px-5 py-3 text-sm font-semibold transition">
               Ir para produtos
             </Link>
           </div>

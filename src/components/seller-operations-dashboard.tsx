@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui-badge";
+import { Button } from "@/components/ui-button";
 import type { Category, OrderStatus, ReportPeriod, SellerOrder, SellerWorkspace } from "@/types/catalog";
 
 const periodLabels: Record<ReportPeriod, string> = {
@@ -30,19 +32,19 @@ const orderStatusLabels: Record<OrderStatus, string> = {
 };
 
 const paymentStatusClass = {
-  pago: "bg-emerald-100 text-emerald-700",
-  pendente: "bg-amber-100 text-amber-700",
-  falhou: "bg-rose-100 text-rose-700",
+  pago: "theme-badge-success",
+  pendente: "theme-badge-warning",
+  falhou: "theme-badge-danger",
 };
 
 const orderStatusClass: Record<OrderStatus, string> = {
-  rascunho: "bg-slate-100 text-slate-700",
-  aguardando_pagamento: "bg-amber-100 text-amber-700",
-  pago: "bg-emerald-100 text-emerald-700",
-  em_preparo: "bg-sky-100 text-sky-700",
-  enviado: "bg-indigo-100 text-indigo-700",
-  concluido: "bg-emerald-100 text-emerald-700",
-  cancelado: "bg-rose-100 text-rose-700",
+  rascunho: "theme-badge-neutral",
+  aguardando_pagamento: "theme-badge-warning",
+  pago: "theme-badge-success",
+  em_preparo: "theme-badge-info",
+  enviado: "theme-badge-indigo",
+  concluido: "theme-badge-success",
+  cancelado: "theme-badge-danger",
 };
 
 const slugify = (value: string) =>
@@ -184,7 +186,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Operacao da loja</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Categorias do lojista</h2>
+              <h2 className="mt-2 text-2xl font-semibold theme-heading">Categorias do lojista</h2>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 Cada loja controla suas proprias categorias. As alteracoes daqui nao impactam os demais lojistas.
               </p>
@@ -199,7 +201,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
               value={newCategoryName}
               onChange={(event) => setNewCategoryName(event.target.value)}
               placeholder="Criar nova categoria da loja"
-              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 theme-text outline-none transition focus:border-[var(--accent)]"
             />
             <button
               type="button"
@@ -212,20 +214,18 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {categories.map((category) => (
-              <article key={category.id} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <article key={category.id} className="rounded-[1.5rem] theme-surface-card p-4">
                 <div className="flex items-center justify-between gap-3">
                   {editingCategoryId === category.id ? (
                     <input
                       value={editingCategoryName}
                       onChange={(event) => setEditingCategoryName(event.target.value)}
-                      className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]"
+                      className="w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
                     />
                   ) : (
-                    <strong className="text-slate-900">{category.name}</strong>
+                    <strong className="theme-heading">{category.name}</strong>
                   )}
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${category.origin === "base" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-700"}`}>
-                    {category.origin === "base" ? "Base" : "Custom"}
-                  </span>
+                  <Badge variant={category.origin === "base" ? "success" : "neutral"}>{category.origin === "base" ? "Base" : "Custom"}</Badge>
                 </div>
                 <p className="mt-2 text-xs font-mono text-[var(--muted)]">/{category.slug}</p>
                 <p className="mt-2 text-xs text-[var(--muted)]">
@@ -233,29 +233,11 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {editingCategoryId === category.id ? (
-                    <button
-                      type="button"
-                      onClick={() => handleSaveCategory(category.id)}
-                      className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
-                    >
-                      Salvar
-                    </button>
+                    <Button type="button" onClick={() => handleSaveCategory(category.id)} variant="dark" size="sm">Salvar</Button>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleStartEditCategory(category)}
-                      className="rounded-full border border-[var(--border)] px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-[var(--accent)]"
-                    >
-                      Editar
-                    </button>
+                    <Button type="button" onClick={() => handleStartEditCategory(category)} variant="secondary" size="sm">Editar</Button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleCategory(category.id)}
-                    className="rounded-full border border-[var(--border)] px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-[var(--accent)]"
-                  >
-                    {category.active ? "Desativar" : "Ativar"}
-                  </button>
+                  <Button type="button" onClick={() => handleToggleCategory(category.id)} variant="secondary" size="sm">{category.active ? "Desativar" : "Ativar"}</Button>
                 </div>
               </article>
             ))}
@@ -268,15 +250,15 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
             {feedback}
           </div>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+            <div className="rounded-[1.5rem] theme-surface-card p-4">
               <p className="text-sm text-[var(--muted)]">Vendas hoje</p>
               <strong className="mt-2 block text-2xl text-slate-900">{formatCurrency(workspace.stats.salesToday)}</strong>
             </div>
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+            <div className="rounded-[1.5rem] theme-surface-card p-4">
               <p className="text-sm text-[var(--muted)]">Pedidos pendentes</p>
               <strong className="mt-2 block text-2xl text-slate-900">{workspace.stats.pendingOrders}</strong>
             </div>
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+            <div className="rounded-[1.5rem] theme-surface-card p-4">
               <p className="text-sm text-[var(--muted)]">Estoque baixo</p>
               <strong className="mt-2 block text-2xl text-slate-900">{workspace.stats.lowStockProducts}</strong>
             </div>
@@ -289,7 +271,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Relatorios do lojista</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Vendas e pedidos filtrados</h2>
+              <h2 className="mt-2 text-2xl font-semibold theme-heading">Vendas e pedidos filtrados</h2>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 O lojista precisa filtrar por periodo e categoria para entender o desempenho da propria operacao.
               </p>
@@ -303,7 +285,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
                   key={snapshot.period}
                   type="button"
                   onClick={() => setSelectedPeriod(snapshot.period)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${selectedPeriod === snapshot.period ? "bg-slate-900 text-white" : "border border-[var(--border)] bg-white text-slate-700 hover:border-[var(--accent)]"}`}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${selectedPeriod === snapshot.period ? "theme-dark-cta" : "theme-border-button"}`}
                 >
                   {periodLabels[snapshot.period]}
                 </button>
@@ -313,7 +295,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
             <select
               value={selectedCategoryId}
               onChange={(event) => setSelectedCategoryId(event.target.value)}
-              className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
+              className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
             >
               <option value="all">Todas as categorias</option>
               {categories.filter((category) => category.active).map((category) => (
@@ -325,15 +307,15 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+            <div className="rounded-[1.5rem] theme-surface-card p-4">
               <p className="text-sm text-[var(--muted)]">Receita do periodo</p>
               <strong className="mt-2 block text-2xl text-slate-900">{formatCurrency(selectedSnapshot?.revenue ?? 0)}</strong>
             </div>
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+            <div className="rounded-[1.5rem] theme-surface-card p-4">
               <p className="text-sm text-[var(--muted)]">Pedidos do periodo</p>
               <strong className="mt-2 block text-2xl text-slate-900">{selectedSnapshot?.orders ?? 0}</strong>
             </div>
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+            <div className="rounded-[1.5rem] theme-surface-card p-4">
               <p className="text-sm text-[var(--muted)]">Ticket medio</p>
               <strong className="mt-2 block text-2xl text-slate-900">{formatCurrency(selectedSnapshot?.averageTicket ?? 0)}</strong>
             </div>
@@ -341,13 +323,13 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
 
           <div className="mt-6 grid gap-3">
             {filteredCategoriesReport.map((item) => (
-              <article key={item.categoryId} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <article key={item.categoryId} className="rounded-[1.5rem] theme-surface-card p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <strong className="text-slate-900">{item.categoryName}</strong>
+                    <strong className="theme-heading">{item.categoryName}</strong>
                     <p className="mt-1 text-sm text-[var(--muted)]">{item.orders} pedido(s) e {item.units} unidade(s) vendidas</p>
                   </div>
-                  <strong className="text-lg text-slate-900">{formatCurrency(item.revenue)}</strong>
+                  <strong className="text-lg theme-heading">{formatCurrency(item.revenue)}</strong>
                 </div>
               </article>
             ))}
@@ -358,7 +340,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Pedidos da loja</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Leitura operacional</h2>
+              <h2 className="mt-2 text-2xl font-semibold theme-heading">Leitura operacional</h2>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 Aqui validamos a visao de pedidos antes da API: status, pagamento, cliente e impacto por categoria.
               </p>
@@ -372,7 +354,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
             <button
               type="button"
               onClick={() => setSelectedOrderStatus("all")}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${selectedOrderStatus === "all" ? "bg-slate-900 text-white" : "border border-[var(--border)] bg-white text-slate-700 hover:border-[var(--accent)]"}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${selectedOrderStatus === "all" ? "theme-dark-cta" : "theme-border-button"}`}
             >
               Todos
             </button>
@@ -381,7 +363,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
                 key={status}
                 type="button"
                 onClick={() => setSelectedOrderStatus(status)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${selectedOrderStatus === status ? "bg-slate-900 text-white" : "border border-[var(--border)] bg-white text-slate-700 hover:border-[var(--accent)]"}`}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${selectedOrderStatus === status ? "theme-dark-cta" : "theme-border-button"}`}
               >
                 {orderStatusLabels[status]}
               </button>
@@ -390,21 +372,21 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
 
           <div className="mt-6 grid gap-3">
             {filteredOrders.map((order) => (
-              <article key={order.id} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <article key={order.id} className="rounded-[1.5rem] theme-surface-card p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <strong className="text-slate-900">{order.code}</strong>
+                      <strong className="theme-heading">{order.code}</strong>
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${orderStatusClass[order.status]}`}>{orderStatusLabels[order.status]}</span>
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${paymentStatusClass[order.paymentStatus]}`}>{order.paymentStatus}</span>
                     </div>
                     <p className="mt-2 text-sm text-[var(--muted)]">Cliente {order.customerName} · {new Date(order.createdAt).toLocaleDateString("pt-BR")} · {order.deliveryType}</p>
                   </div>
-                  <strong className="text-lg text-slate-900">{formatCurrency(order.total)}</strong>
+                  <strong className="text-lg theme-heading">{formatCurrency(order.total)}</strong>
                 </div>
                 <div className="mt-4 grid gap-2 text-sm text-[var(--muted)]">
                   {order.items.map((item) => (
-                    <div key={item.id} className="rounded-2xl bg-slate-50 px-3 py-3">
+                    <div key={item.id} className="rounded-2xl theme-surface-soft px-3 py-3">
                       {item.productName} · {item.quantity} x {formatCurrency(item.unitPrice)}
                     </div>
                   ))}
@@ -416,7 +398,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
                   <select
                     value={order.status}
                     onChange={(event) => handleOrderStatusChange(order.id, event.target.value as OrderStatus)}
-                    className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
+                    className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
                   >
                     {orderStatusOptions.map((status) => (
                       <option key={status} value={status}>

@@ -1,6 +1,9 @@
 import Link from "next/link";
 
 import { getFeaturedStores, getSellerWorkspace } from "@/lib/services/catalog-service";
+import { Badge } from "@/components/ui-badge";
+import { Button } from "@/components/ui-button";
+import { Card } from "@/components/ui-card";
 import { apiConfig, appConfig, endpointMap, hasServerApiToken, resolvedEndpoints } from "@/lib/config";
 
 const navLinks = [
@@ -85,7 +88,7 @@ export default async function Home() {
     <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-8 lg:px-10 lg:py-10 2xl:px-12">
       <section className="rounded-[2rem] border border-[var(--border)] bg-[rgba(255,252,247,0.86)] p-3 shadow-[var(--shadow)] backdrop-blur sm:p-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <Link href="/" className="flex items-center justify-center gap-3 rounded-[1.5rem] px-3 py-3 text-slate-900 lg:justify-start">
+          <Link href="/" className="flex items-center justify-center gap-3 rounded-[1.5rem] px-3 py-3 theme-text lg:justify-start">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
               H
             </span>
@@ -95,12 +98,12 @@ export default async function Home() {
             </div>
           </Link>
 
-          <nav className="order-3 flex flex-wrap items-center justify-center gap-2 rounded-[1.5rem] border border-[var(--border)] bg-white/80 px-3 py-2 lg:order-2 lg:mx-6 lg:flex-1">
+          <nav className="order-3 flex flex-wrap items-center justify-center gap-2 rounded-[1.5rem] theme-surface-card px-3 py-2 lg:order-2 lg:mx-6 lg:flex-1">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-[rgba(15,118,110,0.08)] hover:text-[var(--accent-strong)]"
+                className="rounded-full px-4 py-2 text-sm font-medium theme-text transition hover:bg-[var(--accent-soft)] hover:text-[var(--accent-strong)]"
               >
                 {link.label}
               </a>
@@ -110,7 +113,7 @@ export default async function Home() {
           <div className="order-2 flex flex-wrap items-center justify-center gap-3 lg:order-3 lg:justify-end">
             <Link
               href="/login"
-              className="rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+              className="rounded-full theme-border-button px-4 py-2.5 text-sm font-semibold transition hover:text-[var(--accent-strong)]"
             >
               Login
             </Link>
@@ -130,7 +133,7 @@ export default async function Home() {
             Plataforma multiloja em construcao com foco total no frontend
           </span>
           <div className="space-y-4">
-            <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl xl:text-6xl">
+            <h1 className="max-w-4xl text-3xl font-semibold tracking-tight theme-heading sm:text-5xl xl:text-6xl">
               Um menu moderno no topo, uma vitrine comercial clara e um caminho direto para lojas venderem melhor.
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
@@ -138,7 +141,7 @@ export default async function Home() {
               lojas parceiras e entrada para a vitrine. Mantemos os mocks e a estrutura atual para validar o produto antes da API.
             </p>
           </div>
-          <form action="/lojas-parceiras" className="rounded-[1.75rem] border border-[var(--border)] bg-white p-4 shadow-sm">
+          <form action="/lojas-parceiras" className="rounded-[1.75rem] theme-surface-card p-4 shadow-sm">
             <label className="block space-y-3">
               <span className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Busca publica</span>
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
@@ -146,11 +149,11 @@ export default async function Home() {
                   type="search"
                   name="q"
                   placeholder="Buscar loja, categoria ou produto"
-                  className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[var(--accent)]"
+                  className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
                 />
                 <button
                   type="submit"
-                  className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="rounded-2xl theme-dark-cta px-5 py-3 text-sm font-semibold transition"
                 >
                   Buscar na vitrine
                 </button>
@@ -162,58 +165,50 @@ export default async function Home() {
           </form>
           <div className="grid gap-4 lg:grid-cols-3">
             {phases.map((phase) => (
-              <article key={phase.title} className="rounded-3xl border border-[var(--border)] bg-[var(--surface-strong)] p-5">
-                <h2 className="text-lg font-semibold text-slate-900">{phase.title}</h2>
+              <Card key={phase.title} className="rounded-3xl p-5">
+                <h2 className="text-lg font-semibold theme-heading">{phase.title}</h2>
                 <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{phase.description}</p>
-              </article>
+              </Card>
             ))}
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/cadastro-loja" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
-              Cadastrar-se como loja
-            </Link>
-            <Link href="/login" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
-              Login do lojista
-            </Link>
-            <Link href="/lojas-parceiras" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
-              Nossas lojas parceiras
-            </Link>
+            <Button as={Link} href="/cadastro-loja">Cadastrar-se como loja</Button>
+            <Button as={Link} href="/login" variant="secondary">Login do lojista</Button>
+            <Button as={Link} href="/lojas-parceiras" variant="secondary">Nossas lojas parceiras</Button>
           </div>
         </div>
 
-        <aside className="rounded-[1.75rem] border border-[rgba(245,158,11,0.3)] bg-[rgba(255,255,255,0.92)] p-5 sm:p-6 xl:self-start">
+        <aside className="rounded-[1.75rem] theme-card p-5 sm:p-6 xl:self-start">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-600">Entrada principal</p>
           <div className="mt-5 space-y-4">
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-[rgba(255,248,235,0.9)] p-4">
               <p className="text-sm text-[var(--muted)]">Perfil mais importante agora</p>
-              <strong className="mt-2 block text-2xl text-slate-900">Lojista multimarcas</strong>
+              <strong className="mt-2 block text-2xl theme-heading">Lojista multimarcas</strong>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 Queremos que a loja entenda em segundos o que fazer: entrar, cadastrar-se e publicar catalogo.
               </p>
             </div>
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+            <div className="rounded-[1.5rem] theme-surface-card p-4">
               <p className="text-sm text-[var(--muted)]">Acesso rapido</p>
               <div className="mt-4 grid gap-3">
                 <Link href="/cadastro-loja" className="rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-700">
                   Quero cadastrar minha loja
                 </Link>
-                <Link href="/login" className="rounded-2xl border border-[var(--border)] px-4 py-3 text-center text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+                <Link href="/login" className="rounded-2xl theme-border-button px-4 py-3 text-center text-sm font-semibold transition">
                   Ja tenho acesso
                 </Link>
               </div>
             </div>
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-              <p className="text-sm font-semibold text-slate-900">Base tecnica atual</p>
+            <div className="rounded-[1.5rem] theme-surface-card p-4">
+              <p className="text-sm font-semibold theme-heading">Base tecnica atual</p>
               <div className="mt-3 space-y-3">
                 {envChecks.map((item) => (
-                  <div key={item.label} className="rounded-2xl bg-slate-50 px-3 py-3">
+                  <div key={item.label} className="rounded-2xl theme-surface-soft px-3 py-3">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-slate-700">{item.label}</span>
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                        {item.ready ? "ok" : "pendente"}
-                      </span>
+                      <span className="text-sm theme-text">{item.label}</span>
+                      <Badge variant={item.ready ? "success" : "warning"}>{item.ready ? "ok" : "pendente"}</Badge>
                     </div>
-                    <p className="mt-2 text-xs text-slate-500">{item.value}</p>
+                    <p className="mt-2 text-xs theme-muted">{item.value}</p>
                   </div>
                 ))}
               </div>
@@ -224,10 +219,10 @@ export default async function Home() {
 
       <section id="como-funciona" className="grid gap-6 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-8">
-          <h2 className="text-2xl font-semibold text-slate-900">O que ja conseguimos validar</h2>
+          <h2 className="text-2xl font-semibold theme-heading">O que ja conseguimos validar</h2>
           <div className="mt-6 grid gap-3">
             {highlights.map((highlight) => (
-              <div key={highlight} className="rounded-2xl border border-[var(--border)] bg-white px-4 py-4 text-sm leading-6 text-[var(--muted)]">
+              <div key={highlight} className="rounded-2xl theme-surface-card px-4 py-4 text-sm leading-6 text-[var(--muted)]">
                 {highlight}
               </div>
             ))}
@@ -237,7 +232,7 @@ export default async function Home() {
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Mapa de endpoints</h2>
+              <h2 className="text-2xl font-semibold theme-heading">Mapa de endpoints</h2>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 Quando a API real entrar, o frontend continua. Troca apenas a origem dos dados.
               </p>
@@ -268,8 +263,8 @@ export default async function Home() {
           <h2 className="mt-3 text-2xl font-semibold text-slate-900">O frontend deve crescer nessa ordem</h2>
           <div className="mt-6 grid gap-4">
             {commerceJourney.map((item) => (
-              <article key={item.title} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
-                <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
+              <article key={item.title} className="rounded-[1.5rem] theme-surface-card p-5">
+                <h3 className="text-lg font-semibold theme-heading">{item.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{item.description}</p>
               </article>
             ))}
@@ -304,7 +299,7 @@ export default async function Home() {
               <strong className="mt-2 block text-xl">Pedido e atendimento</strong>
             </div>
           </div>
-          <Link href="/lojas-parceiras" className="mt-8 inline-flex rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-200">
+          <Link href="/lojas-parceiras" className="mt-8 inline-flex rounded-full theme-border-button px-5 py-3 text-sm font-semibold transition">
             Ver lojas parceiras
           </Link>
         </article>
@@ -323,7 +318,7 @@ export default async function Home() {
           </div>
           <div className="mt-6 grid gap-4">
             {stores.map((store) => (
-              <article key={store.id} className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white">
+              <article key={store.id} className="overflow-hidden rounded-[1.75rem] theme-surface-card">
                 <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
                   <div className="min-h-56 bg-slate-100 lg:min-h-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -331,16 +326,16 @@ export default async function Home() {
                   </div>
                   <div className="space-y-3 p-5">
                     <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="text-xl font-semibold text-slate-900">{store.name}</h3>
+                      <h3 className="text-xl font-semibold theme-heading">{store.name}</h3>
                       <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">{store.status}</span>
                     </div>
                     <p className="text-sm leading-6 text-[var(--muted)]">
                       {store.city}, {store.state} · WhatsApp {store.whatsapp}
                     </p>
                     <p className="text-sm leading-6 text-[var(--muted)]">
-                      Chave Pix: <span className="font-medium text-slate-800">{store.pixKey}</span>
+                      Chave Pix: <span className="font-medium theme-text">{store.pixKey}</span>
                     </p>
-                    <Link href={`/lojas/${store.slug}`} className="inline-flex rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+                    <Link href={`/lojas/${store.slug}`} className="inline-flex rounded-full theme-dark-cta px-4 py-2.5 text-sm font-semibold transition">
                       Abrir vitrine da loja
                     </Link>
                   </div>
@@ -362,17 +357,17 @@ export default async function Home() {
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
             {workspace.products.map((product) => (
-              <article key={product.id} className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white">
+              <article key={product.id} className="overflow-hidden rounded-[1.75rem] theme-surface-card">
                 <div className="aspect-[4/5] bg-slate-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={product.imageUrls[0]} alt={product.name} className="h-full w-full object-cover" />
                 </div>
                 <div className="space-y-3 p-4">
-                  <h3 className="text-lg font-semibold text-slate-900">{product.name}</h3>
+                  <h3 className="text-lg font-semibold theme-heading">{product.name}</h3>
                   <p className="text-sm leading-6 text-[var(--muted)]">{product.description}</p>
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">Estoque {product.stock}</span>
-                    <strong className="text-slate-900">R$ {product.priceRetail.toFixed(2)}</strong>
+                    <span className="rounded-full theme-surface-soft px-3 py-1 font-semibold theme-text">Estoque {product.stock}</span>
+                    <strong className="theme-heading">R$ {product.priceRetail.toFixed(2)}</strong>
                   </div>
                 </div>
               </article>

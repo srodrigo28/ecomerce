@@ -80,7 +80,7 @@ export default async function SellerProductsPage() {
               <article key={category.id} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
                 <div className="flex items-center justify-between gap-3">
                   <strong className="text-slate-900">{category.name}</strong>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${category.origin === "base" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-700"}`}>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${category.origin === "base" ? "theme-badge-success" : "theme-badge-neutral"}`}>
                     {category.origin === "base" ? "Base" : "Custom"}
                   </span>
                 </div>

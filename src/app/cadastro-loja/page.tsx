@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { StoreSignupForm } from "@/components/store-signup-form";
+
 const onboardingSteps = [
   "Dados comerciais da loja",
   "Contato principal e canais de venda",
@@ -20,10 +22,10 @@ export default function CadastroLojaPage() {
             </div>
           </Link>
           <div className="flex flex-wrap gap-3">
-            <Link href="/login" className="rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+            <Link href="/login" className="rounded-full theme-border-button px-4 py-2.5 text-sm font-semibold transition">
               Ja tenho acesso
             </Link>
-            <Link href="/lojas-parceiras" className="rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+            <Link href="/lojas-parceiras" className="rounded-full theme-border-button px-4 py-2.5 text-sm font-semibold transition">
               Ver lojas parceiras
             </Link>
           </div>
@@ -42,7 +44,7 @@ export default function CadastroLojaPage() {
           <div className="mt-8 grid gap-3">
             {onboardingSteps.map((step, index) => (
               <div key={step} className="rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-sm text-slate-100">
-                <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold">
+                <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white">
                   0{index + 1}
                 </span>
                 {step}
@@ -51,59 +53,7 @@ export default function CadastroLojaPage() {
           </div>
         </article>
 
-        <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)] lg:p-8">
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block space-y-2 md:col-span-2">
-              <span className="text-sm font-medium text-slate-800">Nome da loja</span>
-              <input type="text" placeholder="Ex.: Aurora Atelier" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Responsavel</span>
-              <input type="text" placeholder="Nome do responsavel" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">CNPJ</span>
-              <input type="text" placeholder="00.000.000/0000-00" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">E-mail comercial</span>
-              <input type="email" placeholder="contato@minhaloja.com" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">WhatsApp</span>
-              <input type="text" placeholder="(11) 99999-0000" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Chave Pix</span>
-              <input type="text" placeholder="pix@minhaloja.com" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Cidade</span>
-              <input type="text" placeholder="Sua cidade" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Estado</span>
-              <input type="text" placeholder="UF" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-            </label>
-            <label className="block space-y-2 md:col-span-2">
-              <span className="text-sm font-medium text-slate-800">Endereco</span>
-              <input type="text" placeholder="Rua, numero e complemento" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-            </label>
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button type="button" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
-              Continuar cadastro
-            </button>
-            <Link href="/painel-lojista/produtos" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
-              Ver formulario de produtos
-            </Link>
-          </div>
-
-          <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
-            Este cadastro ainda e frontend-first. A proxima etapa sera conectar validacoes reais e persistencia, mas somente depois de fechar bem a experiencia.
-          </div>
-        </article>
+        <StoreSignupForm />
       </section>
     </main>
   );

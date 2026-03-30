@@ -77,21 +77,21 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
   return (
     <div className="space-y-8">
       <section className="grid gap-4 md:grid-cols-4">
-        <article className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+        <article className="rounded-[1.75rem] theme-surface-card p-5 shadow-[var(--shadow)]">
           <p className="text-sm text-[var(--muted)]">Receita do recorte</p>
-          <strong className="mt-2 block text-3xl text-slate-900">{formatCurrency(selectedSnapshot?.revenue ?? 0)}</strong>
+          <strong className="mt-2 block text-3xl theme-heading">{formatCurrency(selectedSnapshot?.revenue ?? 0)}</strong>
         </article>
-        <article className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+        <article className="rounded-[1.75rem] theme-surface-card p-5 shadow-[var(--shadow)]">
           <p className="text-sm text-[var(--muted)]">Pedidos do recorte</p>
-          <strong className="mt-2 block text-3xl text-slate-900">{selectedSnapshot?.orders ?? 0}</strong>
+          <strong className="mt-2 block text-3xl theme-heading">{selectedSnapshot?.orders ?? 0}</strong>
         </article>
-        <article className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+        <article className="rounded-[1.75rem] theme-surface-card p-5 shadow-[var(--shadow)]">
           <p className="text-sm text-[var(--muted)]">Ticket medio</p>
-          <strong className="mt-2 block text-3xl text-slate-900">{formatCurrency(selectedSnapshot?.averageTicket ?? 0)}</strong>
+          <strong className="mt-2 block text-3xl theme-heading">{formatCurrency(selectedSnapshot?.averageTicket ?? 0)}</strong>
         </article>
-        <article className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow)]">
+        <article className="rounded-[1.75rem] theme-surface-card p-5 shadow-[var(--shadow)]">
           <p className="text-sm text-[var(--muted)]">Lojista lider</p>
-          <strong className="mt-2 block text-xl text-slate-900">{leadingStore?.storeName ?? "Sem dados"}</strong>
+          <strong className="mt-2 block text-xl theme-heading">{leadingStore?.storeName ?? "Sem dados"}</strong>
         </article>
       </section>
 
@@ -99,7 +99,7 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Filtros do admin</p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-900">Periodo e lojista</h2>
+            <h2 className="mt-2 text-2xl font-semibold theme-heading">Periodo e lojista</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
               O admin consegue recortar a plataforma por periodo e aprofundar a leitura em um lojista especifico quando precisar.
             </p>
@@ -112,7 +112,7 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
                   key={snapshot.period}
                   type="button"
                   onClick={() => setSelectedPeriod(snapshot.period)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${selectedPeriod === snapshot.period ? "bg-slate-900 text-white" : "border border-[var(--border)] bg-white text-slate-700 hover:border-[var(--accent)]"}`}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${selectedPeriod === snapshot.period ? "theme-dark-cta" : "theme-border-button"}`}
                 >
                   {periodLabels[snapshot.period]}
                 </button>
@@ -120,8 +120,8 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
             </div>
 
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Lojista</span>
-              <select value={selectedStoreId} onChange={(event) => setSelectedStoreId(event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]">
+              <span className="text-sm font-medium theme-text">Lojista</span>
+              <select value={selectedStoreId} onChange={(event) => setSelectedStoreId(event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]">
                 <option value="all">Todos os lojistas</option>
                 {workspace.stores.map((store) => (
                   <option key={store.id} value={store.id}>{store.name}</option>
@@ -133,12 +133,12 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
 
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Leitura macro</p>
-          <div className="mt-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
+          <div className="mt-4 rounded-[1.5rem] theme-surface-card p-4 text-sm leading-6 text-[var(--muted)]">
             <p>{trendLabel}</p>
-            <p className="mt-3">Receita dos lojistas visiveis: <span className="font-medium text-slate-800">{formatCurrency(totals.sales)}</span></p>
-            <p>Pedidos dos lojistas visiveis: <span className="font-medium text-slate-800">{totals.orders}</span></p>
-            <p>Novos produtos no recorte: <span className="font-medium text-slate-800">{totals.newProducts}</span></p>
-            <p>Novos clientes no recorte: <span className="font-medium text-slate-800">{totals.newCustomers}</span></p>
+            <p className="mt-3">Receita dos lojistas visiveis: <span className="font-medium theme-text">{formatCurrency(totals.sales)}</span></p>
+            <p>Pedidos dos lojistas visiveis: <span className="font-medium theme-text">{totals.orders}</span></p>
+            <p>Novos produtos no recorte: <span className="font-medium theme-text">{totals.newProducts}</span></p>
+            <p>Novos clientes no recorte: <span className="font-medium theme-text">{totals.newCustomers}</span></p>
           </div>
         </article>
       </section>
@@ -147,18 +147,18 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Comparativo por lojista</p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-900">Vendas, pedidos e crescimento</h2>
+            <h2 className="mt-2 text-2xl font-semibold theme-heading">Vendas, pedidos e crescimento</h2>
           </div>
 
           <div className="mt-6 grid gap-3">
             {filteredStores.map((store) => (
-              <article key={store.storeId} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <article key={store.storeId} className="rounded-[1.5rem] theme-surface-card p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <strong className="text-slate-900">{store.storeName}</strong>
+                    <strong className="theme-heading">{store.storeName}</strong>
                     <p className="mt-1 text-sm text-[var(--muted)]">Pedidos {store.orders} · Produtos novos {store.newProducts} · Clientes novos {store.newCustomers}</p>
                   </div>
-                  <strong className="text-lg text-slate-900">{formatCurrency(store.sales)}</strong>
+                  <strong className="text-lg theme-heading">{formatCurrency(store.sales)}</strong>
                 </div>
               </article>
             ))}
@@ -168,22 +168,22 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Pedidos da plataforma</p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-900">Leitura operacional por lojista</h2>
+            <h2 className="mt-2 text-2xl font-semibold theme-heading">Leitura operacional por lojista</h2>
           </div>
 
           <div className="mt-6 grid gap-3">
             {filteredOrders.map((order) => (
-              <article key={order.id} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <article key={order.id} className="rounded-[1.5rem] theme-surface-card p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <strong className="text-slate-900">{order.code}</strong>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{order.storeName}</span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{order.status}</span>
+                      <strong className="theme-heading">{order.code}</strong>
+                      <span className="rounded-full theme-surface-soft px-3 py-1 text-xs font-semibold theme-text">{order.storeName}</span>
+                      <span className="rounded-full theme-surface-soft px-3 py-1 text-xs font-semibold theme-text">{order.status}</span>
                     </div>
                     <p className="mt-2 text-sm text-[var(--muted)]">Cliente {order.customerName} · {new Date(order.createdAt).toLocaleDateString("pt-BR")} · {order.paymentStatus}</p>
                   </div>
-                  <strong className="text-lg text-slate-900">{formatCurrency(order.total)}</strong>
+                  <strong className="text-lg theme-heading">{formatCurrency(order.total)}</strong>
                 </div>
               </article>
             ))}
@@ -194,7 +194,7 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
       {filteredStores.length === 0 ? (
         <article className="rounded-[2rem] border border-dashed border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-[var(--shadow)]">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Sem dados no recorte</p>
-          <h2 className="mt-3 text-2xl font-semibold text-slate-900">Nao encontramos lojistas para esse filtro.</h2>
+          <h2 className="mt-3 text-2xl font-semibold theme-heading">Nao encontramos lojistas para esse filtro.</h2>
           <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
             Ajuste o lojista selecionado para voltar a enxergar a comparacao e o resumo da plataforma.
           </p>

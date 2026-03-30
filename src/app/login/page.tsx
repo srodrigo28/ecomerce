@@ -28,10 +28,10 @@ export default function LoginPage() {
             </div>
           </Link>
           <div className="flex flex-wrap gap-3">
-            <Link href="/cadastro-loja" className="rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+            <Link href="/cadastro-loja" className="rounded-full theme-border-button px-4 py-2.5 text-sm font-semibold transition">
               Cadastrar loja
             </Link>
-            <Link href="/lojas-parceiras" className="rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+            <Link href="/lojas-parceiras" className="rounded-full theme-border-button px-4 py-2.5 text-sm font-semibold transition">
               Ver lojas parceiras
             </Link>
           </div>

@@ -28,16 +28,16 @@ export function PublicCheckoutSummary({ checkout }: PublicCheckoutSummaryProps) 
           </p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <label className="block space-y-2 md:col-span-2">
-              <span className="text-sm font-medium text-slate-800">Nome completo</span>
-              <input type="text" defaultValue={customer.fullName} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              <span className="text-sm font-medium theme-text">Nome completo</span>
+              <input type="text" defaultValue={customer.fullName} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]" />
             </label>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">WhatsApp</span>
-              <input type="text" defaultValue={customer.whatsapp} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              <span className="text-sm font-medium theme-text">WhatsApp</span>
+              <input type="text" defaultValue={customer.whatsapp} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]" />
             </label>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">E-mail</span>
-              <input type="email" defaultValue={customer.email} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              <span className="text-sm font-medium theme-text">E-mail</span>
+              <input type="email" defaultValue={customer.email} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]" />
             </label>
           </div>
         </div>
@@ -46,29 +46,29 @@ export function PublicCheckoutSummary({ checkout }: PublicCheckoutSummaryProps) 
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Entrega e endereco</p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <label className="block space-y-2 md:col-span-2">
-              <span className="text-sm font-medium text-slate-800">Rua e numero</span>
-              <input type="text" defaultValue={address.street} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              <span className="text-sm font-medium theme-text">Rua e numero</span>
+              <input type="text" defaultValue={address.street} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]" />
             </label>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Bairro</span>
-              <input type="text" defaultValue={address.district} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              <span className="text-sm font-medium theme-text">Bairro</span>
+              <input type="text" defaultValue={address.district} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]" />
             </label>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">CEP</span>
-              <input type="text" defaultValue={address.zipCode} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              <span className="text-sm font-medium theme-text">CEP</span>
+              <input type="text" defaultValue={address.zipCode} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]" />
             </label>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Cidade</span>
-              <input type="text" defaultValue={address.city} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              <span className="text-sm font-medium theme-text">Cidade</span>
+              <input type="text" defaultValue={address.city} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]" />
             </label>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Estado</span>
-              <input type="text" defaultValue={address.state} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+              <span className="text-sm font-medium theme-text">Estado</span>
+              <input type="text" defaultValue={address.state} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]" />
             </label>
           </div>
-          <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-600">
-            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">Entrega: {deliveryLabel[cart.deliveryType]}</span>
-            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium">Pagamento: {cart.paymentLabel}</span>
+          <div className="mt-5 flex flex-wrap gap-3 text-sm theme-muted">
+            <span className="rounded-full theme-surface-soft px-3 py-1 font-medium">Entrega: {deliveryLabel[cart.deliveryType]}</span>
+            <span className="rounded-full theme-surface-soft px-3 py-1 font-medium">Pagamento: {cart.paymentLabel}</span>
           </div>
         </div>
       </article>
@@ -76,26 +76,26 @@ export function PublicCheckoutSummary({ checkout }: PublicCheckoutSummaryProps) 
       <aside className="space-y-6">
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)]">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Confirmacao visual</p>
-          <div className="mt-5 space-y-4 rounded-[1.75rem] border border-[var(--border)] bg-white p-5">
-            <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
+          <div className="mt-5 space-y-4 rounded-[1.75rem] theme-surface-card p-5">
+            <div className="flex items-center justify-between gap-3 text-sm theme-muted">
               <span>Pedido</span>
-              <strong className="text-slate-900">{checkout.orderCode}</strong>
+              <strong className="theme-heading">{checkout.orderCode}</strong>
             </div>
-            <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
+            <div className="flex items-center justify-between gap-3 text-sm theme-muted">
               <span>Subtotal</span>
-              <strong className="text-slate-900">{formatCurrency(cart.subtotal)}</strong>
+              <strong className="theme-heading">{formatCurrency(cart.subtotal)}</strong>
             </div>
-            <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
+            <div className="flex items-center justify-between gap-3 text-sm theme-muted">
               <span>Entrega</span>
-              <strong className="text-slate-900">{formatCurrency(cart.shippingFee)}</strong>
+              <strong className="theme-heading">{formatCurrency(cart.shippingFee)}</strong>
             </div>
             <div className="h-px bg-[var(--border)]" />
-            <div className="flex items-center justify-between gap-3 text-base font-semibold text-slate-900">
+            <div className="flex items-center justify-between gap-3 text-base font-semibold theme-heading">
               <span>Total</span>
               <strong>{formatCurrency(cart.total)}</strong>
             </div>
           </div>
-          <div className="mt-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
+          <div className="mt-4 rounded-[1.5rem] theme-surface-card p-4 text-sm leading-6 text-[var(--muted)]">
             <p>{checkout.confirmationLabel}</p>
             <p className="mt-2">{checkout.note}</p>
           </div>
@@ -107,7 +107,7 @@ export function PublicCheckoutSummary({ checkout }: PublicCheckoutSummaryProps) 
             A confirmacao final ainda e visual. O objetivo agora e validar o checkout completo antes da futura persistencia da API.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link href={`/lojas/${cart.store.slug}/carrinho${firstItem ? `?product=${firstItem.productSlug}&quantity=${firstItem.quantity}` : ""}`} className="rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-200">
+            <Link href={`/lojas/${cart.store.slug}/carrinho${firstItem ? `?product=${firstItem.productSlug}&quantity=${firstItem.quantity}` : ""}`} className="rounded-full theme-border-button px-4 py-2.5 text-sm font-semibold transition">
               Voltar para carrinho
             </Link>
             <Link href={`/lojas/${cart.store.slug}/pedido-confirmado${firstItem ? `?product=${firstItem.productSlug}&quantity=${firstItem.quantity}` : ""}`} className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">

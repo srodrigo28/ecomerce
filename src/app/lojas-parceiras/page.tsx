@@ -172,7 +172,7 @@ export default async function LojasParceirasPage({
                     Abrir vitrine da loja
                   </Link>
                   {result.matchedProducts[0] ? (
-                    <Link href={`/lojas/${result.store.slug}/produtos/${result.matchedProducts[0].slug}`} className="inline-flex rounded-full border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+                    <Link href={`/lojas/${result.store.slug}/produtos/${result.matchedProducts[0].slug}`} className="inline-flex rounded-full theme-border-button px-4 py-2.5 text-sm font-semibold transition">
                       Ver produto encontrado
                     </Link>
                   ) : null}
@@ -192,7 +192,7 @@ export default async function LojasParceirasPage({
             <Link href="/lojas-parceiras" className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
               Limpar busca e filtros
             </Link>
-            <Link href="/" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+            <Link href="/" className="rounded-full theme-border-button px-5 py-3 text-sm font-semibold transition">
               Voltar para home
             </Link>
           </div>

@@ -11,6 +11,7 @@ import type {
   PublicSearchProductMatch,
   PublicSearchStoreResult,
   SellerWorkspace,
+  StorePurchasePreview,
   StoreSummary,
 } from "@/types/catalog";
 
@@ -29,6 +30,16 @@ const normalizeSearchValue = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+
+const getStoreAddressLabel = (store: StoreSummary) =>
+  [
+    [store.street, store.number].filter(Boolean).join(", "),
+    store.district,
+    [store.city, store.state].filter(Boolean).join(" - "),
+    store.zipCode,
+  ]
+    .filter(Boolean)
+    .join(" | ");
 
 export async function getFeaturedStores(): Promise<StoreSummary[]> {
   if (shouldUseMocks) {
@@ -114,9 +125,16 @@ export async function searchPublicCatalog(query: string): Promise<PublicCatalogS
         return null;
       }
 
-      const storeMatches = [store.name, store.city, store.state, store.slug].filter(Boolean).some((value) =>
-        normalizeSearchValue(value ?? "").includes(normalizedQuery),
-      );
+      const storeMatches = [
+        store.name,
+        store.city,
+        store.state,
+        store.slug,
+        store.district,
+        store.street,
+      ]
+        .filter(Boolean)
+        .some((value) => normalizeSearchValue(value ?? "").includes(normalizedQuery));
 
       const matchedCategories = catalog.categories
         .filter((category) => normalizeSearchValue(category.name).includes(normalizedQuery))
@@ -180,6 +198,33 @@ export async function getStoreProductBySlugs(
     store: catalog.store,
     product,
     category,
+  };
+}
+
+export async function getStorePurchasePreviewBySlugs(
+  storeSlug: string,
+  productSlug: string,
+  quantity = 1,
+): Promise<StorePurchasePreview | undefined> {
+  const result = await getStoreProductBySlugs(storeSlug, productSlug);
+
+  if (!result) {
+    return undefined;
+  }
+
+  const { store, product, category } = result;
+
+  return {
+    store,
+    product,
+    category,
+    suggestedQuantity: Math.max(1, quantity),
+    whatsappNumber: store.whatsapp ?? "",
+    pixKey: store.pixKey,
+    addressLabel: getStoreAddressLabel(store),
+    deliveryLabel:
+      store.deliveryLabel ?? "Entrega e retirada combinadas diretamente com a loja pelo WhatsApp.",
+    shareUrl: `/lojas/${store.slug}/produtos/${product.slug}`,
   };
 }
 
@@ -256,16 +301,17 @@ export async function getCheckoutPreviewByStoreSlug(
       email: "cliente@exemplo.com",
     },
     address: {
-      street: "Rua das Vitrines, 120",
-      district: "Centro",
+      street: cart.store.street ?? "Rua das Vitrines, 120",
+      district: cart.store.district ?? "Centro",
       city: storeCity,
       state: storeState,
-      zipCode: "01000-000",
+      zipCode: cart.store.zipCode ?? "01000-000",
     },
     orderCode: `PED-${cart.store.slug.toUpperCase().slice(0, 5)}-001`,
-    note: cart.deliveryType === "entrega"
-      ? "Entrega local em validacao visual com confirmacao por WhatsApp."
-      : "Retirada em loja com janela de atendimento confirmada no WhatsApp.",
+    note:
+      cart.deliveryType === "entrega"
+        ? "Entrega local em validacao visual com confirmacao por WhatsApp."
+        : "Retirada em loja com janela de atendimento confirmada no WhatsApp.",
     confirmationLabel: "Pedido pronto para confirmacao manual no frontend",
   };
 }
@@ -283,7 +329,8 @@ export async function getOrderSuccessPreviewByStoreSlug(
 
   return {
     checkout,
-    etaLabel: checkout.cart.deliveryType === "entrega" ? "Entrega prevista para hoje ate 18h" : "Retirada disponivel em ate 40 minutos",
+    etaLabel:
+      checkout.cart.deliveryType === "entrega" ? "Entrega prevista para hoje ate 18h" : "Retirada disponivel em ate 40 minutos",
     supportLabel: `Acompanhamento inicial pelo WhatsApp ${checkout.cart.store.whatsapp}`,
     nextStepLabel: "Pedido confirmado no frontend e pronto para futura integracao com API e status reais.",
   };

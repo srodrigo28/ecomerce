@@ -23,7 +23,7 @@ export default async function SellerReportsPage() {
             <Link href="/painel-lojista" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
               Voltar para painel
             </Link>
-            <Link href="/painel-lojista/estoque" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-[var(--accent)]">
+            <Link href="/painel-lojista/estoque" className="rounded-full theme-border-button px-5 py-3 text-sm font-semibold transition">
               Ir para estoque
             </Link>
           </div>
