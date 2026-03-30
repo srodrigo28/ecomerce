@@ -14,11 +14,75 @@ A tecnologia escolhida para esta fase sera:
 
 - Python
 - Flask
-- MySQL
+- PostgreSQL
 - SQLAlchemy
 - Flask-Migrate
 
 ## Leitura do estado atual do projeto
+
+## Status de execucao atual
+
+### O que ja foi implementado na base da API
+
+Nesta etapa, ja concluimos a base Flask com PostgreSQL validado e a primeira migration aplicada. Hoje temos:
+
+- estrutura principal de pastas em `api-lojas/app`, `scripts` e `tests`;
+- `requirements.txt` criado com Flask, SQLAlchemy, Migrate, CORS, JWT e bibliotecas de apoio;
+- `.env.example` criado com variaveis base do backend;
+- `run.py` criado para subir a API;
+- `app/__init__.py` com application factory;
+- `app/config.py` com configuracao por ambiente;
+- `app/extensions.py` com `db`, `migrate`, `cors` e `jwt`;
+- modulo `health` com endpoint inicial;
+- modulos scaffold de `stores`, `categories` e `products`;
+- models iniciais de `Store`, `Category` e `Product`;
+- schemas iniciais de `Store`, `Category` e `Product`;
+- `scripts/dev_setup.py` para validacao basica do ambiente.
+- `setup.py` funcionando como checkpoint seguro de execucao;
+- PostgreSQL remoto validado com sucesso via `scripts/dev_setup.py`;
+- Flask-Migrate inicializado em `migrations/`;
+- primeira migration gerada e aplicada no banco;
+- tabelas base `stores`, `categories`, `products` e `alembic_version` criadas em PostgreSQL;
+- CRUDs reais de `stores`, `categories` e `products` funcionando com rotas, servicos e repositories;
+- endpoint real de `category_bases` implementado;
+- segunda migration PostgreSQL gerada e aplicada com `category_bases`, `customers`, `addresses`, `orders` e `order_items`;
+- coluna `category_base_id` adicionada em `categories` com validacao de regra de negocio;
+- fundacao dos modelos de pedidos criada para evoluir checkout, WhatsApp e Pix sem retrabalho.
+- CRUDs reais de `customers`, `addresses`, `orders` e `order_items` implementados e validados com smoke test no PostgreSQL remoto.
+- endpoint `/api/v1/orders/checkout` criado com transacao completa, calculo automatico de totais e persistencia de itens no PostgreSQL remoto.
+- respostas de pedido e checkout enriquecidas com cliente, endereco, loja e itens embutidos para facilitar a integracao com o frontend.
+- frontend público já integrado ao endpoint `/api/v1/orders/checkout`, com redirecionamento para sucesso usando o código real do pedido.
+- painel do lojista já consumindo leitura real de pedidos da API para validar a operação persistida no PostgreSQL.
+- foundation de `stock_movements` criada no PostgreSQL com baixa automática de estoque no checkout.
+- domain de `sales` criado no PostgreSQL com venda derivada automaticamente do checkout e cancelamento refletindo em `sale_status`.
+- endpoints iniciais de `reports` criados para resumo do lojista e resumo admin usando `sales` confirmadas.
+
+### O que ainda nao foi executado
+
+Os pontos abaixo continuam pendentes para as proximas fases:
+
+- consolidar filtros e consultas mais ricas de `stores`, `categories`, `category_bases` e `products`;
+- consolidar filtros e consultas mais ricas de pedidos por loja, cliente e status;
+- expor respostas ainda mais operacionais para o painel do lojista e admin;
+- adicionar leituras operacionais mais completas de estoque no painel;
+- evoluir os relatorios reais com mais agregacoes por categoria, pedido e estoque;
+- adicionar autenticacao e autorizacao.
+
+### Confirmacao de alinhamento com o plano
+
+Sim, a implementacao atual esta seguindo o `api-plano.md`.
+
+A ordem executada ate agora foi coerente com o plano:
+
+1. estrutura base do projeto Flask;
+2. arquivos centrais como `requirements.txt`, `.env.example`, `run.py`, `app/__init__.py`, `app/config.py` e `app/extensions.py`;
+3. organizacao modular inicial para `stores`, `categories` e `products`;
+4. preparacao dos modelos e schemas antes da fase de banco e migrations.
+
+O proximo passo correto, ainda dentro do plano, e continuar em:
+
+- Fase 5 - regras de cancelamento e reposicao de estoque;
+- Fase 5 e 7 - vendas e leituras operacionais para relatórios.
 
 O frontend ja validou estes fluxos:
 
@@ -94,30 +158,50 @@ Se quiser manter a leitura ainda mais direta por entidade, cada modulo pode cont
 
 Isso deixa o codigo mais claro e evita controller gigante.
 
-## Ajuste importante no seu plano inicial
+## Ajuste importante sobre o `setup.py`
 
-O plano atual cita um `setup.py` que cria venv, ativa ambiente, instala dependencias, valida conexao e chama a app.
+O `setup.py` pode existir sim, mas com um papel mais seguro e objetivo.
 
-Eu nao recomendo usar `setup.py` para isso.
+Ele nao deve ser tratado como arquivo para ativar venv automaticamente ou controlar toda a vida da aplicacao.
 
-Melhor abordagem:
+A leitura mais segura aqui e esta:
 
-- usar `requirements.txt` para dependencias;
-- usar `run.py` para subir a aplicacao Flask;
-- usar um script auxiliar como `bootstrap.py` ou `scripts/dev_setup.py` para validacoes locais;
-- usar `.env.example` para variaveis comentadas;
-- nao tentar "ativar venv" por codigo Python, porque isso nao funciona como fluxo confiavel do shell.
+- `requirements.txt` continua sendo a fonte das dependencias;
+- `run.py` continua sendo a entrada para subir a API Flask;
+- `setup.py` passa a existir como camada de seguranca de execucao e validacao do ambiente;
+- `.env.example` continua documentando a configuracao minima;
+- scripts auxiliares continuam podendo existir em `scripts/`.
 
 Ou seja:
 
 - `run.py` sobe a API;
-- `scripts/dev_setup.py` valida ambiente, banco e dependencias;
+- `setup.py` valida ambiente, estrutura e precondicoes de execucao;
 - `requirements.txt` controla bibliotecas;
 - `.env.example` documenta configuracao.
+
+### Papel recomendado do `setup.py`
+
+O `setup.py` pode ser usado para:
+
+- validar se arquivos essenciais existem;
+- verificar se `.env` foi preenchido;
+- checar variaveis obrigatorias;
+- validar se a estrutura base da API esta integra;
+- opcionalmente testar conexao com banco;
+- servir como checkpoint seguro antes de rodar a API.
+
+O que ele nao deve fazer como responsabilidade principal:
+
+- ativar virtualenv por conta propria;
+- substituir `requirements.txt`;
+- substituir `run.py`;
+- virar um ponto unico com toda a logica da API.
 
 ## Sequencia recomendada de criacao da API
 
 ### Fase 1 - Base do projeto Flask
+
+Status atual: concluida na base principal.
 
 Criar primeiro:
 
@@ -139,9 +223,11 @@ Resultado esperado:
 
 ### Fase 2 - Banco e migrations
 
+Status atual: concluida na base principal.
+
 Criar depois:
 
-1. conexao com MySQL;
+1. conexao com PostgreSQL;
 2. SQLAlchemy;
 3. Flask-Migrate;
 4. migration inicial;
@@ -154,6 +240,8 @@ Resultado esperado:
 - ambiente local repetivel.
 
 ### Fase 3 - Modulos centrais do catalogo
+
+Status atual: em andamento com PostgreSQL, CRUD real de `stores`, `categories`, `products` e endpoint de `category_bases`.
 
 Criar nesta ordem:
 
@@ -169,6 +257,8 @@ Resultado esperado:
 
 ### Fase 4 - Pedidos e clientes
 
+Status atual: CRUDs reais de `customers`, `addresses`, `orders` e `order_items` implementados em PostgreSQL, com endpoint transacional de checkout calculando subtotal, frete e total no backend.
+
 Criar nesta ordem:
 
 1. clientes;
@@ -183,6 +273,8 @@ Resultado esperado:
 - operacao da loja comeca a sair do modo visual.
 
 ### Fase 5 - Estoque e vendas
+
+Status atual: foundation de `stock_movements` criada em PostgreSQL, checkout baixando estoque automaticamente, cancelamento repondo estoque e `sales` registrando a venda derivada do pedido.
 
 Criar nesta ordem:
 
@@ -214,6 +306,8 @@ Resultado esperado:
 - credenciais locais deixam de ser provisoria simples.
 
 ### Fase 7 - Relatorios e filtros
+
+Status atual: endpoints reais prontos em PostgreSQL e frontend do lojista/admin ja iniciado com consumo direto de `/api/v1/reports`.
 
 Criar nesta ordem:
 
@@ -485,8 +579,8 @@ Campos sugeridos:
   motivo: ORM e integracao limpa com Flask.
 - `Flask-Migrate`
   motivo: migrations com Alembic.
-- `PyMySQL`
-  motivo: driver para MySQL simples de configurar.
+- `psycopg[binary]`
+  motivo: driver moderno e simples para PostgreSQL.
 - `python-dotenv`
   motivo: leitura de `.env` no ambiente local.
 - `marshmallow`
@@ -537,7 +631,7 @@ Instalar primeiro:
 - Flask
 - Flask-SQLAlchemy
 - Flask-Migrate
-- PyMySQL
+- psycopg[binary]
 - python-dotenv
 - Flask-CORS
 
@@ -571,6 +665,7 @@ Arquivos recomendados para criar primeiro:
 
 - `requirements.txt`
 - `.env.example`
+- `setup.py`
 - `run.py`
 - `app/__init__.py`
 - `app/config.py`
@@ -587,14 +682,28 @@ Sugestao de variaveis:
 - `SECRET_KEY=`
 - `JWT_SECRET_KEY=`
 - `DB_HOST=`
-- `DB_PORT=3306`
+- `DB_PORT=5432`
 - `DB_NAME=`
 - `DB_USER=`
 - `DB_PASSWORD=`
-- `DB_CHARSET=utf8mb4`
+- `DB_SSL_MODE=prefer`
 - `CORS_ORIGINS=http://localhost:3000`
 - `ADMIN_DEFAULT_EMAIL=`
 - `ADMIN_DEFAULT_PASSWORD=`
+
+## Papel do `setup.py`
+
+Esse arquivo deve funcionar como seguranca de execucao e validacao do ambiente.
+
+Ele deve:
+
+- validar se arquivos essenciais existem;
+- verificar se `.env` esta presente;
+- checar variaveis obrigatorias;
+- orientar o desenvolvedor sobre pendencias antes de subir a API;
+- opcionalmente disparar validacoes basicas locais.
+
+Ele nao deve substituir `run.py` nem a estrutura principal do projeto.
 
 ## Papel do `scripts/dev_setup.py`
 
@@ -602,7 +711,7 @@ Esse script deve:
 
 - validar se `.env` existe;
 - validar se as variaveis obrigatorias foram preenchidas;
-- testar conexao com MySQL;
+- testar conexao com PostgreSQL;
 - mostrar mensagens amigaveis se faltar configuracao;
 - opcionalmente rodar migrations;
 - opcionalmente criar seed admin local.
@@ -612,19 +721,20 @@ Esse script nao deve tentar ativar venv automaticamente.
 ## Sequencia de implementacao recomendada para seguir no dia a dia
 
 1. criar estrutura Flask base;
-2. configurar MySQL e migrations;
-3. criar modelos `stores`, `users`, `categories`, `products`;
+2. configurar PostgreSQL e migrations;
+3. criar modelos `stores`, `users`, `categories`, `category_bases`, `products`;
 4. criar CRUD de lojas;
-5. criar CRUD de categorias;
-6. criar CRUD de produtos;
-7. criar clientes, enderecos e pedidos;
-8. criar itens do pedido;
-9. criar movimentos de estoque;
-10. criar vendas;
-11. criar auth com JWT;
-12. criar endpoints de relatorio do lojista;
-13. criar endpoints de relatorio admin;
-14. substituir mocks do frontend gradualmente.
+5. criar CRUD de categorias base;
+6. criar CRUD de categorias;
+7. criar CRUD de produtos;
+8. criar clientes, enderecos e pedidos;
+9. criar itens do pedido;
+10. criar movimentos de estoque;
+11. criar vendas;
+12. criar auth com JWT;
+13. criar endpoints de relatorio do lojista;
+14. criar endpoints de relatorio admin;
+15. substituir mocks do frontend gradualmente.
 
 ## Criterio de pronto da API MVP
 
@@ -640,6 +750,27 @@ A API pode ser considerada pronta para a primeira integracao real quando consegu
 - responder relatorios basicos de lojista e admin;
 - entregar JSON consistente com os contratos validados no frontend.
 
+
+## Confirmacao operacional atual
+
+Estado confirmado em 2026-03-30:
+
+- banco oficial da API: PostgreSQL remoto;
+- conexao validada via `scripts/dev_setup.py`;
+- migration inicial aplicada com `stores`, `categories` e `products`;
+- segunda migration aplicada com `category_bases`, `customers`, `addresses`, `orders` e `order_items`;
+- revisao atual do Alembic no PostgreSQL: `f0443b08fb00`;
+- endpoints ativos e respondendo: `/`, `/api/v1`, `/api/v1/health`, `/api/v1/stores`, `/api/v1/categories`, `/api/v1/products`, `/api/v1/category-bases`, `/api/v1/customers`, `/api/v1/addresses`, `/api/v1/orders`, `/api/v1/order-items`, `/api/v1/stock/movements`, `/api/v1/sales`, `/api/v1/reports/seller` e `/api/v1/reports/admin`;
+- smoke test completo passando com criacao real de cliente, endereco, pedido e item do pedido no PostgreSQL remoto;
+- checkout transacional validado no endpoint `/api/v1/orders/checkout` com calculo real de subtotal, frete e total no backend;
+- `GET /api/v1/orders/:id` e a resposta do checkout ja retornam dados embutidos de cliente, endereco, loja e itens;
+- checkout validado com baixa real de estoque e criacao de `stock_movements` no PostgreSQL remoto;
+- cancelamento validado com reposicao automatica de estoque e movimentacao `entrada/cancelamento`;
+- venda derivada validada com registro automatico em `sales` e marcacao como `cancelled` quando o pedido e cancelado;
+- endpoints iniciais de relatorio respondendo com resumo do lojista e resumo admin baseados em `sales`;
+- frontend de relatorios do lojista e admin ja consumindo a API real de `reports`, com fallback visual para mocks enquanto a base operacional evolui;
+- rota raiz e `/api/v1` agora entregam um indice agrupado por rotas para visualizar todos os endpoints criados.
+
 ## Resumo objetivo
 
 Seu plano inicial tinha uma boa intuicao de clareza por entidade, mas estava curto e colocava responsabilidade demais em `setup.py`.
@@ -647,7 +778,7 @@ Seu plano inicial tinha uma boa intuicao de clareza por entidade, mas estava cur
 A versao melhorada do plano agora fica assim:
 
 - usar Flask com estrutura modular por dominio;
-- usar MySQL com migrations desde o inicio;
+- usar PostgreSQL com migrations desde o inicio;
 - criar primeiro catalogo, depois pedido, depois estoque e vendas;
 - documentar bem `.env.example` e bibliotecas;
 - deixar autenticacao e relatorios entrarem depois da base operacional;

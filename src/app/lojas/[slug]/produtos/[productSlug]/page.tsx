@@ -160,9 +160,9 @@ export default async function ProdutoPublicoPage({
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">Fluxo comercial</p>
             <div className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
               <p>1. O cliente abre um modal de compra sem sair da vitrine.</p>
-              <p>2. O pedido local salva nome, WhatsApp, quantidade e forma de recebimento.</p>
-              <p>3. A conversa pronta abre no WhatsApp da loja com Pix e endereco completos.</p>
-              <p>4. Essa base fica pronta para depois sincronizar com a API Flask.</p>
+              <p>2. O modal agora pode entregar os dados direto para o checkout.</p>
+              <p>3. No checkout, o pedido pode ser persistido na API com codigo real.</p>
+              <p>4. O WhatsApp continua como apoio comercial da loja quando necessario.</p>
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <StorePurchaseModal purchasePreview={purchasePreview} />

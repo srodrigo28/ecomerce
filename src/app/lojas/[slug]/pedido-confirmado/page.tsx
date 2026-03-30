@@ -15,15 +15,17 @@ export default async function PedidoConfirmadoPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ product?: string; quantity?: string }>;
+  searchParams: Promise<{ product?: string; quantity?: string; orderCode?: string; orderId?: string }>;
 }) {
   const { slug } = await params;
-  const { product, quantity } = await searchParams;
-  const preview = await getOrderSuccessPreviewByStoreSlug(slug, product, Number(quantity ?? "1"));
+  const { product, quantity, orderCode } = await searchParams;
+  const preview = await getOrderSuccessPreviewByStoreSlug(slug, product, Number(quantity ?? "1"), orderCode);
 
   if (!preview) {
     notFound();
   }
+
+  const isPersistedOrder = Boolean(orderCode);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
@@ -35,9 +37,13 @@ export default async function PedidoConfirmadoPage({
             <Link href={`/lojas/${preview.checkout.cart.store.slug}`} className="text-sm font-semibold text-[var(--accent-strong)] transition hover:text-[var(--accent)]">
               Voltar para a vitrine
             </Link>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">Pedido confirmado no frontend</h1>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
+              {isPersistedOrder ? "Pedido confirmado com persistencia real" : "Pedido confirmado no frontend"}
+            </h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
-              Esta tela fecha a validacao da jornada publica antes do backend: visual forte, resumo claro e proximos passos para loja e cliente.
+              {isPersistedOrder
+                ? "Esta tela agora fecha a jornada publica com pedido salvo na API, codigo real gerado e base pronta para acompanhamento operacional."
+                : "Esta tela fecha a validacao da jornada publica antes do backend: visual forte, resumo claro e proximos passos para loja e cliente."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

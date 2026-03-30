@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import { FilterSelect } from "@/components/filter-select";
 import { SelectField } from "@/components/ui-form";
+import { getSellerApiOrdersByStoreSlug } from "@/lib/services/catalog-service";
 import { loadLocalOrders } from "@/lib/local-order-storage";
-import type { LocalOrderDraft, OrderStatus, SellerWorkspace } from "@/types/catalog";
+import type { LocalOrderDraft, OrderStatus, SellerOrder, SellerWorkspace } from "@/types/catalog";
 
 const orderStatusOptions: OrderStatus[] = [
   "aguardando_pagamento",
@@ -52,6 +53,11 @@ const formatCurrency = (value: number) =>
 
 export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace }) {
   const [orders, setOrders] = useState(workspace.orders);
+  const [apiOrders, setApiOrders] = useState<SellerOrder[]>([]);
+  const [apiStoreName, setApiStoreName] = useState("");
+  const [matchedBySlug, setMatchedBySlug] = useState(false);
+  const [apiLoading, setApiLoading] = useState(true);
+  const [apiError, setApiError] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [feedback, setFeedback] = useState("Modulo de pedidos pronto para validar fluxo operacional da loja antes da API.");
@@ -59,7 +65,7 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
 
   useEffect(() => {
     const syncLocalOrders = () => {
-      const browserOrders = loadLocalOrders().filter((order) => order.storeId === workspace.store.id);
+      const browserOrders = loadLocalOrders().filter((order) => order.storeId === workspace.store.id || order.storeSlug === workspace.store.slug);
       setLocalOrders(browserOrders);
     };
 
@@ -67,7 +73,43 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
     window.addEventListener("storage", syncLocalOrders);
 
     return () => window.removeEventListener("storage", syncLocalOrders);
-  }, [workspace.store.id]);
+  }, [workspace.store.id, workspace.store.slug]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getSellerApiOrdersByStoreSlug(workspace.store.slug)
+      .then((result) => {
+        if (!isMounted) {
+          return;
+        }
+        setApiOrders(result.orders);
+        setApiStoreName(result.targetStore?.name ?? "");
+        setMatchedBySlug(result.matchedBySlug);
+        setFeedback(
+          result.orders.length > 0
+            ? result.matchedBySlug
+              ? "Pedidos reais da API carregados para esta loja."
+              : "Pedidos reais da API carregados para uma loja disponível enquanto a correspondência por slug ainda não existe."
+            : "API conectada, mas ainda sem pedidos reais para mostrar neste recorte.",
+        );
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+        setApiError(error instanceof Error ? error.message : "Nao foi possivel carregar os pedidos reais da API.");
+      })
+      .finally(() => {
+        if (isMounted) {
+          setApiLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [workspace.store.slug]);
 
   const filteredOrders = useMemo(() => {
     const byStatus = selectedStatus === "all" ? orders : orders.filter((order) => order.status === selectedStatus);
@@ -78,6 +120,16 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
 
     return byStatus.filter((order) => order.items.some((item) => item.categoryId === selectedCategoryId));
   }, [orders, selectedCategoryId, selectedStatus]);
+
+  const filteredApiOrders = useMemo(() => {
+    const byStatus = selectedStatus === "all" ? apiOrders : apiOrders.filter((order) => order.status === selectedStatus);
+
+    if (selectedCategoryId === "all") {
+      return byStatus;
+    }
+
+    return byStatus.filter((order) => order.items.some((item) => item.categoryId === selectedCategoryId));
+  }, [apiOrders, selectedCategoryId, selectedStatus]);
 
   const summary = useMemo(() => {
     const pendingPayment = filteredOrders.filter((order) => order.paymentStatus === "pendente").length;
@@ -90,6 +142,17 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
       revenue,
     };
   }, [filteredOrders]);
+
+  const apiSummary = useMemo(() => {
+    const pendingPayment = filteredApiOrders.filter((order) => order.paymentStatus === "pendente").length;
+    const revenue = filteredApiOrders.reduce((sum, order) => sum + order.total, 0);
+
+    return {
+      count: filteredApiOrders.length,
+      pendingPayment,
+      revenue,
+    };
+  }, [filteredApiOrders]);
 
   const localSummary = useMemo(() => {
     const total = localOrders.reduce((sum, order) => sum + order.total, 0);
@@ -155,12 +218,80 @@ export function SellerOrdersBoard({ workspace }: { workspace: SellerWorkspace })
             {feedback}
           </div>
           <div className="mt-6 rounded-[1.5rem] theme-surface-card p-4 text-sm leading-6 text-[var(--muted)]">
-            <p>Loja: <span className="font-medium theme-text">{workspace.store.name}</span></p>
+            <p>Loja do painel: <span className="font-medium theme-text">{workspace.store.name}</span></p>
             <p>WhatsApp: <span className="font-medium theme-text">{workspace.store.whatsapp}</span></p>
             <p>Pedidos mockados: <span className="font-medium theme-text">{workspace.orders.length}</span></p>
+            <p>Pedidos reais da API: <span className="font-medium theme-text">{apiOrders.length}</span></p>
             <p>Pedidos da vitrine: <span className="font-medium theme-text">{localSummary.count}</span></p>
           </div>
         </article>
+      </section>
+
+      <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Pedidos reais da API</p>
+            <h2 className="mt-2 text-2xl font-semibold theme-heading">Operacao persistida no PostgreSQL</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--muted)]">
+              Esta secao mostra os pedidos salvos de verdade na API. {matchedBySlug ? "A leitura ja esta ligada pela mesma loja do painel." : "Enquanto o slug da loja do painel ainda nao corresponde ao slug da API, mostramos a primeira loja real disponivel para validar a integracao."}
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[1.25rem] theme-surface-card px-4 py-4 text-sm">
+              <p className="text-[var(--muted)]">Pedidos reais</p>
+              <strong className="mt-2 block text-2xl theme-heading">{apiSummary.count}</strong>
+            </div>
+            <div className="rounded-[1.25rem] theme-surface-card px-4 py-4 text-sm">
+              <p className="text-[var(--muted)]">Pendentes</p>
+              <strong className="mt-2 block text-2xl theme-heading">{apiSummary.pendingPayment}</strong>
+            </div>
+            <div className="rounded-[1.25rem] theme-surface-card px-4 py-4 text-sm">
+              <p className="text-[var(--muted)]">Receita real</p>
+              <strong className="mt-2 block text-2xl theme-heading">{formatCurrency(apiSummary.revenue)}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-[1.25rem] theme-surface-card p-4 text-sm leading-6 text-[var(--muted)]">
+          <p>Fonte conectada: <span className="font-medium theme-text">{apiStoreName || "API sem loja carregada"}</span></p>
+          <p>Correspondencia por slug: <span className="font-medium theme-text">{matchedBySlug ? "Sim" : "Nao"}</span></p>
+          <p>Status da leitura: <span className="font-medium theme-text">{apiLoading ? "Carregando" : apiError ? "Com erro" : "Ativa"}</span></p>
+          {apiError ? <p className="mt-2 text-rose-600">{apiError}</p> : null}
+        </div>
+
+        <div className="mt-6 space-y-4">
+          {filteredApiOrders.map((order) => (
+            <article key={`api-${order.id}`} className="rounded-[1.75rem] border border-[var(--border)] theme-surface-card p-4 sm:p-5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-xl theme-heading">{order.code}</strong>
+                    <span className="rounded-full px-3 py-1 text-xs font-semibold theme-badge-success">Pedido real da API</span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${orderStatusClass[order.status]}`}>{orderStatusLabels[order.status]}</span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${paymentStatusClass[order.paymentStatus]}`}>{order.paymentStatus}</span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                    Cliente {order.customerName} · {new Date(order.createdAt).toLocaleDateString("pt-BR")} · {order.itemCount} item(ns)
+                  </p>
+                </div>
+                <div className="text-left xl:text-right">
+                  <strong className="text-2xl theme-heading">{formatCurrency(order.total)}</strong>
+                  <p className="mt-2 text-sm text-[var(--muted)]">Persistido no PostgreSQL</p>
+                </div>
+              </div>
+            </article>
+          ))}
+
+          {!apiLoading && filteredApiOrders.length === 0 ? (
+            <article className="rounded-[1.75rem] border border-dashed border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-[var(--shadow)]">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Sem pedidos reais</p>
+              <h3 className="mt-3 text-2xl font-semibold theme-heading">A API ainda nao retornou pedidos para esse recorte.</h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+                Assim que o checkout publico continuar sendo usado, os pedidos persistidos vao aparecer aqui para a loja acompanhar com mais seguranca.
+              </p>
+            </article>
+          ) : null}
+        </div>
       </section>
 
       <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">

@@ -87,7 +87,7 @@ export function PublicCartSummary({ cart }: PublicCartSummaryProps) {
         <article className="rounded-[2rem] border border-[var(--border)] bg-slate-900 p-6 text-white shadow-[var(--shadow)]">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">Proxima etapa</p>
           <p className="mt-3 text-sm leading-7 text-slate-300">
-            O proximo bloco natural aqui e transformar esse resumo em checkout com dados do cliente, endereco e confirmacao visual do pedido.
+O proximo bloco natural aqui e seguir para um checkout que ja pode receber os dados vindos do modal da vitrine e persistir o pedido na API.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href={`/lojas/${cart.store.slug}`} className="rounded-full theme-border-button px-4 py-2.5 text-sm font-semibold transition">

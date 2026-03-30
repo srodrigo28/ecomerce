@@ -184,6 +184,39 @@ export interface AdminWorkspace {
   reportSummary: AdminReportSummary;
 }
 
+export interface SellerApiReportResult {
+  period: ReportPeriod;
+  summary: {
+    revenue: number;
+    orders: number;
+    averageTicket: number;
+  };
+  byCategory: SellerReportByCategory[];
+}
+
+export interface SellerApiReportBundle {
+  matchedBySlug: boolean;
+  targetStoreId?: string;
+  targetStoreName?: string;
+  snapshots: SellerReportSnapshot[];
+  byCategory: SellerReportByCategory[];
+}
+
+export interface AdminApiReportResult {
+  period: ReportPeriod;
+  summary: {
+    revenue: number;
+    orders: number;
+    averageTicket: number;
+  };
+  byStore: AdminStoreSnapshot[];
+}
+
+export interface AdminApiReportBundle {
+  periodSnapshots: SellerReportSnapshot[];
+  byStore: AdminStoreSnapshot[];
+}
+
 export interface CartPreviewItem {
   id: string;
   productId: string;
@@ -218,6 +251,102 @@ export interface CheckoutAddressPreview {
   city: string;
   state: string;
   zipCode: string;
+}
+
+
+export interface CheckoutSubmitAddressInput {
+  zipCode: string;
+  state: string;
+  city: string;
+  district: string;
+  street: string;
+  number: string;
+  complement?: string;
+  reference?: string;
+}
+
+export interface CheckoutSubmitCustomerInput {
+  fullName: string;
+  whatsapp: string;
+  email: string;
+}
+
+export interface CheckoutSubmitInput {
+  storeId: string;
+  deliveryType: CartDeliveryType;
+  paymentMethod: string;
+  shippingCost: number;
+  notes?: string;
+  customer: CheckoutSubmitCustomerInput;
+  address?: CheckoutSubmitAddressInput;
+  items: Array<{
+    productId: string;
+    quantity: number;
+  }>;
+}
+
+export interface CheckoutApiOrderItem {
+  id: number;
+  productId: number;
+  productNameSnapshot: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  categoryId?: number | null;
+  product?: {
+    id: number;
+    name: string;
+    slug: string;
+    mainImageUrl?: string | null;
+  };
+}
+
+export interface CheckoutApiOrderResult {
+  id: number;
+  code: string;
+  storeId: number;
+  customerId: number;
+  addressId?: number | null;
+  subtotal: number;
+  shippingCost: number;
+  total: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  orderStatus: string;
+  deliveryType: string;
+  notes?: string | null;
+  itemsCount: number;
+  customer?: {
+    id: number;
+    name: string;
+    whatsapp?: string | null;
+    email?: string | null;
+    cpf?: string | null;
+  };
+  address?: {
+    id: number;
+    zipCode?: string | null;
+    state?: string | null;
+    city?: string | null;
+    district?: string | null;
+    street?: string | null;
+    number?: string | null;
+    complement?: string | null;
+    reference?: string | null;
+    fullAddress?: string | null;
+  };
+  store?: {
+    id: number;
+    name: string;
+    slug: string;
+    whatsapp?: string | null;
+    pixKey?: string | null;
+    city?: string | null;
+    state?: string | null;
+  };
+  items: CheckoutApiOrderItem[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CheckoutPreview {

@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui-badge";
 import { Button } from "@/components/ui-button";
 import { Card } from "@/components/ui-card";
 import { FormField, TextArea, TextInput } from "@/components/ui-form";
 import { Modal } from "@/components/ui-modal";
+import { saveCheckoutDraft } from "@/lib/checkout-draft-storage";
 import { saveLocalOrder } from "@/lib/local-order-storage";
 import type { CartDeliveryType, LocalOrderDraft, StorePurchasePreview } from "@/types/catalog";
 
@@ -35,6 +37,7 @@ const buildOrderCode = (storeSlug: string) => {
 };
 
 export function StorePurchaseModal({ purchasePreview }: { purchasePreview: StorePurchasePreview }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [quantity, setQuantity] = useState(String(purchasePreview.suggestedQuantity));
   const [deliveryType, setDeliveryType] = useState<CartDeliveryType>("entrega");
@@ -78,6 +81,28 @@ export function StorePurchaseModal({ purchasePreview }: { purchasePreview: Store
   ]);
 
   const whatsappHref = `https://wa.me/55${purchasePreview.whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
+  const persistCheckoutDraft = () => {
+    saveCheckoutDraft({
+      storeSlug: purchasePreview.store.slug,
+      customerName: customerName.trim(),
+      customerWhatsapp: formatWhatsappMask(customerWhatsapp),
+      deliveryType,
+      notes: notes.trim(),
+      items: [
+        {
+          productSlug: purchasePreview.product.slug,
+          quantity: numericQuantity,
+        },
+      ],
+      createdAt: new Date().toISOString(),
+    });
+  };
+
+  const handleGoToCheckout = () => {
+    persistCheckoutDraft();
+    setIsOpen(false);
+    router.push(`/lojas/${purchasePreview.store.slug}/checkout?product=${purchasePreview.product.slug}&quantity=${numericQuantity}`);
+  };
 
   const handleSaveOrder = () => {
     if (!hasValidCustomer) {
@@ -114,6 +139,7 @@ export function StorePurchaseModal({ purchasePreview }: { purchasePreview: Store
       status: "rascunho_local",
     };
 
+    persistCheckoutDraft();
     saveLocalOrder(order);
     setLastOrderCode(code);
     window.open(whatsappHref, "_blank", "noopener,noreferrer");
@@ -215,7 +241,7 @@ export function StorePurchaseModal({ purchasePreview }: { purchasePreview: Store
                   <p>Pix cadastrado: <span className="font-medium text-white">{purchasePreview.pixKey ?? "A confirmar"}</span></p>
                 </div>
                 <div className="mt-5 rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-sm leading-7 text-slate-300">
-                  O pedido sera salvo localmente no navegador antes de abrir o WhatsApp, preparando a transicao futura para a API.
+O modal agora pode levar o cliente para o checkout com os dados preenchidos, ou seguir no fluxo assistido por WhatsApp quando fizer mais sentido para a loja.
                 </div>
                 {lastOrderCode ? (
                   <div className="mt-4 rounded-[1.25rem] border border-emerald-400/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
@@ -223,6 +249,9 @@ export function StorePurchaseModal({ purchasePreview }: { purchasePreview: Store
                   </div>
                 ) : null}
                 <div className="mt-5 grid gap-3">
+                  <Button type="button" size="lg" onClick={handleGoToCheckout} className="justify-center text-center">
+                    Continuar no checkout
+                  </Button>
                   <Button type="button" size="lg" onClick={handleSaveOrder} className="justify-center text-center" disabled={!hasValidCustomer}>
                     Salvar pedido e enviar no WhatsApp
                   </Button>

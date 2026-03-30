@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { getSellerApiReportByStoreSlug } from "@/lib/services/catalog-service";
 import type { ReportPeriod, SellerWorkspace } from "@/types/catalog";
 
 const periodLabels: Record<ReportPeriod, string> = {
@@ -16,31 +17,101 @@ const formatCurrency = (value: number) =>
 export function SellerReportsBoard({ workspace }: { workspace: SellerWorkspace }) {
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>("dia");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
+  const [apiSnapshots, setApiSnapshots] = useState(workspace.reportSummary.snapshots);
+  const [apiCategories, setApiCategories] = useState(workspace.reportSummary.byCategory);
+  const [apiStatus, setApiStatus] = useState<{
+    loading: boolean;
+    error?: string;
+    sourceLabel?: string;
+  }>({
+    loading: true,
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadApiReports() {
+      try {
+        const report = await getSellerApiReportByStoreSlug(workspace.store.slug);
+
+        if (!active) {
+          return;
+        }
+
+        setApiSnapshots(report.snapshots);
+        setApiCategories(report.byCategory);
+        setApiStatus({
+          loading: false,
+          sourceLabel: report.matchedBySlug
+            ? "Relatorio real carregado pela loja correspondente da API."
+            : `Relatorio real carregado com fallback para ${report.targetStoreName ?? "a primeira loja da API"}.`,
+        });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setApiStatus({
+          loading: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel carregar os relatorios reais da API.",
+        });
+      }
+    }
+
+    void loadApiReports();
+
+    return () => {
+      active = false;
+    };
+  }, [workspace.store.slug]);
+
+  const reportSnapshots = apiSnapshots;
+  const reportCategories = apiCategories;
 
   const selectedSnapshot = useMemo(
-    () => workspace.reportSummary.snapshots.find((snapshot) => snapshot.period === selectedPeriod),
-    [selectedPeriod, workspace.reportSummary.snapshots],
+    () => reportSnapshots.find((snapshot) => snapshot.period === selectedPeriod),
+    [reportSnapshots, selectedPeriod],
   );
 
   const filteredCategories = useMemo(() => {
     if (selectedCategoryId === "all") {
-      return workspace.reportSummary.byCategory;
+      return reportCategories;
     }
 
-    return workspace.reportSummary.byCategory.filter((item) => item.categoryId === selectedCategoryId);
-  }, [selectedCategoryId, workspace.reportSummary.byCategory]);
+    return reportCategories.filter((item) => item.categoryId === selectedCategoryId);
+  }, [reportCategories, selectedCategoryId]);
+
+  const availableCategories = useMemo(() => {
+    const apiOnlyCategories = reportCategories.filter(
+      (apiCategory) => !workspace.categories.some((category) => category.id === apiCategory.categoryId),
+    );
+
+    return [
+      ...workspace.categories,
+      ...apiOnlyCategories.map((category) => ({
+        id: category.categoryId,
+        storeId: workspace.store.id,
+        name: category.categoryName,
+        slug: category.categoryName.toLowerCase().replace(/\s+/g, "-"),
+        active: true,
+      })),
+    ];
+  }, [reportCategories, workspace.categories, workspace.store.id]);
 
   const categoryRevenue = filteredCategories.reduce((sum, item) => sum + item.revenue, 0);
   const categoryOrders = filteredCategories.reduce((sum, item) => sum + item.orders, 0);
   const categoryUnits = filteredCategories.reduce((sum, item) => sum + item.units, 0);
 
   const topCategory = useMemo(() => {
-    const source = selectedCategoryId === "all" ? workspace.reportSummary.byCategory : filteredCategories;
+    const source = selectedCategoryId === "all" ? reportCategories : filteredCategories;
     return [...source].sort((a, b) => b.revenue - a.revenue)[0];
-  }, [filteredCategories, selectedCategoryId, workspace.reportSummary.byCategory]);
+  }, [filteredCategories, reportCategories, selectedCategoryId]);
 
   const trendLabel = useMemo(() => {
-    const snapshots = workspace.reportSummary.snapshots;
+    const snapshots = reportSnapshots;
     const currentIndex = snapshots.findIndex((snapshot) => snapshot.period === selectedPeriod);
     const previous = currentIndex > 0 ? snapshots[currentIndex - 1] : undefined;
 
@@ -57,7 +128,7 @@ export function SellerReportsBoard({ workspace }: { workspace: SellerWorkspace }
     }
 
     return "Receita estavel em relacao ao periodo anterior.";
-  }, [selectedPeriod, selectedSnapshot, workspace.reportSummary.snapshots]);
+  }, [reportSnapshots, selectedPeriod, selectedSnapshot]);
 
   return (
     <div className="space-y-8">
@@ -89,12 +160,15 @@ export function SellerReportsBoard({ workspace }: { workspace: SellerWorkspace }
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 O lojista consegue recortar o desempenho por periodo e focar em uma categoria especifica quando quiser aprofundar a leitura.
               </p>
+              <div className="mt-3 text-xs leading-6 text-[var(--muted)]">
+                {apiStatus.loading ? "Carregando relatorio real da API..." : apiStatus.error ?? apiStatus.sourceLabel}
+              </div>
             </div>
           </div>
 
           <div className="mt-6 grid gap-3 md:grid-cols-[auto_minmax(240px,320px)] md:items-end">
             <div className="flex flex-wrap gap-2">
-              {workspace.reportSummary.snapshots.map((snapshot) => (
+              {reportSnapshots.map((snapshot) => (
                 <button
                   key={snapshot.period}
                   type="button"
@@ -110,7 +184,7 @@ export function SellerReportsBoard({ workspace }: { workspace: SellerWorkspace }
               <span className="text-sm font-medium theme-text">Categoria</span>
               <select value={selectedCategoryId} onChange={(event) => setSelectedCategoryId(event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]">
                 <option value="all">Todas as categorias</option>
-                {workspace.categories.map((category) => (
+                {availableCategories.map((category) => (
                   <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
               </select>

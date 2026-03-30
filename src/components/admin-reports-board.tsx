@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { getAdminApiReportSummary } from "@/lib/services/catalog-service";
 import type { AdminWorkspace, ReportPeriod } from "@/types/catalog";
 
 const periodLabels: Record<ReportPeriod, string> = {
@@ -16,27 +17,89 @@ const formatCurrency = (value: number) =>
 export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) {
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>("dia");
   const [selectedStoreId, setSelectedStoreId] = useState<string>("all");
+  const [apiSnapshots, setApiSnapshots] = useState(workspace.reportSummary.periodSnapshots);
+  const [apiStores, setApiStores] = useState(workspace.reportSummary.byStore);
+  const [apiStatus, setApiStatus] = useState<{ loading: boolean; error?: string }>({ loading: true });
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadApiReports() {
+      try {
+        const report = await getAdminApiReportSummary();
+
+        if (!active) {
+          return;
+        }
+
+        setApiSnapshots(report.periodSnapshots);
+        setApiStores(report.byStore);
+        setApiStatus({ loading: false });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setApiStatus({
+          loading: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel carregar os relatorios reais da plataforma.",
+        });
+      }
+    }
+
+    void loadApiReports();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const periodSnapshots = apiSnapshots;
+  const storeSnapshots = apiStores;
 
   const selectedSnapshot = useMemo(
-    () => workspace.reportSummary.periodSnapshots.find((snapshot) => snapshot.period === selectedPeriod),
-    [selectedPeriod, workspace.reportSummary.periodSnapshots],
+    () => periodSnapshots.find((snapshot) => snapshot.period === selectedPeriod),
+    [periodSnapshots, selectedPeriod],
   );
 
   const filteredStores = useMemo(() => {
     if (selectedStoreId === "all") {
-      return workspace.reportSummary.byStore;
+      return storeSnapshots;
     }
 
-    return workspace.reportSummary.byStore.filter((item) => item.storeId === selectedStoreId);
-  }, [selectedStoreId, workspace.reportSummary.byStore]);
+    return storeSnapshots.filter((item) => item.storeId === selectedStoreId);
+  }, [selectedStoreId, storeSnapshots]);
+
+  const availableStores = useMemo(() => {
+    const apiOnlyStores = storeSnapshots.filter(
+      (apiStore) => !workspace.stores.some((store) => store.id === apiStore.storeId),
+    );
+
+    return [
+      ...workspace.stores,
+      ...apiOnlyStores.map((store) => ({
+        id: store.storeId,
+        name: store.storeName,
+        slug: store.storeName.toLowerCase().replace(/\s+/g, "-"),
+        status: "ativo" as const,
+      })),
+    ];
+  }, [storeSnapshots, workspace.stores]);
 
   const filteredOrders = useMemo(() => {
     if (selectedStoreId === "all") {
       return workspace.orders;
     }
 
-    return workspace.orders.filter((order) => order.storeId === selectedStoreId);
-  }, [selectedStoreId, workspace.orders]);
+    const selectedStore = availableStores.find((store) => store.id === selectedStoreId);
+
+    return workspace.orders.filter((order) =>
+      order.storeId === selectedStoreId || order.storeName === selectedStore?.name,
+    );
+  }, [availableStores, selectedStoreId, workspace.orders]);
 
   const totals = useMemo(() => {
     const sales = filteredStores.reduce((sum, store) => sum + store.sales, 0);
@@ -55,7 +118,7 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
   const leadingStore = useMemo(() => [...filteredStores].sort((a, b) => b.sales - a.sales)[0], [filteredStores]);
 
   const trendLabel = useMemo(() => {
-    const snapshots = workspace.reportSummary.periodSnapshots;
+    const snapshots = periodSnapshots;
     const currentIndex = snapshots.findIndex((snapshot) => snapshot.period === selectedPeriod);
     const previous = currentIndex > 0 ? snapshots[currentIndex - 1] : undefined;
 
@@ -72,7 +135,7 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
     }
 
     return "Receita geral estavel em relacao ao periodo anterior.";
-  }, [selectedPeriod, selectedSnapshot, workspace.reportSummary.periodSnapshots]);
+  }, [periodSnapshots, selectedPeriod, selectedSnapshot]);
 
   return (
     <div className="space-y-8">
@@ -103,11 +166,16 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
               O admin consegue recortar a plataforma por periodo e aprofundar a leitura em um lojista especifico quando precisar.
             </p>
+            <div className="mt-3 text-xs leading-6 text-[var(--muted)]">
+              {apiStatus.loading
+                ? "Carregando relatorio real da plataforma..."
+                : apiStatus.error ?? "Relatorio real carregado pela API em PostgreSQL."}
+            </div>
           </div>
 
           <div className="mt-6 grid gap-3 md:grid-cols-[auto_minmax(240px,320px)] md:items-end">
             <div className="flex flex-wrap gap-2">
-              {workspace.reportSummary.periodSnapshots.map((snapshot) => (
+              {periodSnapshots.map((snapshot) => (
                 <button
                   key={snapshot.period}
                   type="button"
@@ -123,7 +191,7 @@ export function AdminReportsBoard({ workspace }: { workspace: AdminWorkspace }) 
               <span className="text-sm font-medium theme-text">Lojista</span>
               <select value={selectedStoreId} onChange={(event) => setSelectedStoreId(event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]">
                 <option value="all">Todos os lojistas</option>
-                {workspace.stores.map((store) => (
+                {availableStores.map((store) => (
                   <option key={store.id} value={store.id}>{store.name}</option>
                 ))}
               </select>
