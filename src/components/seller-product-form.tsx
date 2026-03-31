@@ -4,8 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { saveLocalSellerProduct } from "@/lib/local-product-storage";
-import { submitSellerProduct } from "@/lib/services/catalog-service";
-import type { Category, ProductFormDraft, ProductImage, SellerWorkspace } from "@/types/catalog";
+import {
+  createSellerCategory,
+  deleteSellerProductImage,
+  getSellerProductById,
+  setSellerProductMainImage,
+  submitSellerProduct,
+} from "@/lib/services/catalog-service";
+import type { Category, ProductApiImageMeta, ProductFormDraft, ProductImage, SellerWorkspace } from "@/types/catalog";
 
 const MAX_IMAGES = 5;
 const MIN_IMAGES = 1;
@@ -53,7 +59,35 @@ const formatCurrency = (value: string) => (value ? `R$ ${value}` : "R$ 0,00");
 const shortenImageName = (value: string, max = 28) =>
   value.length > max ? `${value.slice(0, max - 3)}...` : value;
 
-export function SellerProductForm({ workspace }: { workspace: SellerWorkspace }) {
+const SELLER_PRODUCTS_SCROLL_KEY = "seller-products-scroll-target";
+
+export type SellerProductEditRequest = {
+  id: string;
+  source: "api" | "local";
+  name: string;
+  slug: string;
+  description: string;
+  categoryId: string;
+  priceRetail: number;
+  priceWholesale?: number;
+  pricePromotion?: number;
+  stock: number;
+  minStock: number;
+  imageUrl?: string;
+  images?: ProductApiImageMeta[];
+};
+
+export function SellerProductForm({
+  workspace,
+  externalEditRequest,
+  onCompleted,
+  onCancel,
+}: {
+  workspace: SellerWorkspace;
+  externalEditRequest?: SellerProductEditRequest | null;
+  onCompleted?: () => void;
+  onCancel?: () => void;
+}) {
   const router = useRouter();
   const [draft, setDraft] = useState<ProductFormDraft>(() => initialDraft(workspace));
   const [categories, setCategories] = useState<Category[]>(() => workspace.categories);
@@ -65,7 +99,9 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [deletedApiImageIds, setDeletedApiImageIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const latestImagesRef = useRef<ProductImage[]>([]);
 
@@ -84,6 +120,18 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
   }, []);
 
   useEffect(() => {
+    if (!externalEditRequest || typeof window === "undefined") {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("seller-product-edit", {
+        detail: externalEditRequest,
+      }),
+    );
+  }, [externalEditRequest]);
+
+  useEffect(() => {
     const handleEditProduct = (event: Event) => {
       const customEvent = event as CustomEvent<{
         id: string;
@@ -98,20 +146,32 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
         stock: number;
         minStock: number;
         imageUrl?: string;
+        images?: ProductApiImageMeta[];
       }>;
       const detail = customEvent.detail;
       if (!detail) return;
 
-      const nextImages = detail.imageUrl
-        ? [
-            {
-              id: `existing-${detail.id}`,
-              source: "url" as const,
-              name: detail.name,
-              previewUrl: detail.imageUrl,
-            },
-          ]
-        : [];
+      const nextImages: ProductImage[] = (detail.images ?? []).length
+        ? (detail.images ?? []).map((image, index) => ({
+            id: `api-${image.id}-${index}`,
+            source: "api" as const,
+            name: image.name,
+            previewUrl: image.imageUrl,
+            apiImageId: image.id,
+            isMain: image.isMain,
+          }))
+        : detail.imageUrl
+          ? [
+              {
+                id: `existing-${detail.id}`,
+                source: "url" as const,
+                name: detail.name,
+                previewUrl: detail.imageUrl,
+              },
+            ]
+          : [];
+
+      const selectedMain = nextImages.find((image) => image.isMain) ?? nextImages[0] ?? null;
 
       setEditingProductId(detail.id);
       setDraft({
@@ -126,7 +186,8 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
         minStock: String(detail.minStock),
         images: nextImages,
       });
-      setMainImageId(nextImages[0]?.id ?? null);
+      setMainImageId(selectedMain?.id ?? null);
+      setDeletedApiImageIds([]);
       setStep(0);
       setSubmittedPreview(null);
       setFeedback(`Produto ${detail.name} carregado para edicao. Revise os campos e salve as alteracoes.`);
@@ -207,20 +268,54 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
     setUrlInput("");
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     const trimmed = draft.newCategoryName.trim();
 
-    if (!trimmed) {
-      setFeedback("Digite o nome da nova categoria para adicionar ao cadastro.");
+    if (!trimmed || isSavingCategory) {
+      if (!trimmed) {
+        setFeedback("Digite o nome da nova categoria para adicionar ao cadastro.");
+      }
       return;
     }
 
     const slug = slugify(trimmed);
-    const alreadyExists = categories.some((category) => category.slug === slug);
+    const alreadyExists = categories.find((category) => category.slug === slug);
 
     if (alreadyExists) {
-      setFeedback("Ja existe uma categoria com esse nome nesta loja.");
+      setDraft((current) => ({ ...current, categoryId: alreadyExists.id, newCategoryName: "" }));
+      setIsCategoryModalOpen(false);
+      setFeedback(`Categoria ${alreadyExists.name} ja existe e foi selecionada para este produto.`);
       return;
+    }
+
+    setIsSavingCategory(true);
+
+    try {
+      const createdCategory = await createSellerCategory({
+        storeId: workspace.store.id,
+        name: trimmed,
+        slug,
+        active: true,
+      });
+
+      setCategories((current) => [...current, createdCategory]);
+      setDraft((current) => ({
+        ...current,
+        categoryId: createdCategory.id,
+        newCategoryName: "",
+      }));
+      setIsCategoryModalOpen(false);
+      setFeedback(`Categoria ${createdCategory.name} salva com sucesso e pronta para os proximos cadastros.`);
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Nao foi possivel salvar a categoria agora.";
+
+      if (!message.includes("nao esta configurada")) {
+        setFeedback(message);
+        return;
+      }
+    } finally {
+      setIsSavingCategory(false);
     }
 
     const newCategory: Category = {
@@ -273,6 +368,10 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
       const imageToRemove = current.images.find((image) => image.id === imageId);
       if (imageToRemove?.source === "upload") {
         URL.revokeObjectURL(imageToRemove.previewUrl);
+      }
+
+      if (imageToRemove?.source === "api" && imageToRemove.apiImageId) {
+        setDeletedApiImageIds((currentIds) => currentIds.includes(imageToRemove.apiImageId as string) ? currentIds : [...currentIds, imageToRemove.apiImageId as string]);
       }
 
       const nextImages = current.images.filter((image) => image.id !== imageId);
@@ -364,17 +463,55 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
         mainImageId: mainImageId ?? undefined,
       });
 
-      setSubmittedPreview(draft);
-      setFeedback(`Produto ${createdProduct.name} ${editingProductId ? "atualizado" : "cadastrado"} na API com sucesso. Abrindo a vitrine interna da loja.`);
-      setEditingProductId(null);
+      let finalProduct = createdProduct;
+      const selectedMainImage = draft.images.find((image) => image.id === mainImageId);
 
+      if (editingProductId) {
+        for (const imageId of deletedApiImageIds) {
+          await deleteSellerProductImage(createdProduct.id, imageId);
+        }
+
+        if (selectedMainImage?.source === "api" && selectedMainImage.apiImageId) {
+          await setSellerProductMainImage(createdProduct.id, selectedMainImage.apiImageId);
+        }
+
+        finalProduct = await getSellerProductById(createdProduct.id);
+      }
+
+      const nextSubmittedPreview: ProductFormDraft = {
+        ...draft,
+        images: finalProduct.images?.map((image) => ({
+          id: `saved-${image.id}`,
+          source: "api" as const,
+          name: image.name,
+          previewUrl: image.imageUrl,
+          apiImageId: image.id,
+          isMain: image.isMain,
+        })) ?? draft.images,
+      };
+      setSubmittedPreview(nextSubmittedPreview);
+      setFeedback(`Produto ${finalProduct.name} ${editingProductId ? "atualizado" : "cadastrado"} na API com sucesso. Abrindo a vitrine interna da loja.`);
+      setEditingProductId(null);
+      setDeletedApiImageIds([]);
+
+      if (!editingProductId) {
+        setDraft(initialDraft(workspace));
+        setMainImageId(null);
+        setStep(0);
+      }
+
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(SELLER_PRODUCTS_SCROLL_KEY, "produtos-cadastrados");
+      }
+
+      setIsSubmitting(false);
+      onCompleted?.();
       router.replace("/painel-lojista/produtos#produtos-cadastrados");
-      router.refresh();
       window.setTimeout(() => {
         const showcase = document.getElementById("produtos-cadastrados");
         showcase?.scrollIntoView({ behavior: "smooth", block: "start" });
-        setIsSubmitting(false);
-      }, 300);
+        router.refresh();
+      }, 200);
       return;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Nao foi possivel concluir o cadastro do produto.";
@@ -412,13 +549,25 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
     setSubmittedPreview(draft);
     setFeedback(`Produto ${productName || "sem nome"} ${editingProductId ? "atualizado" : "cadastrado"} localmente. Abrindo a vitrine interna da loja.`);
     setEditingProductId(null);
+    setDeletedApiImageIds([]);
 
+    if (!editingProductId) {
+      setDraft(initialDraft(workspace));
+      setMainImageId(null);
+      setStep(0);
+    }
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(SELLER_PRODUCTS_SCROLL_KEY, "produtos-cadastrados");
+    }
+
+    setIsSubmitting(false);
+    onCompleted?.();
     router.replace("/painel-lojista/produtos#produtos-cadastrados");
     window.setTimeout(() => {
       const showcase = document.getElementById("produtos-cadastrados");
       showcase?.scrollIntoView({ behavior: "smooth", block: "start" });
-      setIsSubmitting(false);
-    }, 250);
+    }, 200);
   };
 
   const selectedCategory = categories.find((category) => category.id === draft.categoryId);
@@ -449,6 +598,24 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
             Etapa {step + 1} de {stepLabels.length}
           </span>
         </div>
+
+        {editingProductId ? (
+          <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Modo edicao</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Aqui voce pode ajustar descricao, preco, estoque, categoria e imagens sem trocar o layout da vitrine.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full theme-border-button px-3 py-1.5 text-xs font-semibold">Descricao</span>
+                <span className="rounded-full theme-border-button px-3 py-1.5 text-xs font-semibold">Preco</span>
+                <span className="rounded-full theme-border-button px-3 py-1.5 text-xs font-semibold">Estoque</span>
+                <span className="rounded-full theme-border-button px-3 py-1.5 text-xs font-semibold">Categoria</span>
+                <span className="rounded-full theme-border-button px-3 py-1.5 text-xs font-semibold">Imagens</span>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="grid gap-3 md:grid-cols-4">
           {stepLabels.map((label, index) => {
@@ -554,13 +721,18 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
           <div className="space-y-5">
             <div>
               <h3 className="text-xl font-semibold text-slate-900">Imagens do produto</h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Escolha entre 1 e 5 imagens, visualize tudo em preview e marque uma como principal.</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Escolha entre 1 e 5 imagens, visualize tudo em preview, marque uma como principal e, na edicao, adicione novas ou remova as atuais.</p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="rounded-full bg-[rgba(15,118,110,0.12)] px-4 py-2 text-xs font-semibold text-[var(--accent-strong)]">
                 {draft.images.length}/{MAX_IMAGES} imagens escolhidas
               </div>
+              {editingProductId ? (
+                <div className="rounded-full theme-border-button px-4 py-2 text-xs font-semibold transition">
+                  Remova as antigas ou envie novas antes de salvar
+                </div>
+              ) : null}
               <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
                 Upload local
               </button>
@@ -577,39 +749,68 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {draft.images.length ? (
-                draft.images.map((image, index) => {
-                  const isMain = image.id === mainImageId;
+                <>
+                  {draft.images.map((image, index) => {
+                    const isMain = image.id === mainImageId;
 
-                  return (
-                    <article key={image.id} className={`overflow-hidden rounded-[1.5rem] border bg-white ${isMain ? "border-[var(--accent)] shadow-[0_0_0_2px_rgba(15,118,110,0.08)]" : "border-[var(--border)]"}`}>
-                      <div className="aspect-[4/5] bg-slate-100">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={image.previewUrl} alt={image.name} className="h-full w-full object-cover" />
-                      </div>
-                      <div className="space-y-3 p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isMain ? "bg-[var(--accent)] text-white" : "theme-badge-neutral"}`}>
-                            {isMain ? "Principal" : `Imagem ${index + 1}`}
-                          </span>
-                          <span className="text-xs font-medium text-[var(--muted)]">{image.source === "upload" ? "Upload local" : "URL remota"}</span>
+                    return (
+                      <article key={image.id} className={`overflow-hidden rounded-[1.5rem] border bg-white ${isMain ? "border-[var(--accent)] shadow-[0_0_0_2px_rgba(15,118,110,0.08)]" : "border-[var(--border)]"}`}>
+                        <div className="relative aspect-[4/5] bg-slate-100">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={image.previewUrl} alt={image.name} className="h-full w-full object-cover" />
+                          <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3">
+                            <span className={`rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${isMain ? "bg-[var(--accent)] text-white" : "bg-white/90 text-slate-700"}`}>
+                              {isMain ? "Principal" : `Imagem ${index + 1}`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(image.id)}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/92 text-rose-600 shadow-sm transition hover:bg-rose-50"
+                              aria-label={`Remover ${image.name}`}
+                              title="Remover imagem"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                                <path d="M9 4.75h6m-8 3h10m-8.25 0 .5 10.5a1 1 0 0 0 1 .95h3.5a1 1 0 0 0 1-.95l.5-10.5M10 10.5v5M14 10.5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/55 via-slate-950/10 to-transparent p-3">
+                            <div className="flex items-center justify-between gap-3 text-white">
+                              <p className="line-clamp-1 text-xs font-medium">{shortenImageName(image.name, 24)}</p>
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
+                                {image.source === "upload" ? "Upload" : image.source === "api" ? "API" : "URL"}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <p className="line-clamp-2 text-sm leading-6 text-[var(--muted)]">{image.name}</p>
-                        <div className="grid gap-2">
-                          <button type="button" onClick={() => setMainImageId(image.id)} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
-                            {isMain ? "Imagem principal" : "Definir como principal"}
-                          </button>
-                          <button type="button" onClick={() => handleRemoveImage(image.id)} className="rounded-2xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">
-                            Remover imagem
+                        <div className="p-4">
+                          <button type="button" onClick={() => setMainImageId(image.id)} className={`w-full rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${isMain ? "bg-slate-100 text-slate-700" : "bg-slate-900 text-white hover:bg-slate-700"}`}>
+                            {isMain ? "Imagem principal" : "Usar como principal"}
                           </button>
                         </div>
-                      </div>
-                    </article>
-                  );
-                })
+                      </article>
+                    );
+                  })}
+                  {draft.images.length < MAX_IMAGES ? (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex aspect-[4/5] flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-[var(--border)] bg-white px-5 text-center transition hover:border-[var(--accent)] hover:bg-[var(--surface)]"
+                    >
+                      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[rgba(15,118,110,0.12)] text-3xl font-light text-[var(--accent)]">+</span>
+                      <strong className="mt-4 block text-base theme-heading">Adicionar imagem</strong>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Use este espaco para enviar mais uma foto sem sair da grade.</p>
+                    </button>
+                  ) : null}
+                </>
               ) : (
-                <div className="rounded-[1.5rem] border border-dashed border-[var(--border)] bg-white px-5 py-10 text-sm leading-6 text-[var(--muted)] sm:col-span-2 xl:col-span-3">
-                  Nenhuma imagem adicionada ainda. Para uma apresentacao mais forte, escolha a sequencia visual do produto antes de seguir.
-                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-[1.5rem] border border-dashed border-[var(--border)] bg-white px-5 py-10 text-sm leading-6 text-[var(--muted)] sm:col-span-2 xl:col-span-3"
+                >
+                  Nenhuma imagem adicionada ainda. Clique para enviar a primeira foto do produto.
+                </button>
               )}
             </div>
           </div>
@@ -691,9 +892,16 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button type="button" onClick={() => setStep((current) => Math.max(current - 1, 0))} className={`rounded-full px-5 py-3 text-sm font-semibold transition ${step === 0 ? "cursor-not-allowed border border-[var(--border)] bg-slate-100 text-slate-400" : "border border-[var(--border)] bg-white text-slate-800 hover:border-[var(--accent)]"}`} disabled={step === 0}>
-          Voltar etapa
-        </button>
+        <div className="flex flex-wrap gap-3">
+          {onCancel ? (
+            <button type="button" onClick={onCancel} className="rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">
+              Fechar
+            </button>
+          ) : null}
+          <button type="button" onClick={() => setStep((current) => Math.max(current - 1, 0))} className={`rounded-full px-5 py-3 text-sm font-semibold transition ${step === 0 ? "cursor-not-allowed border border-[var(--border)] bg-slate-100 text-slate-400" : "border border-[var(--border)] bg-white text-slate-800 hover:border-[var(--accent)]"}`} disabled={step === 0}>
+            Voltar etapa
+          </button>
+        </div>
 
         <div className="flex flex-wrap gap-3">
           {step < 3 ? (
@@ -746,14 +954,12 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
               <button
                 type="button"
                 onClick={() => {
-                  handleAddCategory();
-                  if (draft.newCategoryName.trim()) {
-                    setIsCategoryModalOpen(false);
-                  }
+                  void handleAddCategory();
                 }}
-                className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
+                disabled={isSavingCategory}
+                className={`rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] ${isSavingCategory ? "cursor-not-allowed opacity-70" : ""}`}
               >
-                Salvar categoria
+                {isSavingCategory ? "Salvando categoria..." : "Salvar categoria"}
               </button>
             </div>
           </div>
@@ -804,7 +1010,7 @@ export function SellerProductForm({ workspace }: { workspace: SellerWorkspace })
                       <div className="space-y-3 p-4">
                         <div className="flex items-center justify-between gap-3">
                           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isMain ? "bg-[var(--accent)] text-white" : "theme-badge-neutral"}`}>{isMain ? "Principal" : `Ordem ${index + 1}`}</span>
-                          <span className="text-xs text-[var(--muted)]">{image.source === "upload" ? "Upload" : "URL"}</span>
+                          <span className="text-xs text-[var(--muted)]">{image.source === "upload" ? "Upload" : image.source === "api" ? "API" : "URL"}</span>
                         </div>
                         <p className="text-sm text-[var(--muted)]" title={image.name}>{shortenImageName(image.name)}</p>
                         {!isMain ? (

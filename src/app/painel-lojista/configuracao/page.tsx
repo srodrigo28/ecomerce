@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 import { StoreSettingsForm } from "@/components/store-settings-form";
+import { ThemeSwitcherPanel } from "@/components/theme-switcher";
+import { Modal } from "@/components/ui-modal";
 
 const settingsHighlights = [
   "WhatsApp e Pix usados no modal de compra",
@@ -10,6 +15,8 @@ const settingsHighlights = [
 ];
 
 export default function SellerStoreSettingsPage() {
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10 2xl:px-12">
       <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-8 lg:p-10">
@@ -24,6 +31,13 @@ export default function SellerStoreSettingsPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setIsThemeModalOpen(true)}
+              className="rounded-full theme-border-button px-5 py-3 text-sm font-semibold transition"
+            >
+              Alterar tema
+            </button>
             <Link href="/painel-lojista" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
               Voltar para painel
             </Link>
@@ -57,6 +71,18 @@ export default function SellerStoreSettingsPage() {
 
         <StoreSettingsForm />
       </section>
+
+      {isThemeModalOpen ? (
+        <Modal
+          onClose={() => setIsThemeModalOpen(false)}
+          title="Tema da interface"
+          description="Escolha a paleta do painel. A preferencia fica salva neste navegador."
+        >
+          <div className="mt-6">
+            <ThemeSwitcherPanel />
+          </div>
+        </Modal>
+      ) : null}
     </main>
   );
 }

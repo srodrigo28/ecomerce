@@ -11,7 +11,7 @@ export type OrderStatus =
   | "concluido"
   | "cancelado";
 
-export type ProductImageSource = "upload" | "url";
+export type ProductImageSource = "upload" | "url" | "api";
 export type StockMovementType = "entrada" | "saida" | "ajuste";
 export type StockMovementSource = "manual" | "pedido" | "reposicao" | "cancelamento";
 export type ReportPeriod = "dia" | "semana" | "mes";
@@ -57,6 +57,16 @@ export interface ProductImage {
   name: string;
   previewUrl: string;
   file?: File;
+  apiImageId?: string;
+  isMain?: boolean;
+}
+
+export interface ProductApiImageMeta {
+  id: string;
+  name: string;
+  imageUrl: string;
+  isMain: boolean;
+  position?: number;
 }
 
 export interface Product {
@@ -72,6 +82,7 @@ export interface Product {
   stock: number;
   minStock?: number;
   imageUrls: string[];
+  images?: ProductApiImageMeta[];
   featured?: boolean;
 }
 

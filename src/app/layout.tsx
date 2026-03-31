@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
-import { ThemeSwitcher } from "@/components/theme-switcher";
+import { ThemeHydrator } from "@/components/theme-switcher";
 
 import "./globals.css";
 
@@ -34,8 +34,10 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         {children}
-        <ThemeSwitcher />
+        <ThemeHydrator />
       </body>
     </html>
   );
 }
+
+

@@ -11,6 +11,7 @@ import type {
   CheckoutSubmitInput,
   OrderSuccessPreview,
   Product,
+  ProductApiImageMeta,
   PublicCatalogSearchResult,
   PublicSearchProductMatch,
   PublicSearchStoreResult,
@@ -76,6 +77,16 @@ const toNumberValue = (value: unknown) => {
 };
 
 const toNullableString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
+
+const resolveApiAssetUrl = (value: unknown) => {
+  const rawValue = toNullableString(value);
+
+  if (!rawValue) return undefined;
+  if (/^https?:\/\//i.test(rawValue)) return rawValue;
+
+  const apiOrigin = apiConfig.baseUrl.replace(/\/api\/v\d+$/i, "").replace(/\/$/, "");
+  return apiOrigin ? `${apiOrigin}${rawValue.startsWith("/") ? rawValue : `/${rawValue}`}` : rawValue;
+};
 
 const emptySellerStore: StoreSummary = {
   id: "store-empty",
@@ -206,10 +217,7 @@ const mapCheckoutApiOrderResult = (payload: unknown): CheckoutApiOrderResult => 
                   id: Number(product.id),
                   name: String(product.name),
                   slug: String(product.slug),
-                  mainImageUrl:
-                    typeof (product.main_image_url ?? product.mainImageUrl) === "string"
-                      ? String(product.main_image_url ?? product.mainImageUrl)
-                      : null,
+                  mainImageUrl: resolveApiAssetUrl(product.main_image_url ?? product.mainImageUrl) ?? null,
                 }
               : undefined,
           };
@@ -358,7 +366,6 @@ export async function submitSellerProduct(input: SellerProductSubmitInput): Prom
       min_stock: input.minStock,
       status: "draft",
       is_featured: false,
-      ...(targetProductId ? {} : { main_image_url: null }),
       notes: null,
     }),
     cache: "no-store",
@@ -398,24 +405,65 @@ export async function submitSellerProduct(input: SellerProductSubmitInput): Prom
       ? uploadImages.findIndex((image) => image.id === input.mainImageId)
       : 0;
 
-    if (selectedMainIndex > 0 && Array.isArray(uploadPayload.data) && uploadPayload.data[selectedMainIndex]?.id) {
-      await fetch(`${resolvedEndpoints.products}/${createdProductId}/images/${String(uploadPayload.data[selectedMainIndex].id)}/set-main`, {
-        method: "POST",
-        cache: "no-store",
-      });
+    if (selectedMainIndex >= 0 && Array.isArray(uploadPayload.data) && uploadPayload.data[selectedMainIndex]?.id) {
+      await setSellerProductMainImage(String(createdProductId), String(uploadPayload.data[selectedMainIndex].id));
     }
   }
 
-  const productResponse = await fetch(`${resolvedEndpoints.products}/${createdProductId}`, { cache: "no-store" });
-  const productPayload = (await productResponse.json()) as { data?: Record<string, unknown>; message?: string };
-
-  if (!productResponse.ok || !productPayload.data) {
-    throw new Error(productPayload.message ?? "Produto criado, mas nao foi possivel recarregar os dados finais da API.");
-  }
-
-  return mapApiProduct(productPayload.data);
+  return getSellerProductById(String(createdProductId));
 }
 
+
+export async function getSellerProductById(productId: string): Promise<Product> {
+  if (shouldUseMocks) {
+    throw new Error("A API real de produtos ainda nao esta configurada neste ambiente.");
+  }
+
+  const response = await fetch(`${resolvedEndpoints.products}/${productId}`, { cache: "no-store" });
+  const payload = (await response.json()) as { data?: Record<string, unknown>; message?: string };
+
+  if (!response.ok || !payload.data) {
+    throw new Error(payload.message ?? "Nao foi possivel carregar o produto da API.");
+  }
+
+  return mapApiProduct(payload.data);
+}
+
+export async function setSellerProductMainImage(productId: string, imageId: string): Promise<void> {
+  if (shouldUseMocks) {
+    throw new Error("A API real de imagens ainda nao esta configurada neste ambiente.");
+  }
+
+  const response = await fetch(`${resolvedEndpoints.products}/${productId}/images/${imageId}/set-main`, {
+    method: "POST",
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as { message?: string; details?: string[] };
+
+  if (!response.ok) {
+    const detailLabel = Array.isArray(payload.details) && payload.details.length > 0 ? ` ${payload.details.join(" ")}` : "";
+    throw new Error(`${payload.message ?? "Nao foi possivel definir a imagem principal do produto."}${detailLabel}`.trim());
+  }
+}
+
+export async function deleteSellerProductImage(productId: string, imageId: string): Promise<void> {
+  if (shouldUseMocks) {
+    throw new Error("A API real de imagens ainda nao esta configurada neste ambiente.");
+  }
+
+  const response = await fetch(`${resolvedEndpoints.products}/${productId}/images/${imageId}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as { message?: string; details?: string[] };
+
+  if (!response.ok) {
+    const detailLabel = Array.isArray(payload.details) && payload.details.length > 0 ? ` ${payload.details.join(" ")}` : "";
+    throw new Error(`${payload.message ?? "Nao foi possivel remover a imagem do produto."}${detailLabel}`.trim());
+  }
+}
 
 export async function deleteSellerProduct(productId: string): Promise<void> {
   if (shouldUseMocks) {
@@ -538,14 +586,41 @@ const mapApiCategory = (payload: Record<string, unknown>): Category => ({
 });
 
 const mapApiProduct = (payload: Record<string, unknown>): Product => {
-  const images = Array.isArray(payload.images) ? payload.images : [];
-  const imageUrls = images
-    .map((image) => {
-      if (!image || typeof image !== "object") return undefined;
-      return toNullableString((image as Record<string, unknown>).image_url ?? (image as Record<string, unknown>).imageUrl);
-    })
-    .filter((value): value is string => Boolean(value));
-  const fallbackMainImage = toNullableString(payload.main_image_url ?? payload.mainImageUrl);
+  const imageEntries = Array.isArray(payload.images) ? payload.images : [];
+  const apiImages = imageEntries.reduce<ProductApiImageMeta[]>((accumulator, image, index) => {
+    if (!image || typeof image !== "object") {
+      return accumulator;
+    }
+
+    const record = image as Record<string, unknown>;
+    const imageUrl = toNullableString(record.image_url ?? record.imageUrl);
+
+    if (!imageUrl) {
+      return accumulator;
+    }
+
+    accumulator.push({
+      id: String(record.id ?? `image-${index + 1}`),
+      name: String(record.filename ?? record.name ?? `Imagem ${index + 1}`),
+      imageUrl,
+      isMain: Boolean(record.is_main ?? record.isMain),
+      position: Number(record.position ?? index + 1),
+    });
+
+    return accumulator;
+  }, []);
+
+  const fallbackMainImage = resolveApiAssetUrl(payload.main_image_url ?? payload.mainImageUrl);
+  const orderedImages = [...apiImages].sort((left, right) => {
+    if (left.isMain && !right.isMain) return -1;
+    if (!left.isMain && right.isMain) return 1;
+    return (left.position ?? 0) - (right.position ?? 0);
+  });
+  const imageUrls = orderedImages.map((image) => image.imageUrl);
+
+  if (!imageUrls.length && fallbackMainImage) {
+    imageUrls.push(fallbackMainImage);
+  }
 
   return {
     id: String(payload.id),
@@ -559,7 +634,8 @@ const mapApiProduct = (payload: Record<string, unknown>): Product => {
     pricePromotion: payload.price_promotion ?? payload.pricePromotion ? toNumberValue(payload.price_promotion ?? payload.pricePromotion) : undefined,
     stock: Number(payload.stock ?? 0),
     minStock: Number(payload.min_stock ?? payload.minStock ?? 0),
-    imageUrls: imageUrls.length ? imageUrls : [fallbackMainImage].filter((value): value is string => Boolean(value)),
+    imageUrls,
+    images: orderedImages,
     featured: Boolean(payload.is_featured ?? payload.isFeatured),
   };
 };
@@ -806,7 +882,7 @@ export async function getFeaturedStores(): Promise<StoreSummary[]> {
   }
 }
 
-export async function getSellerWorkspace(): Promise<SellerWorkspace> {
+export async function getSellerWorkspace(storeSlug?: string): Promise<SellerWorkspace> {
   if (shouldUseMocks) {
     return createEmptySellerWorkspace(mockStores[0]);
   }
@@ -818,7 +894,8 @@ export async function getSellerWorkspace(): Promise<SellerWorkspace> {
       return createEmptySellerWorkspace();
     }
 
-    const primaryStorePayload = stores[0];
+    const matchedStorePayload = storeSlug ? stores.find((store) => String(store.slug) === storeSlug) : undefined;
+    const primaryStorePayload = matchedStorePayload ?? stores[stores.length - 1];
     const primaryStore = mapApiStoreSummary(primaryStorePayload);
     const storeId = Number(primaryStorePayload.id);
 
@@ -882,15 +959,45 @@ export async function getPublicStoreCatalogBySlug(slug: string): Promise<PublicS
     return undefined;
   }
 
-  const categories = mockCategories.filter((category) => category.storeId === store.id && category.active);
-  const products = mockProducts.filter((product) => product.storeId === store.id);
+  if (shouldUseMocks) {
+    const categories = mockCategories.filter((category) => category.storeId === store.id && category.active);
+    const products = mockProducts.filter((product) => product.storeId === store.id);
 
-  return {
-    store,
-    categories,
-    products,
-    featuredProducts: products.filter((product) => product.featured),
-  };
+    return {
+      store,
+      categories,
+      products,
+      featuredProducts: products.filter((product) => product.featured),
+    };
+  }
+
+  try {
+    const storeId = Number(store.id);
+    const [categoriesPayload, productsPayload] = await Promise.all([
+      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.categories}?store_id=${storeId}`),
+      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.products}?store_id=${storeId}`),
+    ]);
+
+    const categories = categoriesPayload.map(mapApiCategory).filter((category) => category.active);
+    const products = productsPayload.map(mapApiProduct);
+
+    return {
+      store,
+      categories,
+      products,
+      featuredProducts: products.filter((product) => product.featured),
+    };
+  } catch {
+    const categories = mockCategories.filter((category) => category.storeId === store.id && category.active);
+    const products = mockProducts.filter((product) => product.storeId === store.id);
+
+    return {
+      store,
+      categories,
+      products,
+      featuredProducts: products.filter((product) => product.featured),
+    };
+  }
 }
 
 export async function searchPublicCatalog(query: string): Promise<PublicCatalogSearchResult> {
@@ -1149,3 +1256,8 @@ export async function getOrderSuccessPreviewByStoreSlug(
       : "Pedido confirmado no frontend e pronto para futura integracao com API e status reais.",
   };
 }
+
+
+
+
+

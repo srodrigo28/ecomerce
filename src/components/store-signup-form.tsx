@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { submitStoreSignup } from "@/lib/services/catalog-service";
+import { saveLocalSellerAuth } from "@/lib/local-auth-storage";
 
 const onlyDigits = (value: string) => value.replace(/\D/g, "");
 
@@ -217,6 +218,13 @@ export function StoreSignupForm() {
 
       setCreatedStore(created);
       setSubmitted(true);
+      saveLocalSellerAuth({
+        email: email.trim(),
+        password,
+        storeSlug: created.slug,
+        storeName: created.name,
+      });
+      document.cookie = `seller_store_slug=${created.slug}; path=/; max-age=2592000; samesite=lax`;
       setFeedback(`Loja criada na API com sucesso. Redirecionando para o painel do lojista com a loja /lojas/${created.slug}.`);
       window.setTimeout(() => {
         router.push("/painel-lojista");
@@ -454,3 +462,7 @@ export function StoreSignupForm() {
     </article>
   );
 }
+
+
+
+

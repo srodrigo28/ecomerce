@@ -4,44 +4,62 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { findLocalSellerAuth } from "@/lib/local-auth-storage";
+
 const accessCards = [
   {
     title: "Entrar como lojista",
-    description: "Acesse seu painel para acompanhar categorias, estoque, pedidos e vendas.",
-    href: "/painel-lojista",
-    cta: "Abrir painel do lojista",
+    description: "Acesse seu painel com o cadastro real criado no fluxo da loja.",
+    href: "/cadastro-loja",
+    cta: "Criar loja primeiro",
   },
   {
     title: "Entrar como admin",
-    description: "Acompanhe a operacao da plataforma com filtros por lojista, pedidos e vendas.",
+    description: "O acesso admin continua separado e deve ganhar autenticacao propria depois.",
     href: "/painel-admin",
-    cta: "Abrir painel admin",
+    cta: "Abrir admin de teste",
   },
 ];
+
+const ADMIN_DEMO_EMAIL = "admin@hierarquia.local";
+const ADMIN_DEMO_PASSWORD = "admin123";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [feedback, setFeedback] = useState(
-    "O login definitivo entra depois. Neste momento estamos validando experiencia, navegacao e entradas de negocio.",
+    "Use o e-mail e a senha criados no cadastro da loja. O login real da API entra na proxima fase.",
   );
 
   const handleFrontendLogin = () => {
     if (!email.trim() || !password.trim()) {
-      setFeedback("Preencha e-mail e senha para continuar para o painel de teste.");
+      setFeedback("Preencha e-mail e senha para validar o acesso.");
       return;
     }
 
-    const nextPath = email.toLowerCase().includes("admin") ? "/painel-admin" : "/painel-lojista";
-    setFeedback(
-      nextPath === "/painel-admin"
-        ? "Acesso frontend validado. Redirecionando para o painel admin de teste..."
-        : "Acesso frontend validado. Redirecionando para o painel do lojista de teste...",
-    );
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedEmail === ADMIN_DEMO_EMAIL && password === ADMIN_DEMO_PASSWORD) {
+      setFeedback("Acesso admin de validacao confirmado. Redirecionando...");
+      window.setTimeout(() => {
+        router.push("/painel-admin");
+      }, 500);
+      return;
+    }
+
+    const sellerAccess = findLocalSellerAuth(email, password);
+
+    if (!sellerAccess) {
+      setFeedback("E-mail ou senha invalidos para este ambiente de teste. Use os dados criados no cadastro da loja.");
+      return;
+    }
+
+    document.cookie = `seller_store_slug=${sellerAccess.storeSlug}; path=/; max-age=2592000; samesite=lax`;
+    setFeedback(`Acesso validado para ${sellerAccess.storeName}. Redirecionando para o painel da loja...`);
 
     window.setTimeout(() => {
-      router.push(nextPath);
+      router.push("/painel-lojista");
     }, 500);
   };
 
@@ -70,14 +88,14 @@ export default function LoginPage() {
       <section className="grid gap-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)] lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:p-8">
         <div className="space-y-6">
           <span className="inline-flex rounded-full bg-[rgba(15,118,110,0.12)] px-4 py-2 text-sm font-semibold text-[var(--accent-strong)]">
-            Login frontend para validacao de fluxo
+            Login validado localmente
           </span>
           <div className="space-y-4">
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
-              Entre no ambiente certo sem travar o projeto com backend antes da hora.
+              Entre com os dados reais criados no cadastro da sua loja.
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
-              Esta etapa continua mockada de proposito. O objetivo agora e validar jornada, hierarquia visual e acessos principais antes da API.
+              Enquanto a autenticacao oficial da API nao entra, o ambiente usa validacao local para impedir acessos falsos e manter o contexto correto da loja no painel.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -90,6 +108,9 @@ export default function LoginPage() {
                 </Link>
               </article>
             ))}
+          </div>
+          <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
+            Admin de teste: <span className="font-semibold text-slate-900">admin@hierarquia.local</span> com senha <span className="font-semibold text-slate-900">admin123</span>.
           </div>
         </div>
 
@@ -126,7 +147,7 @@ export default function LoginPage() {
               type="submit"
               className="w-full rounded-2xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
             >
-              Continuar no frontend
+              Entrar no painel
             </button>
           </form>
           <div className="mt-5 rounded-[1.5rem] border border-[var(--border)] bg-slate-50 p-4 text-sm leading-6 text-[var(--muted)]">

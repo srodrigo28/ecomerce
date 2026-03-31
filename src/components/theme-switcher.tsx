@@ -33,6 +33,10 @@ const themes = [
 
 type ThemeId = (typeof themes)[number]["id"];
 
+type ThemeSwitcherPanelProps = {
+  compact?: boolean;
+};
+
 const isThemeId = (value: string | null): value is ThemeId => themes.some((theme) => theme.id === value);
 
 const getInitialTheme = (): ThemeId => {
@@ -50,7 +54,15 @@ const applyTheme = (theme: ThemeId) => {
   document.documentElement.setAttribute("data-theme", theme);
 };
 
-export function ThemeSwitcher() {
+export function ThemeHydrator() {
+  useEffect(() => {
+    applyTheme(getInitialTheme());
+  }, []);
+
+  return null;
+}
+
+export function ThemeSwitcherPanel({ compact = false }: ThemeSwitcherPanelProps) {
   const [activeTheme, setActiveTheme] = useState<ThemeId>(getInitialTheme);
 
   useEffect(() => {
@@ -63,7 +75,7 @@ export function ThemeSwitcher() {
   };
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 w-[min(92vw,22rem)] theme-card rounded-[1.75rem] p-4 sm:bottom-6 sm:left-6 sm:p-5" suppressHydrationWarning>
+    <div className={`theme-card rounded-[1.75rem] p-4 sm:p-5 ${compact ? "" : "w-full"}`} suppressHydrationWarning>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Tema da interface</p>

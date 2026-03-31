@@ -20,7 +20,7 @@ export function SellerTopbar({ store }: { store: StoreSummary }) {
             </div>
             <div className="min-w-0">
               <strong className="block truncate text-base font-semibold theme-heading">{store.name}</strong>
-              <span className="block truncate text-sm text-[var(--muted)]">/lojas/{store.slug}</span>
+              <span className="block truncate text-sm text-[var(--muted)]">Vitrine publica de {store.name}</span>
             </div>
           </div>
         </div>
@@ -79,3 +79,4 @@ export function SellerTopbar({ store }: { store: StoreSummary }) {
     </header>
   );
 }
+

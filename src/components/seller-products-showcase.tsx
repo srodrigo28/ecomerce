@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { FiEdit3, FiShare2, FiTrash2 } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 
 import { FilterSelect } from "@/components/filter-select";
 import { Modal } from "@/components/ui-modal";
 import { Button } from "@/components/ui-button";
-import { deleteSellerProduct } from "@/lib/services/catalog-service";
-import type { SellerWorkspace } from "@/types/catalog";
+import { deleteSellerProduct, deleteSellerProductImage, getSellerProductById, submitSellerProduct } from "@/lib/services/catalog-service";
+import type { ProductApiImageMeta, SellerWorkspace } from "@/types/catalog";
 import {
   deleteLocalSellerProduct,
-  duplicateLocalSellerProduct,
   readLocalSellerProducts,
+  saveLocalSellerProduct,
   subscribeLocalSellerProducts,
   type LocalSellerProductRecord,
 } from "@/lib/local-product-storage";
@@ -38,6 +39,7 @@ type ShowcaseProductRecord = {
   stock: number;
   minStock: number;
   imageUrl?: string;
+  images: ProductApiImageMeta[];
   createdAt: string;
   source: "api" | "local";
 };
@@ -48,6 +50,8 @@ const normalizeSearch = (value: string) =>
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .trim();
+
+const SELLER_PRODUCTS_SCROLL_KEY = "seller-products-scroll-target";
 
 const viewModeOptions: Array<{ value: ProductViewMode; label: string }> = [
   { value: "vitrine", label: "Vitrine" },
@@ -61,16 +65,66 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
   const [filterMode, setFilterMode] = useState<ProductFilterMode>("todos");
   const [sortMode, setSortMode] = useState<ProductSortMode>("recentes");
   const [viewMode, setViewMode] = useState<ProductViewMode>("vitrine");
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [manageTarget, setManageTarget] = useState<ShowcaseProductRecord | null>(null);
+  const [manageImageId, setManageImageId] = useState<string | null>(null);
+  const [deactivatedProductIds] = useState<string[]>([]);
   const [actionFeedback, setActionFeedback] = useState<string>("");
   const [deleteTarget, setDeleteTarget] = useState<ShowcaseProductRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isShowcaseFocused, setIsShowcaseFocused] = useState(false);
+  const [manageDraft, setManageDraft] = useState({
+    name: "",
+    priceRetail: "",
+    stock: "",
+    categoryId: "",
+  });
 
   const localProducts = useSyncExternalStore<LocalSellerProductRecord[]>(
     subscribeLocalSellerProducts,
     readLocalSellerProducts,
     () => EMPTY_LOCAL_PRODUCTS,
   );
+
+  useEffect(() => {
+    if (!manageTarget) {
+      setManageImageId(null);
+      setManageDraft({
+        name: "",
+        priceRetail: "",
+        stock: "",
+        categoryId: "",
+      });
+      return;
+    }
+
+    const primaryImage = manageTarget.images.find((image) => image.isMain) ?? manageTarget.images[0];
+    setManageImageId(primaryImage?.id ?? null);
+    setManageDraft({
+      name: manageTarget.name,
+      priceRetail: String(manageTarget.priceRetail),
+      stock: String(manageTarget.stock),
+      categoryId: manageTarget.categoryId,
+    });
+  }, [manageTarget]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const shouldFocus = window.location.hash === "#produtos-cadastrados"
+      || window.sessionStorage.getItem(SELLER_PRODUCTS_SCROLL_KEY) === "produtos-cadastrados";
+
+    if (!shouldFocus) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const section = document.getElementById("produtos-cadastrados");
+      section?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setIsShowcaseFocused(true);
+      window.sessionStorage.removeItem(SELLER_PRODUCTS_SCROLL_KEY);
+      window.setTimeout(() => setIsShowcaseFocused(false), 2200);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [localProducts.length, workspace.products.length]);
 
   const mergedProducts = useMemo<ShowcaseProductRecord[]>(() => {
     const apiProducts = workspace.products.map((product) => ({
@@ -87,6 +141,7 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
       stock: product.stock,
       minStock: product.minStock ?? 0,
       imageUrl: product.imageUrls[0],
+      images: product.images ?? [],
       createdAt: new Date().toISOString(),
       source: "api" as const,
     }));
@@ -106,6 +161,13 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
         stock: product.stock,
         minStock: product.minStock,
         imageUrl: product.mainImageUrl ?? product.images[0]?.previewUrl,
+        images: (product.images ?? []).map((image, index) => ({
+          id: image.id,
+          name: image.name,
+          imageUrl: image.previewUrl,
+          isMain: (product.mainImageUrl ?? product.images[0]?.previewUrl) === image.previewUrl,
+          position: index + 1,
+        })),
         createdAt: product.createdAt,
         source: "local" as const,
       }));
@@ -177,7 +239,10 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
     };
   }, [filteredProducts]);
 
-  const productPublicUrl = (product: ShowcaseProductRecord) => `${window.location.origin}/lojas/${workspace.store.slug}/produtos/${product.slug}`;
+  const productPublicUrl = (product: ShowcaseProductRecord) => {
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+    return new URL(`/lojas/${workspace.store.slug}/produtos/${product.slug}`, baseUrl || "http://localhost:3000").toString();
+  };
 
   const handleOpenVitrine = (product: ShowcaseProductRecord) => {
     window.open(productPublicUrl(product), "_blank", "noopener,noreferrer");
@@ -190,30 +255,6 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
     } catch {
       setActionFeedback(`Nao foi possivel copiar o link de ${product.name} agora.`);
     }
-    setOpenMenuId(null);
-  };
-
-  const handleDuplicate = (product: ShowcaseProductRecord) => {
-    duplicateLocalSellerProduct({
-      id: product.id,
-      storeId: workspace.store.id,
-      storeName: workspace.store.name,
-      name: product.name,
-      slug: product.slug,
-      description: product.description,
-      categoryId: product.categoryId,
-      categoryName: product.categoryName,
-      priceRetail: product.priceRetail,
-      priceWholesale: product.priceWholesale,
-      pricePromotion: product.pricePromotion,
-      stock: product.stock,
-      minStock: product.minStock,
-      images: product.imageUrl ? [{ id: `${product.id}-image`, name: product.name, previewUrl: product.imageUrl }] : [],
-      mainImageUrl: product.imageUrl,
-      createdAt: product.createdAt,
-    });
-    setActionFeedback(`Uma copia de ${product.name} foi adicionada na vitrine interna.`);
-    setOpenMenuId(null);
   };
 
   const handleEdit = (product: ShowcaseProductRecord) => {
@@ -223,7 +264,7 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
       }),
     );
     setActionFeedback(`Produto ${product.name} carregado no formulario para edicao.`);
-    setOpenMenuId(null);
+    setManageTarget(null);
   };
 
   const handleConfirmDelete = async () => {
@@ -241,43 +282,219 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
 
       setActionFeedback(`Produto ${deleteTarget.name} removido com sucesso.`);
       setDeleteTarget(null);
+      setManageTarget(null);
     } catch (error) {
       setActionFeedback(error instanceof Error ? error.message : "Nao foi possivel remover o produto agora.");
     } finally {
       setIsDeleting(false);
-      setOpenMenuId(null);
     }
   };
 
+  const getManageGallery = (product: ShowcaseProductRecord | null) => {
+    if (!product) return [];
+    if (product.images.length) return product.images;
+    return product.imageUrl
+      ? [{ id: `${product.id}-cover`, name: product.name, imageUrl: product.imageUrl, isMain: true, position: 1 }]
+      : [];
+  };
+
+  const manageGallery = getManageGallery(manageTarget);
+  const manageSelectedIndex = manageGallery.findIndex((image) => image.id === manageImageId);
+  const managePreviewImage = manageGallery[manageSelectedIndex >= 0 ? manageSelectedIndex : 0]
+    ?? manageGallery.find((image) => image.isMain)
+    ?? manageGallery[0]
+    ?? null;
+  const manageIsDeactivated = manageTarget ? deactivatedProductIds.includes(manageTarget.id) : false;
+  const manageHasGalleryNavigation = manageGallery.length > 1;
+  const manageDisplayName = manageDraft.name.trim() || manageTarget?.name || "";
+  const manageDisplayPrice = Number(manageDraft.priceRetail || 0);
+  const manageDisplayStock = Number(manageDraft.stock || 0);
+  const manageDisplayCategoryName =
+    workspace.categories.find((category) => category.id === manageDraft.categoryId)?.name
+    ?? manageTarget?.categoryName
+    ?? "Sem categoria";
+
+  const mapProductToShowcaseRecord = (product: {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    categoryId: string;
+    priceRetail: number;
+    priceWholesale?: number;
+    pricePromotion?: number;
+    stock: number;
+    minStock?: number;
+    imageUrls: string[];
+    images?: ProductApiImageMeta[];
+  }): ShowcaseProductRecord => ({
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    description: product.description ?? "",
+    categoryId: product.categoryId,
+    categoryName: workspace.categories.find((category) => category.id === product.categoryId)?.name ?? "Sem categoria",
+    priceRetail: product.priceRetail,
+    priceWholesale: product.priceWholesale,
+    pricePromotion: product.pricePromotion,
+    stock: product.stock,
+    minStock: product.minStock ?? 0,
+    imageUrl: product.imageUrls[0],
+    images: product.images ?? [],
+    createdAt: new Date().toISOString(),
+    source: "api",
+  });
+
+  const handleQuickSaveAndClose = async () => {
+    if (!manageTarget) return;
+
+    const trimmedName = manageDraft.name.trim();
+    const nextPriceRetail = Number(manageDraft.priceRetail || 0);
+    const nextStock = Number(manageDraft.stock || 0);
+
+    if (!trimmedName || !manageDraft.categoryId) {
+      setActionFeedback("Preencha titulo e categoria para salvar as alteracoes.");
+      return;
+    }
+
+    try {
+      if (manageTarget.source === "local") {
+        saveLocalSellerProduct({
+          id: manageTarget.id,
+          storeId: workspace.store.id,
+          storeName: workspace.store.name,
+          name: trimmedName,
+          slug: manageTarget.slug,
+          description: manageTarget.description,
+          categoryId: manageDraft.categoryId,
+          categoryName: workspace.categories.find((category) => category.id === manageDraft.categoryId)?.name ?? manageTarget.categoryName,
+          priceRetail: nextPriceRetail,
+          priceWholesale: manageTarget.priceWholesale,
+          pricePromotion: manageTarget.pricePromotion,
+          stock: nextStock,
+          minStock: manageTarget.minStock,
+          images: manageGallery.map((image) => ({ id: image.id, name: image.name, previewUrl: image.imageUrl })),
+          mainImageUrl: managePreviewImage?.imageUrl,
+          createdAt: manageTarget.createdAt,
+        });
+      } else {
+        const apiImages = manageGallery.map((image) => ({
+          id: `manage-${image.id}`,
+          source: "api" as const,
+          name: image.name,
+          previewUrl: image.imageUrl,
+          apiImageId: image.id,
+          isMain: managePreviewImage ? image.id === managePreviewImage.id : image.isMain,
+        }));
+
+        await submitSellerProduct({
+          productId: manageTarget.id,
+          storeId: workspace.store.id,
+          categoryId: manageDraft.categoryId,
+          name: trimmedName,
+          slug: manageTarget.slug,
+          description: manageTarget.description,
+          priceRetail: nextPriceRetail,
+          priceWholesale: manageTarget.priceWholesale,
+          pricePromotion: manageTarget.pricePromotion,
+          stock: nextStock,
+          minStock: manageTarget.minStock,
+          images: apiImages,
+          mainImageId: apiImages.find((image) => image.isMain)?.id,
+        });
+        router.refresh();
+      }
+
+      setActionFeedback(`Produto ${trimmedName} atualizado com sucesso.`);
+      setManageTarget(null);
+    } catch (error) {
+      setActionFeedback(error instanceof Error ? error.message : "Nao foi possivel salvar as alteracoes rapidas do produto.");
+    }
+  };
+
+  const handleOpenImageEditor = () => {
+    if (!manageTarget) return;
+    setActionFeedback(`Abrindo a edicao completa de ${manageDisplayName} para adicionar ou reorganizar imagens.`);
+    handleEdit(manageTarget);
+  };
+
+  const handleDeleteSelectedManageImage = async () => {
+    if (!manageTarget || !managePreviewImage) return;
+
+    try {
+      if (manageTarget.source === "local") {
+        const remainingImages = manageGallery.filter((image) => image.id !== managePreviewImage.id);
+        if (remainingImages.length === 0) {
+          setActionFeedback("Mantenha ao menos 1 imagem no produto local antes de salvar.");
+          return;
+        }
+
+        const nextMainImage = remainingImages[0];
+        saveLocalSellerProduct({
+          id: manageTarget.id,
+          storeId: workspace.store.id,
+          storeName: workspace.store.name,
+          name: manageTarget.name,
+          slug: manageTarget.slug,
+          description: manageTarget.description,
+          categoryId: manageTarget.categoryId,
+          categoryName: manageTarget.categoryName,
+          priceRetail: manageTarget.priceRetail,
+          priceWholesale: manageTarget.priceWholesale,
+          pricePromotion: manageTarget.pricePromotion,
+          stock: manageTarget.stock,
+          minStock: manageTarget.minStock,
+          images: remainingImages.map((image) => ({ id: image.id, name: image.name, previewUrl: image.imageUrl })),
+          mainImageUrl: nextMainImage?.imageUrl,
+          createdAt: manageTarget.createdAt,
+        });
+
+        setManageTarget({
+          ...manageTarget,
+          imageUrl: nextMainImage?.imageUrl,
+          images: remainingImages.map((image, index) => ({ ...image, isMain: index == 0 })),
+        });
+        setManageImageId(nextMainImage?.id ?? null);
+      } else {
+        await deleteSellerProductImage(manageTarget.id, managePreviewImage.id);
+        const refreshedProduct = await getSellerProductById(manageTarget.id);
+        const nextRecord = mapProductToShowcaseRecord(refreshedProduct);
+        setManageTarget(nextRecord);
+        setManageImageId(nextRecord.images.find((image) => image.isMain)?.id ?? nextRecord.images[0]?.id ?? null);
+        router.refresh();
+      }
+
+      setActionFeedback(`Imagem removida de ${manageDisplayName} com sucesso.`);
+    } catch (error) {
+      setActionFeedback(error instanceof Error ? error.message : "Nao foi possivel remover a imagem selecionada.");
+    }
+  };
+
+  const handleManageGalleryStep = (direction: "prev" | "next") => {
+    if (!manageGallery.length) return;
+
+    const currentIndex = manageGallery.findIndex((image) => image.id === managePreviewImage?.id);
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+    const nextIndex = direction === "next"
+      ? (safeIndex + 1) % manageGallery.length
+      : (safeIndex - 1 + manageGallery.length) % manageGallery.length;
+
+    setManageImageId(manageGallery[nextIndex]?.id ?? null);
+  };
+
   const renderActions = (product: ShowcaseProductRecord) => (
-    <div className="relative flex flex-wrap gap-2">
-      <Button type="button" variant="secondary" size="sm" onClick={() => setOpenMenuId((current) => current === product.id ? null : product.id)}>
+    <div className="flex flex-wrap gap-2">
+      <Button type="button" variant="secondary" size="sm" onClick={() => setManageTarget(product)}>
         Gerenciar
       </Button>
       <Button type="button" variant="dark" size="sm" onClick={() => handleOpenVitrine(product)}>
         Abrir vitrine
       </Button>
-      {openMenuId === product.id ? (
-        <div className="absolute right-0 top-12 z-20 min-w-[220px] rounded-[1.3rem] border border-[var(--border)] bg-white p-2 shadow-[var(--shadow)]">
-          <button type="button" onClick={() => handleEdit(product)} className="flex w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50">
-            Editar produto
-          </button>
-          <button type="button" onClick={() => handleDuplicate(product)} className="flex w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50">
-            Duplicar produto
-          </button>
-          <button type="button" onClick={() => handleCopyLink(product)} className="flex w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50">
-            Copiar link publico
-          </button>
-          <button type="button" onClick={() => { setDeleteTarget(product); setOpenMenuId(null); }} className="flex w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-700 transition hover:bg-rose-50">
-            Excluir produto
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 
   return (
-    <section id="produtos-cadastrados" className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
+    <section id="produtos-cadastrados" className={`rounded-[2rem] border bg-[var(--surface)] p-5 shadow-[var(--shadow)] transition-all duration-300 sm:p-6 ${isShowcaseFocused ? "border-[var(--accent)] shadow-[0_0_0_3px_rgba(37,99,235,0.12)]" : "border-[var(--border)]"}`}>
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Vitrine interna</p>
@@ -356,6 +573,7 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredProducts.map((product) => {
               const isLowStock = product.stock <= product.minStock;
+              const isDeactivated = deactivatedProductIds.includes(product.id);
 
               return (
                 <article key={`${product.source}-${product.id}`} className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
@@ -372,6 +590,9 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${product.source === "local" ? "theme-badge-info" : "theme-badge-neutral"}`}>
                         {product.source === "local" ? "Novo" : "API"}
                       </span>
+                      {isDeactivated ? (
+                        <span className="rounded-full theme-badge-danger px-3 py-1 text-xs font-semibold">Desativado</span>
+                      ) : null}
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isLowStock ? "theme-badge-warning" : "theme-badge-success"}`}>
                         {isLowStock ? "Estoque baixo" : "Estoque ok"}
                       </span>
@@ -396,6 +617,7 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
           <div className="mt-6 flex flex-col gap-4">
             {filteredProducts.map((product) => {
               const isLowStock = product.stock <= product.minStock;
+              const isDeactivated = deactivatedProductIds.includes(product.id);
 
               return (
                 <article key={`${product.source}-${product.id}`} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
@@ -415,6 +637,9 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
                           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${product.source === "local" ? "theme-badge-info" : "theme-badge-neutral"}`}>
                             {product.source === "local" ? "Novo" : "API"}
                           </span>
+                          {isDeactivated ? (
+                            <span className="rounded-full theme-badge-danger px-3 py-1 text-xs font-semibold">Desativado</span>
+                          ) : null}
                           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isLowStock ? "theme-badge-warning" : "theme-badge-success"}`}>
                             {isLowStock ? "Estoque baixo" : "Estoque ok"}
                           </span>
@@ -453,6 +678,244 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
         </div>
       )}
 
+
+      {manageTarget ? (
+        <Modal
+          onClose={() => setManageTarget(null)}
+          title={manageDisplayName}
+          description="Painel rapido do produto com foco em apresentacao, gestao e acoes comerciais da loja."
+        >
+          <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.8fr)]">
+            <div className="space-y-3 rounded-[2rem] bg-white p-2 shadow-[var(--shadow-soft)]">
+              <div className="relative overflow-hidden rounded-[1.7rem] bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_55%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
+                {manageHasGalleryNavigation ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleManageGalleryStep("prev")}
+                      className="absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-xl font-semibold text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.12)] transition hover:scale-[1.03]"
+                      aria-label="Imagem anterior"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleManageGalleryStep("next")}
+                      className="absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-xl font-semibold text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.12)] transition hover:scale-[1.03]"
+                      aria-label="Proxima imagem"
+                    >
+                      ›
+                    </button>
+                  </>
+                ) : null}
+
+                <div className="min-h-[520px] sm:min-h-[600px] lg:min-h-[660px]">
+                  {managePreviewImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={managePreviewImage.imageUrl} alt={manageDisplayName} className="h-full w-full object-contain px-0 py-0 sm:py-1" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[var(--muted)]">Sem imagem principal para esse produto.</div>
+                  )}
+                </div>
+
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/20 via-transparent to-transparent px-5 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700">
+                      {manageSelectedIndex >= 0 ? manageSelectedIndex + 1 : 1} de {manageGallery.length || 1}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {managePreviewImage?.isMain ? (
+                        <span className="rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-white">Imagem principal</span>
+                      ) : null}
+                      {managePreviewImage ? (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleDeleteSelectedManageImage();
+                          }}
+                          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/92 text-rose-600 shadow-sm transition hover:bg-rose-50"
+                          aria-label="Excluir imagem selecionada"
+                          title="Excluir imagem selecionada"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                            <path d="M9 4.75h6m-8 3h10m-8.25 0 .5 10.5a1 1 0 0 0 1 .95h3.5a1 1 0 0 0 1-.95l.5-10.5M10 10.5v5M14 10.5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {manageGallery.length > 1 ? (
+                <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 lg:grid-cols-6">
+                  {manageGallery.slice(0, 5).map((image) => {
+                    const isSelected = managePreviewImage?.id === image.id;
+                    return (
+                      <button
+                        key={image.id}
+                        type="button"
+                        onClick={() => setManageImageId(image.id)}
+                        className={`overflow-hidden rounded-[1rem] border transition ${isSelected ? "border-[var(--accent)] shadow-[0_0_0_2px_rgba(37,99,235,0.12)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
+                      >
+                        <div className="aspect-[4/5] bg-slate-100">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={image.imageUrl} alt={image.name} className="h-full w-full object-cover" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {manageGallery.length < 5 ? (
+                    <button
+                      type="button"
+                      onClick={handleOpenImageEditor}
+                      className="flex aspect-[4/5] items-center justify-center rounded-[1rem] border border-dashed border-[var(--border)] bg-[var(--surface)] text-3xl font-light text-[var(--accent)] transition hover:border-[var(--accent)]"
+                      aria-label="Adicionar imagem"
+                      title="Adicionar imagem"
+                    >
+                      +
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleOpenImageEditor}
+                  className="flex aspect-[4/5] max-w-[140px] items-center justify-center rounded-[1rem] border border-dashed border-[var(--border)] bg-[var(--surface)] text-3xl font-light text-[var(--accent)] transition hover:border-[var(--accent)]"
+                  aria-label="Adicionar imagem"
+                  title="Adicionar imagem"
+                >
+                  +
+                </button>
+              )}
+
+              <details className="overflow-hidden rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] group">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Mais detalhes</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">Galeria, origem do cadastro e status atual do produto</p>
+                  </div>
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-white text-lg font-semibold text-slate-700 transition group-open:rotate-45">+</span>
+                </summary>
+                <div className="grid gap-3 border-t border-[var(--border)] px-4 py-4 sm:grid-cols-3">
+                  <div className="rounded-[1.2rem] border border-[var(--border)] bg-white p-3">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Galeria</p>
+                    <strong className="mt-2 block text-base theme-heading">{manageGallery.length} imagem(ns)</strong>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-[var(--border)] bg-white p-3">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Origem</p>
+                    <strong className="mt-2 block text-base theme-heading">{manageTarget.source === "api" ? "Persistido" : "Local"}</strong>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-[var(--border)] bg-white p-3">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Status</p>
+                    <strong className="mt-2 block text-base theme-heading">{manageIsDeactivated ? "Fora da vitrine" : "Em destaque"}</strong>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white">Gestao</span>
+                  <span className="rounded-full theme-badge-neutral px-3 py-1 text-xs font-semibold">{manageDisplayCategoryName}</span>
+                  {manageIsDeactivated ? (
+                    <span className="rounded-full theme-badge-danger px-3 py-1 text-xs font-semibold">Desativado</span>
+                  ) : (
+                    <span className="rounded-full theme-badge-success px-3 py-1 text-xs font-semibold">Ativo na vitrine</span>
+                  )}
+                </div>
+
+                <h3 className="mt-4 text-3xl font-semibold leading-tight theme-heading">{manageDisplayName}</h3>
+                <p className="mt-2 text-sm text-[var(--muted)]">Cod. interno /{manageTarget.slug}</p>
+
+                <div className="mt-5 border-t border-[var(--border)] pt-5">
+                  <p className="text-sm text-[var(--muted)]">Preco varejo</p>
+                  <p className="mt-2 text-4xl font-semibold leading-none text-rose-600">{formatCurrency(manageDisplayPrice)}</p>
+                  <p className="mt-3 text-sm text-emerald-600">Estoque atual: {manageDisplayStock} unidade(s)</p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">Estoque minimo configurado: {manageTarget.minStock} unidade(s)</p>
+                </div>
+
+                <div className="mt-5 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+                  <p className="text-sm leading-6 text-[var(--muted)]">{manageTarget.description || "Adicione uma descricao mais forte para a vitrine publica e para a operacao da loja."}</p>
+                </div>
+
+                <form
+                  className="mt-4 grid gap-3 sm:grid-cols-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleQuickSaveAndClose();
+                  }}
+                >
+                  <label className="space-y-2 sm:col-span-2">
+                    <span className="text-sm font-medium theme-heading">Titulo</span>
+                    <input
+                      autoFocus
+                      value={manageDraft.name}
+                      onChange={(event) => setManageDraft((current) => ({ ...current, name: event.target.value }))}
+                      className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                    />
+                  </label>
+                  <label className="space-y-2 sm:col-span-2">
+                    <span className="text-sm font-medium theme-heading">Categoria</span>
+                    <select
+                      value={manageDraft.categoryId}
+                      onChange={(event) => setManageDraft((current) => ({ ...current, categoryId: event.target.value }))}
+                      className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                    >
+                      {workspace.categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium theme-heading">Preco varejo</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={manageDraft.priceRetail}
+                      onChange={(event) => setManageDraft((current) => ({ ...current, priceRetail: event.target.value }))}
+                      className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium theme-heading">Quantidade</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={manageDraft.stock}
+                      onChange={(event) => setManageDraft((current) => ({ ...current, stock: event.target.value }))}
+                      className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                    />
+                  </label>
+                </form>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button type="button" variant="primary" onClick={() => void handleQuickSaveAndClose()} className="inline-flex h-12 w-12 items-center justify-center rounded-full p-0">
+                    <FiEdit3 className="h-5 w-5" aria-hidden="true" />
+                    <span className="sr-only">Alterar</span>
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => handleCopyLink(manageTarget)} className="inline-flex h-12 w-12 items-center justify-center rounded-full p-0">
+                    <FiShare2 className="h-5 w-5" aria-hidden="true" />
+                    <span className="sr-only">Compartilhar</span>
+                  </Button>
+                  <Button type="button" variant="dark" onClick={() => setDeleteTarget(manageTarget)} className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-rose-700 p-0 hover:bg-rose-600">
+                    <FiTrash2 className="h-5 w-5" aria-hidden="true" />
+                    <span className="sr-only">Excluir</span>
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
       {deleteTarget ? (
         <Modal
           onClose={() => setDeleteTarget(null)}
@@ -477,3 +940,14 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
     </section>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
