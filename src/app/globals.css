@@ -174,7 +174,7 @@ body {
     color 220ms ease;
 }
 
-a {
+:where(a) {
   color: inherit;
   text-decoration: none;
 }
@@ -381,3 +381,4 @@ html[data-theme="dark"] .theme-badge-indigo {
   background: color-mix(in srgb, #6366f1 24%, #0f172a);
   color: #c7d2fe;
 }
+
