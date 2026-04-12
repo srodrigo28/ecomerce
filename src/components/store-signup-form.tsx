@@ -77,6 +77,7 @@ export function StoreSignupForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [createdStore, setCreatedStore] = useState<{ id: number; name: string; slug: string } | null>(null);
   const [address, setAddress] = useState<AddressState>({
@@ -217,11 +218,13 @@ export function StoreSignupForm() {
 
     try {
       setIsSubmitting(true);
+      setSubmissionError(null);
       const created = await submitStoreSignup({
         name: storeName.trim(),
         slug: generatedSlug,
         ownerName: ownerName.trim(),
         ownerEmail: email.trim(),
+        password,
         whatsapp,
         cnpj,
         pixKey: pixKey.trim(),
@@ -248,6 +251,7 @@ export function StoreSignupForm() {
       }, 1200);
     } catch (error) {
       console.error(error);
+      setSubmissionError(error instanceof Error ? error.message : "Nao foi possivel concluir o cadastro agora.");
     } finally {
       setIsSubmitting(false);
     }
@@ -425,6 +429,12 @@ export function StoreSignupForm() {
         </div>
       </div>
 
+      {submissionError ? (
+        <div className="mt-6 rounded-[1.5rem] border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-900">
+          {submissionError}
+        </div>
+      ) : null}
+
       {submitted ? (
         <div className="mt-6 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
           Loja criada com sucesso na API. {createdStore ? <>Registro <span className="font-semibold">#{createdStore.id}</span> criado para <span className="font-semibold">{createdStore.name}</span>. Link principal preparado em <span className="font-semibold">/lojas/{createdStore.slug}</span>. </> : null}
@@ -435,6 +445,10 @@ export function StoreSignupForm() {
     </article>
   );
 }
+
+
+
+
 
 
 

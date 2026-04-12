@@ -3,12 +3,16 @@ const toNumber = (value: string | undefined, fallback: number) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+const isAbsoluteUrl = (value: string) => /^https?:\/\//i.test(value);
+
 const normalizePath = (value: string | undefined, fallback: string) => {
   if (!value) return fallback;
+  if (isAbsoluteUrl(value)) return value;
   return value.startsWith("/") ? value : `/${value}`;
 };
 
 const joinUrl = (baseUrl: string, path: string) => {
+  if (isAbsoluteUrl(path)) return path;
   if (!baseUrl) return path;
   return `${baseUrl.replace(/\/$/, "")}${normalizePath(path, "")}`;
 };
@@ -27,7 +31,7 @@ export const apiConfig = {
 
 export const endpointMap = {
   auth: normalizePath(process.env.NEXT_PUBLIC_API_AUTH_ENDPOINT, "/auth"),
-  stores: normalizePath(process.env.NEXT_PUBLIC_API_STORES_ENDPOINT, "/stores"),
+  stores: normalizePath(process.env.NEXT_PUBLIC_API, "/api/lojas"),
   categories: normalizePath(
     process.env.NEXT_PUBLIC_API_CATEGORIES_ENDPOINT,
     "/categories"
@@ -46,3 +50,4 @@ export const resolvedEndpoints = Object.fromEntries(
 ) as Record<keyof typeof endpointMap, string>;
 
 export const hasServerApiToken = Boolean(apiConfig.token);
+

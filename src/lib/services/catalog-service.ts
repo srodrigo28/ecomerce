@@ -40,6 +40,7 @@ export interface StoreSignupSubmitInput {
   slug: string;
   ownerName: string;
   ownerEmail: string;
+  password: string;
   whatsapp: string;
   cnpj: string;
   pixKey: string;
@@ -70,6 +71,7 @@ const normalizeSearchValue = (value: string) =>
 
 const normalizeWhatsappDigits = (value: string) => value.replace(/\D/g, "");
 const onlyDigits = (value: string) => value.replace(/\D/g, "");
+const canUseStoreSignupApi = !apiConfig.useMocks && (Boolean(apiConfig.baseUrl) || /^https?:\/\//i.test(resolvedEndpoints.stores));
 
 const toNumberValue = (value: unknown) => {
   const parsed = Number(value);
@@ -229,8 +231,8 @@ const mapCheckoutApiOrderResult = (payload: unknown): CheckoutApiOrderResult => 
 };
 
 export async function submitStoreSignup(input: StoreSignupSubmitInput) {
-  if (shouldUseMocks) {
-    throw new Error("A API real de lojas ainda nao esta configurada neste ambiente.");
+  if (!canUseStoreSignupApi) {
+    throw new Error("O endpoint de cadastro de loja ainda nao esta configurado. Defina NEXT_PUBLIC_API ou NEXT_PUBLIC_API_BASE_URL para continuar.");
   }
 
   const response = await fetch(resolvedEndpoints.stores, {
@@ -241,12 +243,13 @@ export async function submitStoreSignup(input: StoreSignupSubmitInput) {
     body: JSON.stringify({
       name: input.name,
       slug: input.slug,
-      owner_name: input.ownerName,
-      owner_email: input.ownerEmail,
-      whatsapp: normalizeWhatsappDigits(input.whatsapp),
+      ownerName: input.ownerName,
+      ownerEmail: input.ownerEmail,
+      password: input.password,
+      whatsapp: input.whatsapp,
       cnpj: onlyDigits(input.cnpj),
-      pix_key: input.pixKey,
-      zip_code: input.zipCode,
+      pixKey: input.pixKey,
+      zipCode: input.zipCode,
       state: input.state,
       city: input.city,
       district: input.district,
@@ -258,17 +261,22 @@ export async function submitStoreSignup(input: StoreSignupSubmitInput) {
     cache: "no-store",
   });
 
-  const payload = (await response.json()) as { data?: Record<string, unknown>; message?: string; details?: string[] };
+  const payload = (await response.json()) as Record<string, unknown> & {
+    message?: string;
+    errors?: Record<string, string>;
+  };
 
-  if (!response.ok || !payload.data) {
-    const detailLabel = Array.isArray(payload.details) && payload.details.length > 0 ? ` ${payload.details.join(" ")}` : "";
-    throw new Error(`${payload.message ?? "Nao foi possivel cadastrar a loja na API."}${detailLabel}`.trim());
+  if (!response.ok) {
+    const validationErrors = payload.errors
+      ? ` ${Object.values(payload.errors).join(" ")}`
+      : "";
+    throw new Error(`${payload.message ?? "Nao foi possivel cadastrar a loja na API."}${validationErrors}`.trim());
   }
 
   return {
-    id: Number(payload.data.id),
-    name: String(payload.data.name ?? input.name),
-    slug: String(payload.data.slug ?? input.slug),
+    id: Number(payload.id),
+    name: String(payload.name ?? input.name),
+    slug: String(payload.slug ?? input.slug),
   };
 }
 
@@ -1256,6 +1264,9 @@ export async function getOrderSuccessPreviewByStoreSlug(
       : "Pedido confirmado no frontend e pronto para futura integracao com API e status reais.",
   };
 }
+
+
+
 
 
 
