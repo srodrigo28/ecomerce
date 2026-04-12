@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { submitStoreSignup } from "@/lib/services/catalog-service";
 import { saveLocalSellerAuth } from "@/lib/local-auth-storage";
@@ -49,9 +49,9 @@ const slugify = (value: string) =>
 
 const stepLabels = [
   "Loja",
-  "Contato e Pix",
-  "Endereco",
-  "Seguranca",
+  "Contato",
+  "Local",
+  "Final",
 ] as const;
 
 interface AddressState {
@@ -66,6 +66,7 @@ interface AddressState {
 
 export function StoreSignupForm() {
   const router = useRouter();
+  const lastZipLookupRef = useRef<string>("");
   const [storeName, setStoreName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [cnpj, setCnpj] = useState("");
@@ -75,7 +76,6 @@ export function StoreSignupForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [step, setStep] = useState(0);
-  const [feedback, setFeedback] = useState("Vamos montar a configuracao da loja em etapas curtas, com foco total em uma decisao por vez.");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [createdStore, setCreatedStore] = useState<{ id: number; name: string; slug: string } | null>(null);
@@ -88,7 +88,6 @@ export function StoreSignupForm() {
     number: "",
     complement: "",
   });
-  const [zipStatus, setZipStatus] = useState("Preencha o CEP para buscar endereco automaticamente.");
   const [isLoadingZip, setIsLoadingZip] = useState(false);
 
   const isAddressReady = useMemo(
@@ -102,76 +101,96 @@ export function StoreSignupForm() {
     setAddress((current) => ({ ...current, [field]: value }));
   };
 
-  const handleZipLookup = async () => {
-    const cleanZip = onlyDigits(address.zipCode);
+  const handleZipLookup = useCallback(async (zipOverride?: string) => {
+    const cleanZip = onlyDigits(zipOverride ?? address.zipCode);
 
     if (cleanZip.length !== 8) {
-      setZipStatus("Informe um CEP valido com 8 digitos para buscar o endereco.");
+      lastZipLookupRef.current = "";
+      return;
+    }
+
+    if (cleanZip === lastZipLookupRef.current) {
       return;
     }
 
     try {
       setIsLoadingZip(true);
-      setZipStatus("Buscando endereco pelo CEP...");
 
       const response = await fetch(`https://viacep.com.br/ws/${cleanZip}/json/`);
       const data = await response.json();
 
       if (!response.ok || data.erro) {
-        setZipStatus("Nao encontramos endereco para esse CEP. Confira e tente novamente.");
         return;
       }
 
       setAddress((current) => ({
         ...current,
+        zipCode: formatCep(cleanZip),
         state: data.uf ?? current.state,
         city: data.localidade ?? current.city,
         district: data.bairro ?? current.district,
         street: data.logradouro ?? current.street,
       }));
-      setZipStatus("Endereco preenchido automaticamente a partir do CEP.");
+      lastZipLookupRef.current = cleanZip;
     } catch {
-      setZipStatus("Nao foi possivel consultar o CEP agora. Verifique sua conexao e tente novamente.");
+      return;
     } finally {
       setIsLoadingZip(false);
     }
-  };
+  }, [address.zipCode]);
+
+  useEffect(() => {
+    if (step !== 2) {
+      return;
+    }
+
+    const cleanZip = onlyDigits(address.zipCode);
+
+    if (cleanZip.length !== 8) {
+      lastZipLookupRef.current = "";
+      return;
+    }
+
+    if (cleanZip === lastZipLookupRef.current) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void handleZipLookup(cleanZip);
+    }, 450);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [address.zipCode, handleZipLookup, step]);
 
   const validateStep = (targetStep = step) => {
     if (targetStep === 0) {
       if (!storeName.trim() || !ownerName.trim() || onlyDigits(cnpj).length !== 14) {
-        setFeedback("Preencha nome da loja, responsavel e CNPJ valido antes de continuar.");
         return false;
       }
     }
 
     if (targetStep === 1) {
       if (!email.trim() || onlyDigits(whatsapp).length < 10 || !pixKey.trim()) {
-        setFeedback("Preencha e-mail comercial, WhatsApp e chave Pix antes de continuar.");
         return false;
       }
     }
 
     if (targetStep === 2) {
       if (onlyDigits(address.zipCode).length !== 8 || !address.city.trim() || !address.state.trim() || !address.street.trim() || !address.number.trim()) {
-        setFeedback("Complete CEP, cidade, estado, rua e numero para seguir para a revisao.");
         return false;
       }
     }
 
     if (targetStep === 3) {
       if (!generatedSlug) {
-        setFeedback("Informe um nome valido para gerar o link principal da loja.");
         return false;
       }
 
       if (password.length < 6) {
-        setFeedback("Crie uma senha com pelo menos 6 caracteres para concluir o cadastro.");
         return false;
       }
 
       if (password !== confirmPassword) {
-        setFeedback("A confirmacao de senha precisa ser igual a senha criada.");
         return false;
       }
     }
@@ -189,7 +208,6 @@ export function StoreSignupForm() {
     }
 
     setStep((current) => Math.min(current + 1, stepLabels.length - 1));
-    setFeedback("Etapa validada. Vamos seguir mantendo o cadastro mais elegante e sem distracoes.");
   };
 
   const handleSubmit = async () => {
@@ -225,12 +243,11 @@ export function StoreSignupForm() {
         storeName: created.name,
       });
       document.cookie = `seller_store_slug=${created.slug}; path=/; max-age=2592000; samesite=lax`;
-      setFeedback(`Loja criada na API com sucesso. Redirecionando para o painel do lojista com a loja /lojas/${created.slug}.`);
       window.setTimeout(() => {
         router.push("/painel-lojista");
       }, 1200);
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Nao foi possivel salvar a loja na API.");
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -258,14 +275,14 @@ export function StoreSignupForm() {
             const isDone = index < step;
 
             return (
-              <div key={label} className={`rounded-[1.5rem] border px-4 py-4 ${isCurrent ? "border-[var(--accent)] bg-[rgba(15,118,110,0.08)]" : isDone ? "border-emerald-200 bg-emerald-50" : "border-[var(--border)] bg-slate-50"}`}>
-                <div className="flex items-center gap-3">
-                  <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${isCurrent ? "bg-[var(--accent)] text-white" : isDone ? "bg-emerald-600 text-white" : "bg-white text-slate-700"}`}>
+              <div key={label} className={`rounded-[1.5rem] border px-4 py-3 ${isCurrent ? "border-[var(--accent)] bg-[linear-gradient(180deg,rgba(239,246,255,0.98),rgba(219,234,254,0.92))] shadow-[0_10px_26px_rgba(37,99,235,0.10)]" : isDone ? "border-emerald-200 bg-emerald-50" : "border-[var(--border)] bg-slate-50"}`}>
+                <div className="grid min-h-[62px] grid-cols-[auto_1fr] items-center gap-3">
+                  <span className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-sm ${isCurrent ? "bg-[var(--accent)] text-white" : isDone ? "bg-emerald-600 text-white" : "bg-white text-slate-700"}`}>
                     0{index + 1}
                   </span>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{label}</p>
-                    <p className="text-xs text-[var(--muted)]">{isCurrent ? "Etapa atual" : isDone ? "Concluida" : "A seguir"}</p>
+                  <div className="flex min-w-0 flex-col justify-center">
+                    <p className="text-sm font-semibold leading-5 text-slate-900">{label}</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{isCurrent ? "Atual" : isDone ? "Concluida" : "A seguir"}</p>
                   </div>
                 </div>
               </div>
@@ -328,55 +345,42 @@ export function StoreSignupForm() {
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Use o CEP para preencher os campos automaticamente e depois finalize os detalhes manuais.</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-2">
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="space-y-2 md:col-span-2">
                 <span className="text-sm font-medium text-slate-900">CEP</span>
                 <input
                   value={address.zipCode}
                   onChange={(event) => updateAddressField("zipCode", formatCep(event.target.value))}
-                  onBlur={handleZipLookup}
                   inputMode="numeric"
                   type="text"
                   placeholder="00000-000"
                   className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
                 />
               </label>
-              <div className="flex items-end">
-                <button type="button" onClick={handleZipLookup} className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
-                  {isLoadingZip ? "Buscando CEP..." : "Consultar CEP"}
-                </button>
-              </div>
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-900">Cidade</span>
-                <input value={address.city} onChange={(event) => updateAddressField("city", event.target.value)} type="text" placeholder="Sua cidade" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
-              </label>
               <label className="space-y-2">
                 <span className="text-sm font-medium text-slate-900">Estado</span>
-                <input value={address.state} onChange={(event) => updateAddressField("state", event.target.value.toUpperCase().slice(0, 2))} type="text" placeholder="UF" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm uppercase outline-none transition focus:border-[var(--accent)]" />
+                <input value={address.state} readOnly disabled={isLoadingZip} type="text" placeholder="UF" className="w-full rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm uppercase outline-none transition disabled:cursor-wait disabled:opacity-100" />
+              </label>
+              <label className="space-y-2 md:col-span-2">
+                <span className="text-sm font-medium text-slate-900">Cidade</span>
+                <input value={address.city} readOnly disabled={isLoadingZip} type="text" placeholder="Sua cidade" className="w-full rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm outline-none transition disabled:cursor-wait disabled:opacity-100" />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-medium text-slate-900">Bairro</span>
-                <input value={address.district} onChange={(event) => updateAddressField("district", event.target.value)} type="text" placeholder="Seu bairro" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+                <input value={address.district} readOnly disabled={isLoadingZip} type="text" placeholder="Seu bairro" className="w-full rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm outline-none transition disabled:cursor-wait disabled:opacity-100" />
               </label>
-              <label className="space-y-2 md:col-span-2">
+              <label className="space-y-2 md:col-span-3">
                 <span className="text-sm font-medium text-slate-900">Rua</span>
-                <input value={address.street} onChange={(event) => updateAddressField("street", event.target.value)} type="text" placeholder="Rua ou avenida" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
+                <input value={address.street} readOnly disabled={isLoadingZip} type="text" placeholder="Rua ou avenida" className="w-full rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm outline-none transition disabled:cursor-wait disabled:opacity-100" />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-medium text-slate-900">Numero</span>
                 <input value={address.number} onChange={(event) => updateAddressField("number", event.target.value)} type="text" placeholder="123" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
               </label>
-              <label className="space-y-2">
+              <label className="space-y-2 md:col-span-2">
                 <span className="text-sm font-medium text-slate-900">Complemento</span>
                 <input value={address.complement} onChange={(event) => updateAddressField("complement", event.target.value)} type="text" placeholder="Sala, loja, referencia" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
               </label>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-slate-50 p-4 text-sm leading-6 text-[var(--muted)]">
-              {zipStatus}
-              <div className="mt-2 text-slate-700">
-                {isAddressReady ? "Endereco principal preenchido e pronto para revisao." : "Os campos principais do endereco serao completados automaticamente quando o CEP for encontrado."}
-              </div>
             </div>
           </div>
         ) : null}
@@ -399,36 +403,8 @@ export function StoreSignupForm() {
               </label>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-[1.5rem] border border-[var(--border)] bg-slate-50 p-4">
-                <p className="text-sm text-[var(--muted)]">Loja</p>
-                <strong className="mt-2 block text-xl text-slate-900">{storeName || "Loja sem nome"}</strong>
-                <p className="mt-2 text-sm text-[var(--muted)]">Responsavel: {ownerName || "Nao informado"}</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">CNPJ: {cnpj || "Nao informado"}</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">Slug da loja: /lojas/{generatedSlug || "sua-loja"}</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-[var(--border)] bg-slate-50 p-4">
-                <p className="text-sm text-[var(--muted)]">Contato e recebimento</p>
-                <strong className="mt-2 block text-xl text-slate-900">{email || "Sem e-mail comercial"}</strong>
-                <p className="mt-2 text-sm text-[var(--muted)]">WhatsApp: {whatsapp || "Nao informado"}</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">Pix: {pixKey || "Nao informado"}</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-[var(--border)] bg-slate-50 p-4 lg:col-span-2">
-                <p className="text-sm text-[var(--muted)]">Endereco</p>
-                <strong className="mt-2 block text-xl text-slate-900">{address.street ? `${address.street}, ${address.number}` : "Endereco ainda nao preenchido"}</strong>
-                <p className="mt-2 text-sm text-[var(--muted)]">
-                  {address.district || "Bairro nao informado"} • {address.city || "Cidade nao informada"} - {address.state || "UF"}
-                </p>
-                <p className="mt-1 text-sm text-[var(--muted)]">CEP: {address.zipCode || "Nao informado"}</p>
-                {address.complement ? <p className="mt-1 text-sm text-[var(--muted)]">Complemento: {address.complement}</p> : null}
-              </div>
-            </div>
           </div>
         ) : null}
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm leading-6 text-[var(--muted)]">
-        {feedback}
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -456,9 +432,6 @@ export function StoreSignupForm() {
         </div>
       ) : null}
 
-      <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
-        O cadastro agora persiste a loja na API. A senha ja entra no fluxo final de validacao e sera conectada ao modulo real de autenticacao assim que fecharmos a fase de usuarios.
-      </div>
     </article>
   );
 }

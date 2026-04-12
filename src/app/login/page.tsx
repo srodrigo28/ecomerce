@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Button } from "@/components/ui-button";
 import { findLocalSellerAuth } from "@/lib/local-auth-storage";
 
 const accessCards = [
@@ -64,8 +65,8 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-      <section className="rounded-[2rem] border border-[var(--border)] bg-[rgba(255,252,247,0.92)] p-4 shadow-[var(--shadow)] backdrop-blur sm:p-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 pt-0 pb-3 sm:px-6 sm:pt-0 sm:pb-4 lg:px-8 lg:pt-0 lg:pb-5">
+      <section className="sticky top-0 z-30 rounded-[1.75rem] border border-[var(--border)] bg-[rgba(255,252,247,0.92)] px-4 py-3 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:px-5 sm:py-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <Link href="/" className="flex items-center gap-3 text-slate-900">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">H</span>
@@ -103,9 +104,15 @@ export default function LoginPage() {
               <article key={card.title} className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5">
                 <h2 className="text-xl font-semibold text-slate-900">{card.title}</h2>
                 <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{card.description}</p>
-                <Link href={card.href} className="mt-5 inline-flex rounded-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
+                <Button
+                  as={Link}
+                  href={card.href}
+                  variant="dark"
+                  size="md"
+                  className="mt-5 inline-flex text-white hover:text-white focus:text-white visited:text-white"
+                >
                   {card.cta}
-                </Link>
+                </Button>
               </article>
             ))}
           </div>

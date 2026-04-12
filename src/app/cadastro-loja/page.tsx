@@ -11,8 +11,8 @@ const onboardingSteps = [
 
 export default function CadastroLojaPage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-      <section className="rounded-[2rem] border border-[var(--border)] bg-[rgba(255,252,247,0.92)] p-4 shadow-[var(--shadow)] backdrop-blur sm:p-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 pt-0 pb-3 sm:px-6 sm:pt-0 sm:pb-4 lg:px-8 lg:pt-0 lg:pb-5">
+      <section className="sticky top-0 z-30 rounded-[1.75rem] border border-[var(--border)] bg-[rgba(255,252,247,0.92)] px-4 py-3 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:px-5 sm:py-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <Link href="/" className="flex items-center gap-3 text-slate-900">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">H</span>
@@ -38,9 +38,6 @@ export default function CadastroLojaPage() {
           <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-5xl">
             Cadastre sua loja e prepare a base de estoque, pedidos e vendas desde o primeiro acesso.
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-lg sm:leading-8">
-            O cadastro precisa refletir o que o negocio realmente usa. Por isso esta pagina ja parte dos campos mais importantes para operacao do lojista.
-          </p>
           <div className="mt-8 grid gap-3">
             {onboardingSteps.map((step, index) => (
               <div key={step} className="rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-sm text-slate-100">
