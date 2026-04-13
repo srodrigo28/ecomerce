@@ -4,6 +4,17 @@ export interface LocalSellerProductImage {
   previewUrl: string;
 }
 
+export interface LocalSellerProductVariant {
+  id: string;
+  sizeLabel: string;
+  stock: number;
+  minStock: number;
+  priceRetail?: number;
+  priceWholesale?: number;
+  pricePromotion?: number;
+  position?: number;
+}
+
 export interface LocalSellerProductRecord {
   id: string;
   storeId: string;
@@ -18,6 +29,7 @@ export interface LocalSellerProductRecord {
   pricePromotion?: number;
   stock: number;
   minStock: number;
+  variants?: LocalSellerProductVariant[];
   images: LocalSellerProductImage[];
   mainImageUrl?: string;
   createdAt: string;

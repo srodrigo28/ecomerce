@@ -72,6 +72,27 @@ export interface ProductApiImageMeta {
   position?: number;
 }
 
+export interface ProductVariant {
+  id?: string;
+  sizeLabel: string;
+  stock: number;
+  minStock?: number;
+  priceRetail?: number;
+  priceWholesale?: number;
+  pricePromotion?: number;
+  position?: number;
+}
+
+export interface ProductVariantDraft {
+  id: string;
+  sizeLabel: string;
+  stock: string;
+  minStock: string;
+  priceRetail?: string;
+  priceWholesale?: string;
+  pricePromotion?: string;
+}
+
 export interface Product {
   id: string;
   storeId: string;
@@ -86,6 +107,7 @@ export interface Product {
   minStock?: number;
   imageUrls: string[];
   images?: ProductApiImageMeta[];
+  variants?: ProductVariant[];
   featured?: boolean;
 }
 
@@ -432,6 +454,7 @@ export interface SellerProductSubmitInput {
   pricePromotion?: number;
   stock: number;
   minStock: number;
+  variants?: ProductVariant[];
   images: ProductImage[];
   mainImageId?: string;
 }
@@ -444,12 +467,10 @@ export interface ProductFormDraft {
   priceRetail: string;
   priceWholesale: string;
   pricePromotion: string;
-  stock: string;
-  minStock: string;
   shelfSection: string;
   shelfPosition: string;
-  sizeLabel: string;
   audience: string;
+  variants: ProductVariantDraft[];
   images: ProductImage[];
 }
 

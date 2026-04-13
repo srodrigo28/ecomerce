@@ -518,6 +518,16 @@ export async function submitSellerProduct(input: SellerProductSubmitInput): Prom
       price_promotion: input.pricePromotion ?? null,
       stock: input.stock,
       min_stock: input.minStock,
+      variants: input.variants?.map((variant, index) => ({
+        id: variant.id ? Number(variant.id) : undefined,
+        size_label: variant.sizeLabel,
+        price_retail: variant.priceRetail ?? null,
+        price_wholesale: variant.priceWholesale ?? null,
+        price_promotion: variant.pricePromotion ?? null,
+        stock: variant.stock,
+        min_stock: variant.minStock ?? 0,
+        position: variant.position ?? index + 1,
+      })) ?? [],
       status: "draft",
       is_featured: false,
       notes: null,
@@ -752,13 +762,14 @@ const mapApiCategory = (payload: Record<string, unknown>): Category => {
 
 const mapApiProduct = (payload: Record<string, unknown>): Product => {
   const imageEntries = Array.isArray(payload.images) ? payload.images : [];
+  const variantEntries = Array.isArray(payload.variants) ? payload.variants : [];
   const apiImages = imageEntries.reduce<ProductApiImageMeta[]>((accumulator, image, index) => {
     if (!image || typeof image !== "object") {
       return accumulator;
     }
 
     const record = image as Record<string, unknown>;
-    const imageUrl = toNullableString(record.image_url ?? record.imageUrl);
+    const imageUrl = resolveApiAssetUrl(record.image_url ?? record.imageUrl);
 
     if (!imageUrl) {
       return accumulator;
@@ -801,6 +812,19 @@ const mapApiProduct = (payload: Record<string, unknown>): Product => {
     minStock: Number(payload.min_stock ?? payload.minStock ?? 0),
     imageUrls,
     images: orderedImages,
+    variants: variantEntries.map((variant, index) => {
+      const record = variant as Record<string, unknown>;
+      return {
+        id: record.id !== undefined && record.id !== null ? String(record.id) : undefined,
+        sizeLabel: String(record.size_label ?? record.sizeLabel ?? ""),
+        stock: Number(record.stock ?? 0),
+        minStock: Number(record.min_stock ?? record.minStock ?? 0),
+        priceRetail: record.price_retail ?? record.priceRetail ? toNumberValue(record.price_retail ?? record.priceRetail) : undefined,
+        priceWholesale: record.price_wholesale ?? record.priceWholesale ? toNumberValue(record.price_wholesale ?? record.priceWholesale) : undefined,
+        pricePromotion: record.price_promotion ?? record.pricePromotion ? toNumberValue(record.price_promotion ?? record.pricePromotion) : undefined,
+        position: Number(record.position ?? index + 1),
+      };
+    }),
     featured: Boolean(payload.is_featured ?? payload.isFeatured),
   };
 };
@@ -1572,4 +1596,7 @@ export async function updateAdminStoreStatus(storeId: string, active: boolean): 
 
   return mapApiStoreSummary(payload);
 }
+
+
+
 

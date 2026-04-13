@@ -42,6 +42,32 @@ const workspace: SellerWorkspace = {
   },
 };
 
+const workspaceWithCategories: SellerWorkspace = {
+  ...workspace,
+  categories: [
+    {
+      id: "cat-vestidos",
+      storeId: "101",
+      name: "Vestidos",
+      slug: "vestidos",
+      description: "Moda feminina para ocasioes especiais",
+      image: "/uploads/categorias/vestidos.png",
+      active: true,
+      origin: "custom",
+    },
+    {
+      id: "cat-outlet",
+      storeId: "101",
+      name: "Outlet",
+      slug: "outlet",
+      description: "Pecas remarcadas",
+      image: "/uploads/categorias/outlet.png",
+      active: false,
+      origin: "custom",
+    },
+  ],
+};
+
 describe("SellerCategoriesBoard", () => {
   beforeEach(() => {
     (createSellerCategory as jest.Mock).mockReset();
@@ -160,4 +186,130 @@ describe("SellerCategoriesBoard", () => {
     expect(screen.getByRole("button", { name: "Cadastrar categoria" })).toBeDisabled();
   });
 
+  it("deve permitir editar uma categoria existente", async () => {
+    const user = userEvent.setup();
+
+    (updateSellerCategory as jest.Mock).mockResolvedValue({
+      id: "cat-vestidos",
+      storeId: "101",
+      name: "Vestidos Premium",
+      slug: "vestidos-premium",
+      description: "Linha premium para festas e eventos",
+      image: "/uploads/categorias/vestidos-premium.png",
+      active: true,
+      origin: "custom",
+    });
+
+    render(<SellerCategoriesBoard workspace={workspaceWithCategories} />);
+
+    const activeSection = screen.getByRole("heading", { name: "Prontas para a vitrine e produtos" }).closest("article");
+    expect(activeSection).not.toBeNull();
+    const activeScope = within(activeSection as HTMLElement);
+
+    await user.click(activeScope.getByRole("button", { name: "Editar" }));
+    const nameInput = activeScope.getByDisplayValue("Vestidos");
+    const descriptionInput = activeScope.getByDisplayValue("Moda feminina para ocasioes especiais");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Vestidos Premium");
+    await user.clear(descriptionInput);
+    await user.type(descriptionInput, "Linha premium para festas e eventos");
+    await user.click(activeScope.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => {
+      expect(updateSellerCategory).toHaveBeenCalledWith("cat-vestidos", {
+        storeId: "101",
+        name: "Vestidos Premium",
+        description: "Linha premium para festas e eventos",
+        imageFile: undefined,
+        active: true,
+      });
+    });
+
+    expect(await screen.findByText("Categoria Vestidos Premium atualizada com sucesso.")).toBeInTheDocument();
+    expect(screen.getByText("Vestidos Premium")).toBeInTheDocument();
+  });
+
+  it("deve desativar uma categoria ativa", async () => {
+    const user = userEvent.setup();
+
+    (updateSellerCategory as jest.Mock).mockResolvedValue({
+      id: "cat-vestidos",
+      storeId: "101",
+      name: "Vestidos",
+      slug: "vestidos",
+      description: "Moda feminina para ocasioes especiais",
+      image: "/uploads/categorias/vestidos.png",
+      active: false,
+      origin: "custom",
+    });
+
+    render(<SellerCategoriesBoard workspace={workspaceWithCategories} />);
+
+    await user.click(screen.getByRole("button", { name: "Desativar" }));
+
+    await waitFor(() => {
+      expect(updateSellerCategory).toHaveBeenCalledWith("cat-vestidos", {
+        storeId: "101",
+        name: "Vestidos",
+        description: "Moda feminina para ocasioes especiais",
+        active: false,
+      });
+    });
+
+    expect(await screen.findByText("Categoria Vestidos desativada com sucesso.")).toBeInTheDocument();
+    expect(screen.getByText("2 inativa(s)")).toBeInTheDocument();
+  });
+
+  it("deve reativar uma categoria inativa", async () => {
+    const user = userEvent.setup();
+
+    (updateSellerCategory as jest.Mock).mockResolvedValue({
+      id: "cat-outlet",
+      storeId: "101",
+      name: "Outlet",
+      slug: "outlet",
+      description: "Pecas remarcadas",
+      image: "/uploads/categorias/outlet.png",
+      active: true,
+      origin: "custom",
+    });
+
+    render(<SellerCategoriesBoard workspace={workspaceWithCategories} />);
+
+    await user.click(screen.getByRole("button", { name: "Ativar novamente" }));
+
+    await waitFor(() => {
+      expect(updateSellerCategory).toHaveBeenCalledWith("cat-outlet", {
+        storeId: "101",
+        name: "Outlet",
+        description: "Pecas remarcadas",
+        active: true,
+      });
+    });
+
+    expect(await screen.findByText("Categoria Outlet ativada com sucesso.")).toBeInTheDocument();
+    expect(screen.getByText("2 ativa(s)")).toBeInTheDocument();
+  });
+
+  it("deve excluir uma categoria existente", async () => {
+    const user = userEvent.setup();
+
+    (deleteSellerCategory as jest.Mock).mockResolvedValue(undefined);
+
+    render(<SellerCategoriesBoard workspace={workspaceWithCategories} />);
+
+    const activeSection = screen.getByRole("heading", { name: "Prontas para a vitrine e produtos" }).closest("article");
+    expect(activeSection).not.toBeNull();
+    const activeScope = within(activeSection as HTMLElement);
+
+    await user.click(activeScope.getByRole("button", { name: "Excluir" }));
+
+    await waitFor(() => {
+      expect(deleteSellerCategory).toHaveBeenCalledWith("cat-vestidos");
+    });
+
+    expect(await screen.findByText("Categoria Vestidos removida com sucesso.")).toBeInTheDocument();
+    expect(screen.queryByText("Vestidos")).not.toBeInTheDocument();
+  });
 });
+

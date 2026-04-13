@@ -25,6 +25,7 @@ const EMPTY_LOCAL_PRODUCTS: LocalSellerProductRecord[] = [];
 type ProductViewMode = "vitrine" | "lista";
 type ProductFilterMode = "todos" | "estoque_baixo" | "sem_imagem" | "api" | "novo";
 type ProductSortMode = "recentes" | "nome" | "preco" | "estoque";
+type ManageSection = "catalogo" | "precos";
 
 type ShowcaseProductRecord = {
   id: string;
@@ -72,9 +73,12 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
   const [deleteTarget, setDeleteTarget] = useState<ShowcaseProductRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShowcaseFocused, setIsShowcaseFocused] = useState(false);
+  const [manageSection, setManageSection] = useState<ManageSection>("catalogo");
   const [manageDraft, setManageDraft] = useState({
     name: "",
     priceRetail: "",
+    priceWholesale: "",
+    pricePromotion: "",
     stock: "",
     categoryId: "",
   });
@@ -91,9 +95,12 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
       setManageDraft({
         name: "",
         priceRetail: "",
+        priceWholesale: "",
+        pricePromotion: "",
         stock: "",
         categoryId: "",
       });
+      setManageSection("catalogo");
       return;
     }
 
@@ -102,9 +109,12 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
     setManageDraft({
       name: manageTarget.name,
       priceRetail: String(manageTarget.priceRetail),
+      priceWholesale: manageTarget.priceWholesale !== undefined ? String(manageTarget.priceWholesale) : "",
+      pricePromotion: manageTarget.pricePromotion !== undefined ? String(manageTarget.pricePromotion) : "",
       stock: String(manageTarget.stock),
       categoryId: manageTarget.categoryId,
     });
+    setManageSection("catalogo");
   }, [manageTarget]);
 
   useEffect(() => {
@@ -258,13 +268,15 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
   };
 
   const handleEdit = (product: ShowcaseProductRecord) => {
-    window.dispatchEvent(
-      new CustomEvent("seller-product-edit", {
-        detail: product,
-      }),
-    );
-    setActionFeedback(`Produto ${product.name} carregado no formulario para edicao.`);
     setManageTarget(null);
+    window.requestAnimationFrame(() => {
+      window.dispatchEvent(
+        new CustomEvent("seller-product-edit", {
+          detail: product,
+        }),
+      );
+    });
+    setActionFeedback(`Produto ${product.name} carregado no formulario para edicao.`);
   };
 
   const handleConfirmDelete = async () => {
@@ -308,6 +320,8 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
   const manageHasGalleryNavigation = manageGallery.length > 1;
   const manageDisplayName = manageDraft.name.trim() || manageTarget?.name || "";
   const manageDisplayPrice = Number(manageDraft.priceRetail || 0);
+  const manageDisplayWholesale = Number(manageDraft.priceWholesale || 0);
+  const manageDisplayPromotion = Number(manageDraft.pricePromotion || 0);
   const manageDisplayStock = Number(manageDraft.stock || 0);
   const manageDisplayCategoryName =
     workspace.categories.find((category) => category.id === manageDraft.categoryId)?.name
@@ -350,6 +364,8 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
 
     const trimmedName = manageDraft.name.trim();
     const nextPriceRetail = Number(manageDraft.priceRetail || 0);
+    const nextPriceWholesale = manageDraft.priceWholesale ? Number(manageDraft.priceWholesale) : undefined;
+    const nextPricePromotion = manageDraft.pricePromotion ? Number(manageDraft.pricePromotion) : undefined;
     const nextStock = Number(manageDraft.stock || 0);
 
     if (!trimmedName || !manageDraft.categoryId) {
@@ -369,8 +385,8 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
           categoryId: manageDraft.categoryId,
           categoryName: workspace.categories.find((category) => category.id === manageDraft.categoryId)?.name ?? manageTarget.categoryName,
           priceRetail: nextPriceRetail,
-          priceWholesale: manageTarget.priceWholesale,
-          pricePromotion: manageTarget.pricePromotion,
+          priceWholesale: nextPriceWholesale,
+          pricePromotion: nextPricePromotion,
           stock: nextStock,
           minStock: manageTarget.minStock,
           images: manageGallery.map((image) => ({ id: image.id, name: image.name, previewUrl: image.imageUrl })),
@@ -395,8 +411,8 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
           slug: manageTarget.slug,
           description: manageTarget.description,
           priceRetail: nextPriceRetail,
-          priceWholesale: manageTarget.priceWholesale,
-          pricePromotion: manageTarget.pricePromotion,
+          priceWholesale: nextPriceWholesale,
+          pricePromotion: nextPricePromotion,
           stock: nextStock,
           minStock: manageTarget.minStock,
           images: apiImages,
@@ -440,8 +456,8 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
           categoryId: manageTarget.categoryId,
           categoryName: manageTarget.categoryName,
           priceRetail: manageTarget.priceRetail,
-          priceWholesale: manageTarget.priceWholesale,
-          pricePromotion: manageTarget.pricePromotion,
+          priceWholesale: nextPriceWholesale,
+          pricePromotion: nextPricePromotion,
           stock: manageTarget.stock,
           minStock: manageTarget.minStock,
           images: remainingImages.map((image) => ({ id: image.id, name: image.name, previewUrl: image.imageUrl })),
@@ -790,6 +806,7 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
                 </button>
               )}
 
+
               <details className="overflow-hidden rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] group">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                   <div>
@@ -833,12 +850,37 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
                 <div className="mt-5 border-t border-[var(--border)] pt-5">
                   <p className="text-sm text-[var(--muted)]">Preco varejo</p>
                   <p className="mt-2 text-4xl font-semibold leading-none text-rose-600">{formatCurrency(manageDisplayPrice)}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                    <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
+                      Atacado {manageDisplayWholesale > 0 ? formatCurrency(manageDisplayWholesale) : "Nao definido"}
+                    </span>
+                    <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
+                      Promocional {manageDisplayPromotion > 0 ? formatCurrency(manageDisplayPromotion) : "Nao definido"}
+                    </span>
+                  </div>
                   <p className="mt-3 text-sm text-emerald-600">Estoque atual: {manageDisplayStock} unidade(s)</p>
                   <p className="mt-2 text-sm text-[var(--muted)]">Estoque minimo configurado: {manageTarget.minStock} unidade(s)</p>
                 </div>
 
                 <div className="mt-5 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
                   <p className="text-sm leading-6 text-[var(--muted)]">{manageTarget.description || "Adicione uma descricao mais forte para a vitrine publica e para a operacao da loja."}</p>
+                </div>
+
+                <div className="mt-4 flex gap-2 rounded-[1rem] border border-[var(--border)] bg-[var(--surface)] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setManageSection("catalogo")}
+                    className={`flex-1 rounded-[0.8rem] px-3 py-2 text-sm font-semibold transition ${manageSection === "catalogo" ? "bg-white text-slate-950 shadow-sm" : "text-[var(--muted)]"}`}
+                  >
+                    Catalogo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setManageSection("precos")}
+                    className={`flex-1 rounded-[0.8rem] px-3 py-2 text-sm font-semibold transition ${manageSection === "precos" ? "bg-white text-slate-950 shadow-sm" : "text-[var(--muted)]"}`}
+                  >
+                    Precos
+                  </button>
                 </div>
 
                 <form
@@ -848,66 +890,123 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
                     void handleQuickSaveAndClose();
                   }}
                 >
-                  <label className="space-y-2 sm:col-span-2">
-                    <span className="text-sm font-medium theme-heading">Titulo</span>
-                    <input
-                      autoFocus
-                      value={manageDraft.name}
-                      onChange={(event) => setManageDraft((current) => ({ ...current, name: event.target.value }))}
-                      className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
-                    />
-                  </label>
-                  <label className="space-y-2 sm:col-span-2">
-                    <span className="text-sm font-medium theme-heading">Categoria</span>
-                    <select
-                      value={manageDraft.categoryId}
-                      onChange={(event) => setManageDraft((current) => ({ ...current, categoryId: event.target.value }))}
-                      className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
-                    >
-                      {workspace.categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium theme-heading">Preco varejo</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={manageDraft.priceRetail}
-                      onChange={(event) => setManageDraft((current) => ({ ...current, priceRetail: event.target.value }))}
-                      className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
-                    />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium theme-heading">Quantidade</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={manageDraft.stock}
-                      onChange={(event) => setManageDraft((current) => ({ ...current, stock: event.target.value }))}
-                      className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
-                    />
-                  </label>
+                  {manageSection === "catalogo" ? (
+                    <>
+                      <label className="space-y-2 sm:col-span-2">
+                        <span className="text-sm font-medium theme-heading">Titulo</span>
+                        <input
+                          autoFocus
+                          value={manageDraft.name}
+                          onChange={(event) => setManageDraft((current) => ({ ...current, name: event.target.value }))}
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                        />
+                      </label>
+                      <label className="space-y-2 sm:col-span-2">
+                        <span className="text-sm font-medium theme-heading">Categoria</span>
+                        <select
+                          value={manageDraft.categoryId}
+                          onChange={(event) => setManageDraft((current) => ({ ...current, categoryId: event.target.value }))}
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                        >
+                          {workspace.categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </>
+                  ) : (
+                    <>
+                      <label className="space-y-2">
+                        <span className="text-sm font-medium theme-heading">Preco varejo</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={manageDraft.priceRetail}
+                          onChange={(event) => setManageDraft((current) => ({ ...current, priceRetail: event.target.value }))}
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                        />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="text-sm font-medium theme-heading">Preco atacado</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={manageDraft.priceWholesale}
+                          onChange={(event) => setManageDraft((current) => ({ ...current, priceWholesale: event.target.value }))}
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                        />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="text-sm font-medium theme-heading">Preco promocional</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={manageDraft.pricePromotion}
+                          onChange={(event) => setManageDraft((current) => ({ ...current, pricePromotion: event.target.value }))}
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                        />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="text-sm font-medium theme-heading">Quantidade</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={manageDraft.stock}
+                          onChange={(event) => setManageDraft((current) => ({ ...current, stock: event.target.value }))}
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                        />
+                      </label>
+                    </>
+                  )}
                 </form>
 
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <Button type="button" variant="primary" onClick={() => void handleQuickSaveAndClose()} className="inline-flex h-12 w-12 items-center justify-center rounded-full p-0">
-                    <FiEdit3 className="h-5 w-5" aria-hidden="true" />
-                    <span className="sr-only">Alterar</span>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => void handleQuickSaveAndClose()}
+                    className="rounded-[0.9rem] px-4"
+                  >
+                    Salvar alteracoes
                   </Button>
-                  <Button type="button" variant="secondary" onClick={() => handleCopyLink(manageTarget)} className="inline-flex h-12 w-12 items-center justify-center rounded-full p-0">
-                    <FiShare2 className="h-5 w-5" aria-hidden="true" />
-                    <span className="sr-only">Compartilhar</span>
-                  </Button>
-                  <Button type="button" variant="dark" onClick={() => setDeleteTarget(manageTarget)} className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-rose-700 p-0 hover:bg-rose-600">
-                    <FiTrash2 className="h-5 w-5" aria-hidden="true" />
-                    <span className="sr-only">Excluir</span>
-                  </Button>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleOpenImageEditor}
+                      className="inline-flex h-12 w-12 items-center justify-center rounded-full border-amber-200 bg-amber-50 p-0 text-amber-700 hover:border-amber-300 hover:bg-amber-100"
+                      aria-label="Editar"
+                      title="Editar"
+                    >
+                      <FiEdit3 className="h-5 w-5" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => handleCopyLink(manageTarget)}
+                      className="inline-flex h-12 w-12 items-center justify-center rounded-full border-sky-200 bg-sky-50 p-0 text-sky-700 hover:border-sky-300 hover:bg-sky-100"
+                      aria-label="Compartilhar"
+                      title="Compartilhar"
+                    >
+                      <FiShare2 className="h-5 w-5" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="dark"
+                      onClick={() => setDeleteTarget(manageTarget)}
+                      className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-rose-700 p-0 text-white hover:bg-rose-600"
+                      aria-label="Excluir"
+                      title="Excluir"
+                    >
+                      <FiTrash2 className="h-5 w-5" aria-hidden="true" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -940,6 +1039,17 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
     </section>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

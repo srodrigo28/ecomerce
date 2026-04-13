@@ -11,7 +11,7 @@ import {
   setSellerProductMainImage,
   submitSellerProduct,
 } from "@/lib/services/catalog-service";
-import type { Category, ProductApiImageMeta, ProductFormDraft, ProductImage, SellerWorkspace } from "@/types/catalog";
+import type { Category, ProductApiImageMeta, ProductFormDraft, ProductImage, ProductVariant, ProductVariantDraft, SellerWorkspace } from "@/types/catalog";
 
 const MAX_IMAGES = 5;
 const MIN_IMAGES = 1;
@@ -32,6 +32,38 @@ const slugify = (value: string) =>
 
 const isObjectUrl = (value?: string | null) => Boolean(value?.startsWith("blob:"));
 const shortenImageName = (value: string, max = 22) => (value.length > max ? `${value.slice(0, max - 3)}...` : value);
+const createVariantDraft = (overrides?: Partial<ProductVariantDraft>): ProductVariantDraft => ({
+  id: overrides?.id ?? `variant-${Math.random().toString(36).slice(2, 10)}`,
+  sizeLabel: overrides?.sizeLabel ?? "",
+  stock: overrides?.stock ?? "",
+  minStock: overrides?.minStock ?? "0",
+  priceRetail: overrides?.priceRetail ?? "",
+  priceWholesale: overrides?.priceWholesale ?? "",
+  pricePromotion: overrides?.pricePromotion ?? "",
+});
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        resolve(result);
+        return;
+      }
+      reject(new Error("Nao foi possivel ler a imagem local do produto."));
+    };
+    reader.onerror = () => reject(new Error("Nao foi possivel ler a imagem local do produto."));
+    reader.readAsDataURL(file);
+  });
+
+const getPersistableImageUrl = async (image: ProductImage) => {
+  if (image.source === "upload" && image.file) {
+    return readFileAsDataUrl(image.file);
+  }
+
+  return image.previewUrl;
+};
 
 const initialDraft = (workspace: SellerWorkspace): ProductFormDraft => ({
   name: "",
@@ -41,12 +73,10 @@ const initialDraft = (workspace: SellerWorkspace): ProductFormDraft => ({
   priceRetail: "",
   priceWholesale: "",
   pricePromotion: "",
-  stock: "",
-  minStock: "",
   shelfSection: "A",
   shelfPosition: "1",
-  sizeLabel: "",
   audience: audienceOptions[0],
+  variants: [createVariantDraft()],
   images: [],
 });
 
@@ -102,13 +132,29 @@ const buildStructuredDescription = (draft: ProductFormDraft) => {
     DESCRIPTION_META_START,
     `shelfSection=${draft.shelfSection.trim() || "A"}`,
     `shelfPosition=${draft.shelfPosition.trim() || "1"}`,
-    `sizeLabel=${draft.sizeLabel.trim()}`,
     `audience=${draft.audience.trim() || audienceOptions[0]}`,
     DESCRIPTION_META_END,
   ].join("\n");
 
   return notes ? `${notes}\n\n${metaBlock}` : metaBlock;
 };
+
+const toVariantPayload = (draft: ProductFormDraft): ProductVariant[] =>
+  draft.variants
+    .filter((variant) => variant.sizeLabel.trim())
+    .map((variant, index) => ({
+      id: variant.id.startsWith("api-") ? variant.id.replace("api-", "") : undefined,
+      sizeLabel: variant.sizeLabel.trim().toUpperCase(),
+      stock: Number(variant.stock || 0),
+      minStock: Number(variant.minStock || 0),
+      priceRetail: variant.priceRetail ? Number(variant.priceRetail) : undefined,
+      priceWholesale: variant.priceWholesale ? Number(variant.priceWholesale) : undefined,
+      pricePromotion: variant.pricePromotion ? Number(variant.pricePromotion) : undefined,
+      position: index + 1,
+    }));
+
+const sumVariantStock = (variants: ProductVariant[]) => variants.reduce((sum, variant) => sum + variant.stock, 0);
+const sumVariantMinStock = (variants: ProductVariant[]) => variants.reduce((sum, variant) => sum + (variant.minStock ?? 0), 0);
 
 export type SellerProductEditRequest = {
   id: string;
@@ -124,6 +170,7 @@ export type SellerProductEditRequest = {
   minStock: number;
   imageUrl?: string;
   images?: ProductApiImageMeta[];
+  variants?: ProductVariant[];
 };
 
 export function SellerProductForm({
@@ -196,6 +243,25 @@ export function SellerProductForm({
           : [];
 
       const selectedMain = nextImages.find((image) => image.isMain) ?? nextImages[0] ?? null;
+      const nextVariants = detail.variants?.length
+        ? detail.variants.map((variant, index) => ({
+            ...createVariantDraft(),
+            id: variant.id ? `api-${variant.id}` : `variant-${index + 1}`,
+            sizeLabel: variant.sizeLabel,
+            stock: String(variant.stock ?? 0),
+            minStock: String(variant.minStock ?? 0),
+            priceRetail: variant.priceRetail !== undefined ? String(variant.priceRetail) : "",
+            priceWholesale: variant.priceWholesale !== undefined ? String(variant.priceWholesale) : "",
+            pricePromotion: variant.pricePromotion !== undefined ? String(variant.pricePromotion) : "",
+          }))
+        : [
+            {
+              ...createVariantDraft(),
+              sizeLabel: parsedDescription.sizeLabel,
+              stock: String(detail.stock),
+              minStock: String(detail.minStock),
+            },
+          ];
       setEditingProductId(detail.id);
       setDraft({
         name: detail.name,
@@ -205,18 +271,16 @@ export function SellerProductForm({
         priceRetail: String(detail.priceRetail || ""),
         priceWholesale: detail.priceWholesale ? String(detail.priceWholesale) : "",
         pricePromotion: detail.pricePromotion ? String(detail.pricePromotion) : "",
-        stock: String(detail.stock),
-        minStock: String(detail.minStock),
         shelfSection: parsedDescription.shelfSection,
         shelfPosition: parsedDescription.shelfPosition,
-        sizeLabel: parsedDescription.sizeLabel,
         audience: parsedDescription.audience,
+        variants: nextVariants,
         images: nextImages,
       });
       setMainImageId(selectedMain?.id ?? null);
       setDeletedApiImageIds([]);
       setSubmittedLabel(null);
-      setFeedback(`Produto ${detail.name} carregado para edicao. Revise os dados operacionais e salve novamente.`);
+      setFeedback(`Produto ${detail.name} carregado para edicao. Revise os tamanhos, os estoques e salve novamente.`);
       document.getElementById("cadastro-produto-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
@@ -226,9 +290,36 @@ export function SellerProductForm({
 
   const selectedCategory = useMemo(() => categories.find((category) => category.id === draft.categoryId), [categories, draft.categoryId]);
   const mainImage = useMemo(() => draft.images.find((image) => image.id === mainImageId) ?? draft.images[0] ?? null, [draft.images, mainImageId]);
+  const variantPayload = useMemo(() => toVariantPayload(draft), [draft]);
+  const totalStock = useMemo(() => sumVariantStock(variantPayload), [variantPayload]);
+  const totalMinStock = useMemo(() => sumVariantMinStock(variantPayload), [variantPayload]);
 
   const updateField = <K extends keyof ProductFormDraft>(field: K, value: ProductFormDraft[K]) => {
     setDraft((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateVariantField = (variantId: string, field: keyof ProductVariantDraft, value: string) => {
+    setDraft((current) => ({
+      ...current,
+      variants: current.variants.map((variant) => (variant.id === variantId ? { ...variant, [field]: value } : variant)),
+    }));
+  };
+
+  const handleAddVariant = () => {
+    setDraft((current) => ({
+      ...current,
+      variants: [...current.variants, createVariantDraft()],
+    }));
+  };
+
+  const handleRemoveVariant = (variantId: string) => {
+    setDraft((current) => {
+      const remaining = current.variants.filter((variant) => variant.id !== variantId);
+      return {
+        ...current,
+        variants: remaining.length ? remaining : [createVariantDraft()],
+      };
+    });
   };
 
   const appendImages = (newImages: ProductImage[]) => {
@@ -363,13 +454,31 @@ export function SellerProductForm({
       setFeedback("Selecione uma categoria para o produto.");
       return false;
     }
-    if (!draft.stock.trim()) {
-      setFeedback("Informe a quantidade atual do produto.");
+    const completeVariants = draft.variants.filter((variant) => variant.sizeLabel.trim());
+    if (!completeVariants.length) {
+      setFeedback("Adicione pelo menos 1 tamanho para concluir o cadastro do produto.");
       return false;
     }
-    if (Number(draft.stock) < 0) {
-      setFeedback("A quantidade nao pode ser negativa.");
-      return false;
+    const labels = new Set();
+    for (const variant of completeVariants) {
+      const normalizedLabel = variant.sizeLabel.trim().toUpperCase();
+      if (labels.has(normalizedLabel)) {
+        setFeedback(`O tamanho ${normalizedLabel} foi repetido. Ajuste a grade antes de salvar.`);
+        return false;
+      }
+      labels.add(normalizedLabel);
+      if (!variant.stock.trim()) {
+        setFeedback(`Informe a quantidade do tamanho ${normalizedLabel}.`);
+        return false;
+      }
+      if (Number(variant.stock) < 0) {
+        setFeedback(`A quantidade do tamanho ${normalizedLabel} nao pode ser negativa.`);
+        return false;
+      }
+      if (Number(variant.minStock || 0) < 0) {
+        setFeedback(`O estoque minimo do tamanho ${normalizedLabel} nao pode ser negativo.`);
+        return false;
+      }
     }
     if (draft.images.length < MIN_IMAGES) {
       setFeedback("Adicione pelo menos 1 imagem para concluir o cadastro do produto.");
@@ -411,8 +520,9 @@ export function SellerProductForm({
         priceRetail: Number(draft.priceRetail || 0),
         priceWholesale: draft.priceWholesale ? Number(draft.priceWholesale) : undefined,
         pricePromotion: draft.pricePromotion ? Number(draft.pricePromotion) : undefined,
-        stock: Number(draft.stock || 0),
-        minStock: Number(draft.minStock || 0),
+        stock: totalStock,
+        minStock: totalMinStock,
+        variants: variantPayload,
         images: draft.images,
         mainImageId: mainImageId ?? undefined,
       });
@@ -431,7 +541,7 @@ export function SellerProductForm({
       }
 
       setFeedback(`Produto ${createdProduct.name} ${editingProductId ? "atualizado" : "cadastrado"} na API com sucesso.`);
-      setSubmittedLabel(`${createdProduct.name} salvo com ${draft.images.length} imagem(ns) e categoria ${categoryName}.`);
+      setSubmittedLabel(`${createdProduct.name} salvo com ${variantPayload.length} tamanho(s), ${draft.images.length} imagem(ns) e categoria ${categoryName}.`);
 
       if (typeof window !== "undefined") {
         window.sessionStorage.setItem(SELLER_PRODUCTS_SCROLL_KEY, "produtos-cadastrados");
@@ -456,6 +566,15 @@ export function SellerProductForm({
       }
     }
 
+    const persistedImages = await Promise.all(
+      draft.images.map(async (image) => ({
+        id: image.id,
+        name: image.name,
+        previewUrl: await getPersistableImageUrl(image),
+      })),
+    );
+    const persistedMainImageUrl = mainImage ? await getPersistableImageUrl(mainImage) : undefined;
+
     saveLocalSellerProduct({
       id: editingProductId ?? window.crypto.randomUUID(),
       storeId: workspace.store.id,
@@ -468,15 +587,25 @@ export function SellerProductForm({
       priceRetail: Number(draft.priceRetail || 0),
       priceWholesale: draft.priceWholesale ? Number(draft.priceWholesale) : undefined,
       pricePromotion: draft.pricePromotion ? Number(draft.pricePromotion) : undefined,
-      stock: Number(draft.stock || 0),
-      minStock: Number(draft.minStock || 0),
-      images: draft.images.map((image) => ({ id: image.id, name: image.name, previewUrl: image.previewUrl })),
-      mainImageUrl: mainImage?.previewUrl,
+      stock: totalStock,
+      minStock: totalMinStock,
+      variants: variantPayload.map((variant, index) => ({
+        id: variant.id ?? `local-variant-${index + 1}`,
+        sizeLabel: variant.sizeLabel,
+        stock: variant.stock,
+        minStock: variant.minStock ?? 0,
+        priceRetail: variant.priceRetail,
+        priceWholesale: variant.priceWholesale,
+        pricePromotion: variant.pricePromotion,
+        position: variant.position,
+      })),
+      images: persistedImages,
+      mainImageUrl: persistedMainImageUrl,
       createdAt: new Date().toISOString(),
     });
 
     setFeedback(`Produto ${productName} salvo localmente na vitrine interna.`);
-    setSubmittedLabel(`${productName} salvo localmente com categoria ${categoryName}.`);
+    setSubmittedLabel(`${productName} salvo localmente com ${variantPayload.length} tamanho(s) e categoria ${categoryName}.`);
 
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem(SELLER_PRODUCTS_SCROLL_KEY, "produtos-cadastrados");
@@ -525,30 +654,55 @@ export function SellerProductForm({
           </div>
 
           <div>
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-slate-700">
+                {variantPayload.length} tamanho(s) · {totalStock} unidade(s)
+              </div>
               <span className="rounded-full theme-border-button px-3 py-1.5 text-xs font-semibold transition">{draft.images.length}/{MAX_IMAGES}</span>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <label className="space-y-2">
                 <span className="text-sm font-medium theme-heading">Prateleira</span>
-                <input value={draft.shelfSection} onChange={(event) => updateField("shelfSection", event.target.value.toUpperCase().slice(0, 2))} placeholder="A" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-center outline-none transition focus:border-[var(--accent)]" />
+                <input aria-label="Prateleira" value={draft.shelfSection} onChange={(event) => updateField("shelfSection", event.target.value.toUpperCase().slice(0, 2))} placeholder="A" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-center outline-none transition focus:border-[var(--accent)]" />
               </label>
 
               <label className="space-y-2">
                 <span className="text-sm font-medium theme-heading">Posicao</span>
-                <input value={draft.shelfPosition} onChange={(event) => updateField("shelfPosition", event.target.value)} placeholder="1" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-center outline-none transition focus:border-[var(--accent)]" />
+                <input aria-label="Posicao" value={draft.shelfPosition} onChange={(event) => updateField("shelfPosition", event.target.value)} placeholder="1" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-center outline-none transition focus:border-[var(--accent)]" />
               </label>
+            </div>
 
-              <label className="space-y-2">
-                <span className="text-sm font-medium theme-heading">Tamanho</span>
-                <input value={draft.sizeLabel} onChange={(event) => updateField("sizeLabel", event.target.value)} placeholder="34" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-              </label>
+            <div className="mt-4 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium theme-heading">Grade e estoque</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">Cadastre varios tamanhos do mesmo produto com quantidades independentes.</p>
+                </div>
+                <button type="button" onClick={handleAddVariant} className="rounded-xl bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">Adicionar tamanho</button>
+              </div>
 
-              <label className="space-y-2">
-                <span className="text-sm font-medium theme-heading">Qtd</span>
-                <input type="number" min="0" step="1" value={draft.stock} onChange={(event) => updateField("stock", event.target.value)} placeholder="30" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-              </label>
+              <div className="mt-4 space-y-3">
+                {draft.variants.map((variant, index) => (
+                  <div key={variant.id} className="grid gap-3 rounded-[1rem] border border-[var(--border)] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_44px]">
+                    <label className="space-y-2">
+                      <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Tamanho</span>
+                      <input aria-label={`Tamanho ${index + 1}`} value={variant.sizeLabel} onChange={(event) => updateVariantField(variant.id, "sizeLabel", event.target.value.toUpperCase())} placeholder="34, 36, P, M, G" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                    </label>
+                    <label className="space-y-2">
+                      <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Qtd</span>
+                      <input aria-label={`Qtd ${index + 1}`} type="number" min="0" step="1" value={variant.stock} onChange={(event) => updateVariantField(variant.id, "stock", event.target.value)} placeholder="30" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                    </label>
+                    <label className="space-y-2">
+                      <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Min.</span>
+                      <input aria-label={`Minimo ${index + 1}`} type="number" min="0" step="1" value={variant.minStock} onChange={(event) => updateVariantField(variant.id, "minStock", event.target.value)} placeholder="0" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                    </label>
+                    <div className="flex items-end">
+                      <button type="button" onClick={() => handleRemoveVariant(variant.id)} className="flex h-[50px] w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-lg font-semibold text-rose-600 transition hover:bg-rose-100" aria-label={`Remover tamanho ${index + 1}`}>X</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -588,19 +742,19 @@ export function SellerProductForm({
 
           <label className="space-y-2">
             <span className="text-sm font-medium theme-heading">Selecione</span>
-            <select value={draft.audience} onChange={(event) => updateField("audience", event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]">
+            <select aria-label="Selecione" value={draft.audience} onChange={(event) => updateField("audience", event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]">
               {audienceOptions.map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </label>
 
           <label className="space-y-2">
             <span className="text-sm font-medium theme-heading">Produto</span>
-            <input value={draft.name} onChange={(event) => updateField("name", event.target.value)} placeholder="Nome ou codigo do produto" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+            <input aria-label="Produto" value={draft.name} onChange={(event) => updateField("name", event.target.value)} placeholder="Nome ou codigo do produto" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
           </label>
 
           <label className="space-y-2">
             <span className="text-sm font-medium theme-heading">Descricao</span>
-            <textarea value={draft.description} onChange={(event) => updateField("description", event.target.value)} rows={4} placeholder="Descreva o produto, acabamento, cor, caimento e detalhes importantes para a venda..." className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+            <textarea aria-label="Descricao" value={draft.description} onChange={(event) => updateField("description", event.target.value)} rows={4} placeholder="Descreva o produto, acabamento, cor, caimento e detalhes importantes para a venda..." className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
           </label>
 
         </section>
@@ -683,5 +837,12 @@ export function SellerProductForm({
     </div>
   );
 }
+
+
+
+
+
+
+
 
 
