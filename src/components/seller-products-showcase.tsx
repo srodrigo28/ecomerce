@@ -584,12 +584,12 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
     setManageImageId(manageGallery[nextIndex]?.id ?? null);
   };
 
-  const renderActions = (product: ShowcaseProductRecord) => (
-    <div className="flex flex-wrap gap-2">
-      <Button type="button" variant="secondary" size="sm" onClick={() => setManageTarget(product)}>
+  const renderActions = (product: ShowcaseProductRecord, compact = false) => (
+    <div className={`flex flex-wrap gap-2 ${compact ? "xl:gap-1.5" : ""}`}>
+      <Button type="button" variant="secondary" size="sm" onClick={() => setManageTarget(product)} className={compact ? "px-3 py-2 text-xs" : ""}>
         Gerenciar
       </Button>
-      <Button type="button" variant="dark" size="sm" onClick={() => handleOpenVitrine(product)}>
+      <Button type="button" variant="dark" size="sm" onClick={() => handleOpenVitrine(product)} className={compact ? "px-3 py-2 text-xs" : ""}>
         Abrir vitrine
       </Button>
     </div>
@@ -672,14 +672,14 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
 
       {filteredProducts.length ? (
         viewMode === "vitrine" ? (
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
             {filteredProducts.map((product) => {
               const isLowStock = product.stock <= product.minStock;
               const isDeactivated = deactivatedProductIds.includes(product.id);
 
               return (
-                <article key={`${product.source}-${product.id}`} className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
-                  <div className="aspect-[4/5] bg-slate-100">
+                <article key={`${product.source}-${product.id}`} className="overflow-hidden rounded-[1.25rem] border border-[var(--border)] bg-white shadow-[var(--shadow-soft)]">
+                  <div className="aspect-[4/5] bg-slate-100 xl:aspect-[4/4.2]">
                     {product.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
@@ -687,29 +687,23 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                       <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[var(--muted)]">Sem imagem principal</div>
                     )}
                   </div>
-                  <div className="space-y-3 p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${product.source === "local" ? "theme-badge-info" : "theme-badge-neutral"}`}>
-                        {product.source === "local" ? "Novo" : "API"}
-                      </span>
-                      {isDeactivated ? (
-                        <span className="rounded-full theme-badge-danger px-3 py-1 text-xs font-semibold">Desativado</span>
-                      ) : null}
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isLowStock ? "theme-badge-warning" : "theme-badge-success"}`}>
-                        {isLowStock ? "Estoque baixo" : "Estoque ok"}
-                      </span>
+                  <div className="space-y-2.5 p-3 xl:space-y-2 xl:p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="block text-base theme-heading xl:text-[15px]">{product.name}</strong>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {isDeactivated ? (
+                          <span className="rounded-full theme-badge-danger px-2.5 py-1 text-[11px] font-semibold">Desativado</span>
+                        ) : null}
+                        {isLowStock ? (
+                          <span className="rounded-full theme-badge-warning px-2.5 py-1 text-[11px] font-semibold">Estoque baixo</span>
+                        ) : null}
+                      </div>
                     </div>
-                    <div>
-                      <strong className="block text-lg theme-heading">{product.name}</strong>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{product.categoryName}</p>
-                      <p className="mt-1 text-xs font-mono text-[var(--muted)]">/{product.slug}</p>
-                    </div>
-                    <p className="line-clamp-2 text-sm leading-6 text-[var(--muted)]">{product.description || "Sem descricao informada."}</p>
                     <div className="flex items-center justify-between gap-3">
-                      <strong className="text-lg theme-heading">{formatCurrency(product.priceRetail)}</strong>
-                      <span className="text-sm text-[var(--muted)]">{product.stock} em estoque</span>
+                      <strong className="text-base theme-heading xl:text-[15px]">{formatCurrency(product.priceRetail)}</strong>
+                      <span className="text-xs text-[var(--muted)] xl:text-[11px]">{product.stock} estoque</span>
                     </div>
-                    {renderActions(product)}
+                    {renderActions(product, true)}
                   </div>
                 </article>
               );
@@ -748,7 +742,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                         </div>
                         <p className="text-sm text-[var(--muted)]">{product.categoryName}</p>
                         <p className="text-xs font-mono text-[var(--muted)]">/{product.slug}</p>
-                        <p className="line-clamp-2 text-sm leading-6 text-[var(--muted)]">{product.description || "Sem descricao informada."}</p>
+                        <p className="line-clamp-2 text-sm leading-6 text-[var(--muted)]">{parseShowcaseDescription(product.description).notes || "Sem descricao informada."}</p>
                       </div>
                     </div>
 
@@ -785,10 +779,9 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
         <Modal
           onClose={() => setManageTarget(null)}
           title={manageDisplayName}
-          description="Painel rapido do produto com foco em apresentacao, gestao e acoes comerciais da loja."
         >
-          <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.8fr)]">
-            <div className="space-y-3 rounded-[2rem] bg-white p-2 shadow-[var(--shadow-soft)]">
+          <div className="mt-4 grid gap-4 xl:h-[calc(100vh-220px)] xl:grid-cols-[minmax(560px,1.55fr)_minmax(380px,0.95fr)] 2xl:h-[calc(100vh-210px)] 2xl:grid-cols-[minmax(620px,1.65fr)_minmax(400px,0.95fr)]">
+            <div className="space-y-3 rounded-[2rem] bg-white p-2 shadow-[var(--shadow-soft)] xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:p-3">
               <div className="relative overflow-hidden rounded-[1.7rem] bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_55%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
                 {manageHasGalleryNavigation ? (
                   <>
@@ -811,7 +804,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                   </>
                 ) : null}
 
-                <div className="min-h-[520px] sm:min-h-[600px] lg:min-h-[660px]">
+                <div className="min-h-[340px] sm:min-h-[420px] lg:min-h-[480px] xl:h-[52vh] xl:min-h-0 2xl:h-[56vh]">
                   {managePreviewImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={managePreviewImage.imageUrl} alt={manageDisplayName} className="h-full w-full object-contain px-0 py-0 sm:py-1" />
@@ -851,7 +844,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
               </div>
 
               {manageGallery.length > 1 ? (
-                <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 lg:grid-cols-6">
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                   {manageGallery.slice(0, 5).map((image) => {
                     const isSelected = managePreviewImage?.id === image.id;
                     return (
@@ -861,7 +854,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                         onClick={() => setManageImageId(image.id)}
                         className={`overflow-hidden rounded-[1rem] border transition ${isSelected ? "border-[var(--accent)] shadow-[0_0_0_2px_rgba(37,99,235,0.12)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
                       >
-                        <div className="aspect-[4/5] bg-slate-100">
+                        <div className="aspect-[4/5] bg-slate-100 xl:aspect-[3/4]">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={image.imageUrl} alt={image.name} className="h-full w-full object-cover" />
                         </div>
@@ -893,7 +886,22 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
               )}
 
 
-              <details className="overflow-hidden rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] group">
+              <div className="grid gap-2 sm:grid-cols-3 xl:hidden">
+                <div className="rounded-[1.1rem] border border-[var(--border)] bg-[var(--surface)] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--muted)]">Galeria</p>
+                  <strong className="mt-1 block text-sm theme-heading">{manageGallery.length} imagem(ns)</strong>
+                </div>
+                <div className="rounded-[1.1rem] border border-[var(--border)] bg-[var(--surface)] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--muted)]">Origem</p>
+                  <strong className="mt-1 block text-sm theme-heading">{manageTarget.source === "api" ? "Persistido" : "Local"}</strong>
+                </div>
+                <div className="rounded-[1.1rem] border border-[var(--border)] bg-[var(--surface)] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--muted)]">Status</p>
+                  <strong className="mt-1 block text-sm theme-heading">{manageIsDeactivated ? "Fora da vitrine" : "Em destaque"}</strong>
+                </div>
+              </div>
+
+              <details className="hidden overflow-hidden rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] group xl:block">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Mais detalhes</p>
@@ -918,8 +926,8 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
               </details>
             </div>
 
-            <div className="space-y-4">
-              <div className="rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)]">
+            <div className="space-y-3 xl:flex xl:h-full xl:flex-col xl:space-y-0">
+              <div className="rounded-[2rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)] xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:p-5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white">Gestao</span>
                   <span className="rounded-full theme-badge-neutral px-3 py-1 text-xs font-semibold">{manageDisplayCategoryName}</span>
@@ -930,39 +938,53 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                   )}
                 </div>
 
-                <h3 className="mt-4 text-3xl font-semibold leading-tight theme-heading">{manageDisplayName}</h3>
+                <h3 className="mt-3 text-2xl font-semibold leading-tight theme-heading xl:text-[2rem]">{manageDisplayName}</h3>
                 <p className="mt-2 text-sm text-[var(--muted)]">Cod. interno /{manageTarget.slug}</p>
 
-                <div className="mt-5 border-t border-[var(--border)] pt-5">
-                  <p className="text-sm text-[var(--muted)]">Preco varejo</p>
-                  <p className="mt-2 text-4xl font-semibold leading-none text-rose-600">{formatCurrency(manageDisplayPrice)}</p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                    <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
-                      Atacado {manageDisplayWholesale > 0 ? formatCurrency(manageDisplayWholesale) : "Nao definido"}
-                    </span>
-                    <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
-                      Promocional {manageDisplayPromotion > 0 ? formatCurrency(manageDisplayPromotion) : "Nao definido"}
-                    </span>
+                <div className="mt-4 border-t border-[var(--border)] pt-4">
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)] xl:items-start">
+                    <div>
+                      <p className="text-sm text-[var(--muted)]">Preco varejo</p>
+                      <p className="mt-2 text-3xl font-semibold leading-none text-rose-600 xl:text-[2.8rem]">{formatCurrency(manageDisplayPrice)}</p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
+                          Atacado {manageDisplayWholesale > 0 ? formatCurrency(manageDisplayWholesale) : "Nao definido"}
+                        </span>
+                        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
+                          Promocional {manageDisplayPromotion > 0 ? formatCurrency(manageDisplayPromotion) : "Nao definido"}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm text-emerald-600">Estoque atual: {manageDisplayStock} unidade(s)</p>
+                      <p className="mt-2 text-sm text-[var(--muted)]">Estoque minimo configurado: {manageTarget.minStock} unidade(s)</p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      <div className="rounded-[1.1rem] border border-[var(--border)] bg-[var(--surface)] p-3">
+                        <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Estoque atual</p>
+                        <strong className="mt-1 block text-lg theme-heading">{manageDisplayStock} unid</strong>
+                      </div>
+                      <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+                        <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Estoque minimo</p>
+                        <strong className="mt-1 block text-lg theme-heading">{manageTarget.minStock} unid</strong>
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-3 text-sm text-emerald-600">Estoque atual: {manageDisplayStock} unidade(s)</p>
-                  <p className="mt-2 text-sm text-[var(--muted)]">Estoque minimo configurado: {manageTarget.minStock} unidade(s)</p>
                 </div>
 
                 {manageVariantBadges.length ? (
-                  <div className="mt-5 flex flex-wrap gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {manageVariantBadges.map((variant, index) => (
-                      <span key={`${variant.sizeLabel}-${index}`} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-sm font-semibold text-slate-700">
+                      <span key={`${variant.sizeLabel}-${index}`} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-slate-700 xl:px-2.5">
                         {variant.sizeLabel} · {variant.stock} unid
                       </span>
                     ))}
                   </div>
                 ) : null}
 
-                <div className="mt-5 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
-                  <p className="text-sm leading-6 text-[var(--muted)]">{manageDescriptionMeta.notes || "Adicione uma descricao mais forte para a vitrine publica e para a operacao da loja."}</p>
+                <div className="mt-4 rounded-[1.2rem] border border-[var(--border)] bg-[var(--surface)] p-3 xl:p-3.5">
+                  <p className="text-sm leading-6 text-[var(--muted)] xl:text-[13px] xl:leading-5">{manageDescriptionMeta.notes || "Adicione uma descricao mais forte para a vitrine publica e para a operacao da loja."}</p>
                 </div>
 
-                <div className="mt-4 flex gap-2 rounded-[1rem] border border-[var(--border)] bg-[var(--surface)] p-1">
+                <div className="mt-4 flex gap-2 rounded-[1rem] border border-[var(--border)] bg-[var(--surface)] p-1 xl:mt-3">
                   <button
                     type="button"
                     onClick={() => setManageSection("catalogo")}
@@ -980,7 +1002,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                 </div>
 
                 <form
-                  className="mt-4 grid gap-3 sm:grid-cols-2"
+                  className="mt-3 grid gap-3 sm:grid-cols-2 xl:mt-3 xl:gap-3"
                   onSubmit={(event) => {
                     event.preventDefault();
                     void handleQuickSaveAndClose();
@@ -994,7 +1016,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                           autoFocus
                           value={manageDraft.name}
                           onChange={(event) => setManageDraft((current) => ({ ...current, name: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
                         />
                       </label>
                       <label className="space-y-2 sm:col-span-2">
@@ -1002,7 +1024,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                         <select
                           value={manageDraft.categoryId}
                           onChange={(event) => setManageDraft((current) => ({ ...current, categoryId: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
                         >
                           {workspace.categories.map((category) => (
                             <option key={category.id} value={category.id}>
@@ -1022,7 +1044,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                           step="0.01"
                           value={manageDraft.priceRetail}
                           onChange={(event) => setManageDraft((current) => ({ ...current, priceRetail: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
                         />
                       </label>
                       <label className="space-y-2">
@@ -1033,7 +1055,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                           step="0.01"
                           value={manageDraft.priceWholesale}
                           onChange={(event) => setManageDraft((current) => ({ ...current, priceWholesale: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
                         />
                       </label>
                       <label className="space-y-2">
@@ -1044,7 +1066,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                           step="0.01"
                           value={manageDraft.pricePromotion}
                           onChange={(event) => setManageDraft((current) => ({ ...current, pricePromotion: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
                         />
                       </label>
                       <label className="space-y-2">
@@ -1055,14 +1077,14 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                           step="1"
                           value={manageDraft.stock}
                           onChange={(event) => setManageDraft((current) => ({ ...current, stock: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
                         />
                       </label>
                     </>
                   )}
                 </form>
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 xl:mt-auto xl:border-t xl:border-[var(--border)] xl:pt-4">
                   <Button
                     type="button"
                     variant="primary"
