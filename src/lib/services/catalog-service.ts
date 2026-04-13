@@ -876,6 +876,14 @@ async function fetchApiList<T = Record<string, unknown>>(url: string): Promise<T
   return Array.isArray(payload.data) ? payload.data : [];
 }
 
+async function fetchApiListOrEmpty<T = Record<string, unknown>>(url: string): Promise<T[]> {
+  try {
+    return await fetchApiList<T>(url);
+  } catch {
+    return [];
+  }
+}
+
 async function fetchApiPayload<T>(url: string, mapper: (payload: unknown) => T): Promise<T> {
   const response = await fetch(url, { cache: "no-store" });
   const payload = (await response.json()) as { data?: unknown; message?: string };
@@ -1048,52 +1056,70 @@ export async function getSellerWorkspace(storeSlug?: string, ownerEmail?: string
     return createEmptySellerWorkspace(mockStores[0]);
   }
 
+  const emptyReportSummary: SellerApiReportBundle = {
+    matchedBySlug: false,
+    snapshots: reportPeriods.map((period) => ({ period, revenue: 0, orders: 0, averageTicket: 0 })),
+    byCategory: [],
+  };
+
   try {
     const normalizedStoreSlug = toNullableString(storeSlug);
     const normalizedOwnerEmail = toNullableString(ownerEmail)?.toLowerCase();
+
+    const buildWorkspaceFromStore = async (primaryStore: StoreSummary) => {
+      const storeId = Number(primaryStore.id);
+      const categoriesPayload = await fetchApiListOrEmpty<Record<string, unknown>>(`${resolvedEndpoints.categories}?lojaId=${storeId}`);
+      const productsPayload = await fetchApiListOrEmpty<Record<string, unknown>>(`${resolvedEndpoints.products}?store_id=${storeId}`);
+      const stockPayload = await fetchApiListOrEmpty<Record<string, unknown>>(`${resolvedEndpoints.stock}/movements?store_id=${storeId}`);
+
+      let sellerOrdersData: { matchedBySlug: boolean; orders: SellerOrder[] } = { matchedBySlug: false, orders: [] };
+      try {
+        sellerOrdersData = await getSellerApiOrdersByStoreSlug(primaryStore.slug);
+      } catch {
+        sellerOrdersData = { matchedBySlug: false, orders: [] };
+      }
+
+      let sellerReportData: SellerApiReportBundle = emptyReportSummary;
+      try {
+        sellerReportData = await getSellerApiReportByStoreSlug(primaryStore.slug);
+      } catch {
+        sellerReportData = emptyReportSummary;
+      }
+
+      const categories = categoriesPayload.map(mapApiCategory);
+      const products = productsPayload.map(mapApiProduct);
+      const stockMovements = stockPayload.map(mapApiStockMovement);
+      const orders = sellerOrdersData.orders;
+      const pendingOrders = orders.filter((order) => order.status !== "concluido" && order.status !== "cancelado").length;
+
+      return {
+        store: primaryStore,
+        categoryBases: [],
+        categories,
+        products,
+        stockMovements,
+        orders,
+        reportSummary: {
+          snapshots: sellerReportData.snapshots,
+          byCategory: sellerReportData.byCategory,
+        },
+        stats: {
+          activeProducts: products.length,
+          lowStockProducts: products.filter((product) => product.stock <= (product.minStock ?? 0)).length,
+          pendingOrders,
+          catalogViews: 0,
+          salesToday: sellerReportData.snapshots.find((snapshot) => snapshot.period === "dia")?.revenue ?? 0,
+          salesWeek: sellerReportData.snapshots.find((snapshot) => snapshot.period === "semana")?.revenue ?? 0,
+          salesMonth: sellerReportData.snapshots.find((snapshot) => snapshot.period === "mes")?.revenue ?? 0,
+        },
+      } satisfies SellerWorkspace;
+    };
 
     if (authToken) {
       const authSession = await getCurrentSellerSession(authToken);
 
       if (authSession?.store?.id) {
-        const primaryStore = authSession.store;
-        const storeId = Number(primaryStore.id);
-
-        const [categoriesPayload, productsPayload, stockPayload, sellerOrdersData, sellerReportData] = await Promise.all([
-          fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.categories}?lojaId=${storeId}`),
-          fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.products}?store_id=${storeId}`),
-          fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.stock}/movements?store_id=${storeId}`),
-          getSellerApiOrdersByStoreSlug(primaryStore.slug),
-          getSellerApiReportByStoreSlug(primaryStore.slug),
-        ]);
-
-        const categories = categoriesPayload.map(mapApiCategory);
-        const products = productsPayload.map(mapApiProduct);
-        const stockMovements = stockPayload.map(mapApiStockMovement);
-        const orders = sellerOrdersData.orders;
-        const pendingOrders = orders.filter((order) => order.status !== "concluido" && order.status !== "cancelado").length;
-
-        return {
-          store: primaryStore,
-          categoryBases: [],
-          categories,
-          products,
-          stockMovements,
-          orders,
-          reportSummary: {
-            snapshots: sellerReportData.snapshots,
-            byCategory: sellerReportData.byCategory,
-          },
-          stats: {
-            activeProducts: products.length,
-            lowStockProducts: products.filter((product) => product.stock <= (product.minStock ?? 0)).length,
-            pendingOrders,
-            catalogViews: 0,
-            salesToday: sellerReportData.snapshots.find((snapshot) => snapshot.period === "dia")?.revenue ?? 0,
-            salesWeek: sellerReportData.snapshots.find((snapshot) => snapshot.period === "semana")?.revenue ?? 0,
-            salesMonth: sellerReportData.snapshots.find((snapshot) => snapshot.period === "mes")?.revenue ?? 0,
-          },
-        };
+        return await buildWorkspaceFromStore(authSession.store);
       }
 
       return createEmptySellerWorkspace({
@@ -1125,48 +1151,12 @@ export async function getSellerWorkspace(storeSlug?: string, ownerEmail?: string
       });
     }
 
-    const primaryStore = mapApiStoreSummary(primaryStorePayload);
-    const storeId = Number(primaryStorePayload.id);
-
-    const [categoriesPayload, productsPayload, stockPayload, sellerOrdersData, sellerReportData] = await Promise.all([
-      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.categories}?lojaId=${storeId}`),
-      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.products}?store_id=${storeId}`),
-      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.stock}/movements?store_id=${storeId}`),
-      getSellerApiOrdersByStoreSlug(primaryStore.slug),
-      getSellerApiReportByStoreSlug(primaryStore.slug),
-    ]);
-
-    const categories = categoriesPayload.map(mapApiCategory);
-    const products = productsPayload.map(mapApiProduct);
-    const stockMovements = stockPayload.map(mapApiStockMovement);
-    const orders = sellerOrdersData.orders;
-    const pendingOrders = orders.filter((order) => order.status !== "concluido" && order.status !== "cancelado").length;
-
-    return {
-      store: primaryStore,
-      categoryBases: [],
-      categories,
-      products,
-      stockMovements,
-      orders,
-      reportSummary: {
-        snapshots: sellerReportData.snapshots,
-        byCategory: sellerReportData.byCategory,
-      },
-      stats: {
-        activeProducts: products.length,
-        lowStockProducts: products.filter((product) => product.stock <= (product.minStock ?? 0)).length,
-        pendingOrders,
-        catalogViews: 0,
-        salesToday: sellerReportData.snapshots.find((snapshot) => snapshot.period === "dia")?.revenue ?? 0,
-        salesWeek: sellerReportData.snapshots.find((snapshot) => snapshot.period === "semana")?.revenue ?? 0,
-        salesMonth: sellerReportData.snapshots.find((snapshot) => snapshot.period === "mes")?.revenue ?? 0,
-      },
-    };
+    return await buildWorkspaceFromStore(mapApiStoreSummary(primaryStorePayload));
   } catch {
     return createEmptySellerWorkspace();
   }
 }
+
 export async function getAdminWorkspace(): Promise<AdminWorkspace> {
   if (shouldUseMocks) {
     return mockAdminWorkspace;
