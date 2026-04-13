@@ -25,11 +25,13 @@ const visualHighlights = [
     eyebrow: "colecao feminina",
     title: "Looks que chamam atencao",
     description: "Visual forte para valorizar novidades, pecas premium e campanhas da loja.",
+    imageUrl: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80",
   },
   {
     eyebrow: "colecao masculina",
     title: "Vitrine limpa e confiante",
     description: "Apresentacao elegante para destacar produtos, estilo e identidade da marca.",
+    imageUrl: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80",
   },
 ];
 
@@ -76,22 +78,19 @@ export default async function Home() {
           <div className="grid gap-5 sm:grid-cols-2">
             {visualStores.map((store, index) => {
               const highlight = visualHighlights[index] ?? visualHighlights[visualHighlights.length - 1];
+              const imageUrl = store.coverImageUrl || highlight.imageUrl;
 
               return (
                 <div key={store.id} className="group">
                   <div className="relative overflow-hidden rounded-[1.5rem] bg-slate-100 shadow-sm transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl">
                     <div className="relative aspect-[4/5]">
-                      {store.coverImageUrl ? (
-                        <Image
-                          src={store.coverImageUrl}
-                          alt={highlight.title}
-                          fill
-                          sizes="(max-width: 640px) 100vw, 20vw"
-                          className="object-cover transition duration-500 ease-out group-hover:scale-[1.05]"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-[linear-gradient(135deg,#e2e8f0,#ffffff)]" />
-                      )}
+                      <Image
+                        src={imageUrl}
+                        alt={highlight.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, 20vw"
+                        className="object-cover transition duration-500 ease-out group-hover:scale-[1.05]"
+                      />
                       <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(15,23,42,0.38)_100%)] opacity-70 transition duration-500 group-hover:opacity-90" />
                       <div className="absolute left-4 top-4 rounded-full bg-white/88 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900 shadow-sm backdrop-blur-sm">
                         {highlight.eyebrow}
@@ -166,3 +165,4 @@ export default async function Home() {
     </main>
   );
 }
+
