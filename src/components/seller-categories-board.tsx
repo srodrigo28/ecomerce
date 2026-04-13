@@ -17,6 +17,13 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-");
 
+const normalizeSearchValue = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
 const isObjectUrl = (value?: string | null) => Boolean(value?.startsWith("blob:"));
 
 const renderCategoryPreview = (image?: string | null, label = "Preview da categoria") => {
@@ -36,6 +43,17 @@ const renderCategoryPreview = (image?: string | null, label = "Preview da catego
   );
 };
 
+const categoryMatchesSearch = (category: Category, searchTerm: string) => {
+  const normalizedSearch = normalizeSearchValue(searchTerm);
+
+  if (!normalizedSearch) {
+    return true;
+  }
+
+  return [category.name, category.description ?? "", category.slug]
+    .some((value) => normalizeSearchValue(value).includes(normalizedSearch));
+};
+
 export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspace }) {
   const [categories, setCategories] = useState<Category[]>(workspace.categories);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -47,6 +65,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   const [editingCategoryDescription, setEditingCategoryDescription] = useState("");
   const [editingCategoryImageFile, setEditingCategoryImageFile] = useState<File | null>(null);
   const [editingCategoryPreviewUrl, setEditingCategoryPreviewUrl] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [feedback, setFeedback] = useState(
     "Cadastre categorias comerciais reais da loja, com nome, descricao e imagem obrigatoria, sempre vinculadas automaticamente a loja ativa.",
   );
@@ -65,6 +84,15 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
 
   const activeCategories = useMemo(() => categories.filter((category) => category.active), [categories]);
   const inactiveCategories = useMemo(() => categories.filter((category) => !category.active), [categories]);
+  const filteredActiveCategories = useMemo(
+    () => activeCategories.filter((category) => categoryMatchesSearch(category, searchTerm)),
+    [activeCategories, searchTerm],
+  );
+  const filteredInactiveCategories = useMemo(
+    () => inactiveCategories.filter((category) => categoryMatchesSearch(category, searchTerm)),
+    [inactiveCategories, searchTerm],
+  );
+  const visibleCategoriesCount = filteredActiveCategories.length + filteredInactiveCategories.length;
 
   const resetNewCategoryForm = () => {
     setNewCategoryName("");
@@ -345,6 +373,22 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
               <strong className="mt-2 block text-3xl theme-heading">{inactiveCategories.length}</strong>
             </div>
           </div>
+          <div className="mt-4 rounded-[1.5rem] theme-surface-card p-4">
+            <label className="grid gap-2">
+              <span className="text-sm font-medium theme-text">Buscar categoria</span>
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar por nome, descricao ou slug"
+                className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
+              />
+            </label>
+            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+              {searchTerm
+                ? `${visibleCategoriesCount} categoria(s) visivel(is) para a busca atual.`
+                : "Use a busca para localizar categorias rapidamente sem percorrer toda a lista."}
+            </p>
+          </div>
           <div className="mt-4 rounded-[1.5rem] theme-surface-card p-4 text-sm leading-6 text-[var(--muted)]">
             {feedback}
           </div>
@@ -358,11 +402,11 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Categorias ativas</p>
               <h2 className="mt-2 text-2xl font-semibold theme-heading">Prontas para a vitrine e produtos</h2>
             </div>
-            <span className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white">{activeCategories.length} ativa(s)</span>
+            <span className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white">{filteredActiveCategories.length} ativa(s)</span>
           </div>
 
           <div className="mt-6 grid gap-3">
-            {activeCategories.length ? activeCategories.map((category) => (
+            {filteredActiveCategories.length ? filteredActiveCategories.map((category) => (
               <article key={category.id} className="rounded-[1.5rem] theme-surface-card p-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex min-w-0 flex-1 gap-4">
@@ -416,7 +460,9 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
               </article>
             )) : (
               <div className="rounded-[1.5rem] border border-dashed border-[var(--border)] bg-white p-6 text-sm leading-6 text-[var(--muted)]">
-                Ainda nao existem categorias ativas para esta loja. Comece com vestidos, calcas, blusas, bermudas ou shorts.
+                {searchTerm
+                  ? "Nenhuma categoria ativa corresponde a busca atual. Tente outro termo para localizar a categoria da loja."
+                  : "Ainda nao existem categorias ativas para esta loja. Comece com vestidos, calcas, blusas, bermudas ou shorts."}
               </div>
             )}
           </div>
@@ -428,11 +474,11 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Categorias inativas</p>
               <h2 className="mt-2 text-2xl font-semibold theme-heading">Arquivadas sem perder historico</h2>
             </div>
-            <span className="rounded-full theme-border-button px-4 py-2 text-xs font-semibold transition">{inactiveCategories.length} inativa(s)</span>
+            <span className="rounded-full theme-border-button px-4 py-2 text-xs font-semibold transition">{filteredInactiveCategories.length} inativa(s)</span>
           </div>
 
           <div className="mt-6 grid gap-3">
-            {inactiveCategories.length ? inactiveCategories.map((category) => (
+            {filteredInactiveCategories.length ? filteredInactiveCategories.map((category) => (
               <article key={category.id} className="rounded-[1.5rem] theme-surface-card p-4">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-center gap-4">
@@ -453,7 +499,9 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
               </article>
             )) : (
               <div className="rounded-[1.5rem] border border-dashed border-[var(--border)] bg-white p-6 text-sm leading-6 text-[var(--muted)]">
-                Nenhuma categoria inativa no momento.
+                {searchTerm
+                  ? "Nenhuma categoria inativa corresponde a busca atual."
+                  : "Nenhuma categoria inativa no momento."}
               </div>
             )}
           </div>
@@ -462,6 +510,3 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
     </div>
   );
 }
-
-
-

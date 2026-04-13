@@ -87,6 +87,16 @@ const toNumberValue = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const toRequiredNumericId = (value: unknown, fieldLabel: string) => {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${fieldLabel} ainda nao esta disponivel no painel. Recarregue a pagina da loja e tente novamente.`);
+  }
+
+  return parsed;
+};
+
 const toNullableString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
 
 const resolveApiAssetUrl = (value: unknown) => {
@@ -294,10 +304,11 @@ export async function createSellerCategory(input: SellerCategoryUpsertInput): Pr
     throw new Error("A API real de categorias ainda nao esta configurada neste ambiente.");
   }
 
-    const formData = new FormData();
+  const storeId = toRequiredNumericId(input.storeId, "A loja");
+  const formData = new FormData();
   formData.append("nome", input.name);
   formData.append("descricao", input.description ?? "");
-  formData.append("lojaId", String(Number(input.storeId)));
+  formData.append("lojaId", String(storeId));
   formData.append("ativo", String(input.active));
 
   if (input.imageFile) {
@@ -325,10 +336,11 @@ export async function updateSellerCategory(categoryId: string, input: SellerCate
     throw new Error("A API real de categorias ainda nao esta configurada neste ambiente.");
   }
 
-    const formData = new FormData();
+  const storeId = toRequiredNumericId(input.storeId, "A loja");
+  const formData = new FormData();
   formData.append("nome", input.name);
   formData.append("descricao", input.description ?? "");
-  formData.append("lojaId", String(Number(input.storeId)));
+  formData.append("lojaId", String(storeId));
   formData.append("ativo", String(input.active));
 
   if (input.imageFile) {
@@ -372,6 +384,8 @@ export async function submitSellerProduct(input: SellerProductSubmitInput): Prom
     throw new Error("A API real de produtos ainda nao esta configurada neste ambiente.");
   }
 
+  const storeId = toRequiredNumericId(input.storeId, "A loja");
+  const categoryId = toRequiredNumericId(input.categoryId, "A categoria");
   const uploadImages = input.images.filter((image) => image.source === "upload" && image.file);
   const targetProductId = input.productId ? Number(input.productId) : null;
 
@@ -385,8 +399,8 @@ export async function submitSellerProduct(input: SellerProductSubmitInput): Prom
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      store_id: Number(input.storeId),
-      category_id: Number(input.categoryId),
+      store_id: storeId,
+      category_id: categoryId,
       name: input.name,
       slug: input.slug,
       description_short: input.description || null,
