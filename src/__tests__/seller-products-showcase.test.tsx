@@ -94,6 +94,10 @@ const localProduct = {
   pricePromotion: 34.9,
   stock: 8,
   minStock: 2,
+  variants: [
+    { id: "variant-local-1", sizeLabel: "34", stock: 8, minStock: 2, position: 1 },
+    { id: "variant-local-2", sizeLabel: "44", stock: 10, minStock: 3, position: 2 },
+  ],
   images: [
     {
       id: "img-local-1",
@@ -129,6 +133,8 @@ describe("SellerProductsShowcase", () => {
     expect(screen.getByRole("button", { name: "Editar" })).toHaveClass("h-14", "w-14", "border-amber-300", "bg-amber-100", "text-amber-700");
     expect(screen.getByRole("button", { name: "Compartilhar" })).toHaveClass("h-14", "w-14", "border-sky-300", "bg-sky-100", "text-sky-700");
     expect(screen.getByRole("button", { name: "Excluir" })).toHaveClass("h-14", "w-14", "border-rose-300", "bg-rose-600", "text-white");
+    expect(screen.getByText("44 · 10 unid")).toBeInTheDocument();
+    expect(screen.queryByText("[operacao-loja]")).not.toBeInTheDocument();
     await user.clear(screen.getByLabelText("Titulo"));
     await user.type(screen.getByLabelText("Titulo"), "Camiseta Premium");
     await user.selectOptions(screen.getAllByLabelText("Categoria")[1], "cat-infantil");
@@ -144,7 +150,7 @@ describe("SellerProductsShowcase", () => {
     await user.click(screen.getByRole("button", { name: "Salvar alteracoes" }));
 
     await waitFor(() => {
-      expect(saveLocalSellerProduct).toHaveBeenCalledWith({
+      expect(saveLocalSellerProduct).toHaveBeenCalledWith(expect.objectContaining({
         id: "local-1",
         storeId: "101",
         storeName: "Atelie Solar",
@@ -167,7 +173,11 @@ describe("SellerProductsShowcase", () => {
             previewUrl: persistedImageUrl,
           },
         ],
-      });
+        variants: [
+          { id: "variant-local-1", sizeLabel: "34", stock: 8, minStock: 2, priceRetail: undefined, priceWholesale: undefined, pricePromotion: undefined, position: 1 },
+          { id: "variant-local-2", sizeLabel: "44", stock: 10, minStock: 3, priceRetail: undefined, priceWholesale: undefined, pricePromotion: undefined, position: 2 },
+        ],
+      }));
     });
 
     expect(await screen.findByText("Produto Camiseta Premium atualizado com sucesso.")).toBeInTheDocument();
