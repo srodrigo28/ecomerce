@@ -867,10 +867,15 @@ const mapAdminApiReportResult = (payload: unknown): AdminApiReportResult => {
 
 async function fetchApiList<T = Record<string, unknown>>(url: string): Promise<T[]> {
   const response = await fetch(url, { cache: "no-store" });
-  const payload = (await response.json()) as { data?: T[]; message?: string };
+  const payload = (await response.json()) as { data?: T[]; message?: string } | T[];
 
   if (!response.ok) {
-    throw new Error(payload.message ?? "Nao foi possivel carregar a lista da API.");
+    const errorPayload = Array.isArray(payload) ? undefined : payload;
+    throw new Error(errorPayload?.message ?? "Nao foi possivel carregar a lista da API.");
+  }
+
+  if (Array.isArray(payload)) {
+    return payload;
   }
 
   return Array.isArray(payload.data) ? payload.data : [];
