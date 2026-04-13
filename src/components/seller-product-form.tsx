@@ -122,7 +122,7 @@ export function SellerProductForm({
         }
       });
 
-      if (isObjectUrl(newCategoryPreviewUrl)) {
+      if (newCategoryPreviewUrl && isObjectUrl(newCategoryPreviewUrl)) {
         URL.revokeObjectURL(newCategoryPreviewUrl);
       }
     };
@@ -277,11 +277,11 @@ export function SellerProductForm({
     setUrlInput("");
   };
 
-    const resetCategoryModalState = () => {
+  const resetCategoryModalState = () => {
     setDraft((current) => ({ ...current, newCategoryName: "" }));
     setNewCategoryDescription("");
     setNewCategoryImageFile(null);
-    if (isObjectUrl(newCategoryPreviewUrl)) {
+    if (newCategoryPreviewUrl && isObjectUrl(newCategoryPreviewUrl)) {
       URL.revokeObjectURL(newCategoryPreviewUrl);
     }
     setNewCategoryPreviewUrl(null);
@@ -300,7 +300,7 @@ export function SellerProductForm({
       return;
     }
 
-    if (isObjectUrl(newCategoryPreviewUrl)) {
+    if (newCategoryPreviewUrl && isObjectUrl(newCategoryPreviewUrl)) {
       URL.revokeObjectURL(newCategoryPreviewUrl);
     }
 
@@ -1125,6 +1125,8 @@ export function SellerProductForm({
     </div>
   );
 }
+
+
 
 
 

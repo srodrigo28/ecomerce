@@ -54,10 +54,10 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
 
   useEffect(() => {
     return () => {
-      if (isObjectUrl(newCategoryPreviewUrl)) {
+      if (newCategoryPreviewUrl && isObjectUrl(newCategoryPreviewUrl)) {
         URL.revokeObjectURL(newCategoryPreviewUrl);
       }
-      if (isObjectUrl(editingCategoryPreviewUrl)) {
+      if (editingCategoryPreviewUrl && isObjectUrl(editingCategoryPreviewUrl)) {
         URL.revokeObjectURL(editingCategoryPreviewUrl);
       }
     };
@@ -70,7 +70,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
     setNewCategoryName("");
     setNewCategoryDescription("");
     setNewCategoryImageFile(null);
-    if (isObjectUrl(newCategoryPreviewUrl)) {
+    if (newCategoryPreviewUrl && isObjectUrl(newCategoryPreviewUrl)) {
       URL.revokeObjectURL(newCategoryPreviewUrl);
     }
     setNewCategoryPreviewUrl(null);
@@ -89,7 +89,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
       return;
     }
 
-    if (isObjectUrl(newCategoryPreviewUrl)) {
+    if (newCategoryPreviewUrl && isObjectUrl(newCategoryPreviewUrl)) {
       URL.revokeObjectURL(newCategoryPreviewUrl);
     }
 
@@ -110,7 +110,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
       return;
     }
 
-    if (isObjectUrl(editingCategoryPreviewUrl)) {
+    if (editingCategoryPreviewUrl && isObjectUrl(editingCategoryPreviewUrl)) {
       URL.revokeObjectURL(editingCategoryPreviewUrl);
     }
 
@@ -160,7 +160,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   };
 
   const handleStartEdit = (category: Category) => {
-    if (isObjectUrl(editingCategoryPreviewUrl)) {
+    if (editingCategoryPreviewUrl && isObjectUrl(editingCategoryPreviewUrl)) {
       URL.revokeObjectURL(editingCategoryPreviewUrl);
     }
 
@@ -172,7 +172,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   };
 
   const handleCancelEdit = () => {
-    if (isObjectUrl(editingCategoryPreviewUrl)) {
+    if (editingCategoryPreviewUrl && isObjectUrl(editingCategoryPreviewUrl)) {
       URL.revokeObjectURL(editingCategoryPreviewUrl);
     }
 
@@ -462,4 +462,6 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
     </div>
   );
 }
+
+
 
