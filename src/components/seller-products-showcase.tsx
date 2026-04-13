@@ -439,6 +439,8 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
 
     try {
       if (manageTarget.source === "local") {
+        const nextPriceWholesale = manageDraft.priceWholesale ? Number(manageDraft.priceWholesale) : undefined;
+        const nextPricePromotion = manageDraft.pricePromotion ? Number(manageDraft.pricePromotion) : undefined;
         const remainingImages = manageGallery.filter((image) => image.id !== managePreviewImage.id);
         if (remainingImages.length === 0) {
           setActionFeedback("Mantenha ao menos 1 imagem no produto local antes de salvar.");
