@@ -714,22 +714,26 @@ const mapApiStoreSummaryRecord = (payload: Record<string, unknown>): ApiStoreSum
   slug: String(payload.slug),
 });
 
-const mapApiStoreSummary = (payload: Record<string, unknown>): StoreSummary => ({
-  id: String(payload.id),
-  name: String(payload.name),
-  slug: String(payload.slug),
-  ownerEmail: toNullableString(payload.owner_email ?? payload.ownerEmail),
-  city: toNullableString(payload.city),
-  state: toNullableString(payload.state),
-  district: toNullableString(payload.district),
-  street: toNullableString(payload.street),
-  number: toNullableString(payload.number),
-  zipCode: toNullableString(payload.zip_code ?? payload.zipCode),
-  complement: toNullableString(payload.complement),
-  whatsapp: toNullableString(payload.whatsapp),
-  pixKey: toNullableString(payload.pix_key ?? payload.pixKey),
-  status: String(payload.status ?? "ativo") === "inativo" ? "inativo" : "ativo",
-});
+const mapApiStoreSummary = (payload: Record<string, unknown>): StoreSummary => {
+  const rawStatus = String(payload.status ?? "active").trim().toLowerCase();
+
+  return {
+    id: String(payload.id),
+    name: String(payload.name),
+    slug: String(payload.slug),
+    ownerEmail: toNullableString(payload.owner_email ?? payload.ownerEmail),
+    city: toNullableString(payload.city),
+    state: toNullableString(payload.state),
+    district: toNullableString(payload.district),
+    street: toNullableString(payload.street),
+    number: toNullableString(payload.number),
+    zipCode: toNullableString(payload.zip_code ?? payload.zipCode),
+    complement: toNullableString(payload.complement),
+    whatsapp: toNullableString(payload.whatsapp),
+    pixKey: toNullableString(payload.pix_key ?? payload.pixKey),
+    status: rawStatus === "inactive" || rawStatus === "inativo" ? "inativo" : "ativo",
+  };
+};
 
 const mapApiCategory = (payload: Record<string, unknown>): Category => {
   const name = String(payload.nome ?? payload.name);
