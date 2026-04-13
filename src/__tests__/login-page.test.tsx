@@ -15,9 +15,13 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("next/link", () => {
-  return ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+  const LinkMock = ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={href} {...props}>{children}</a>
   );
+
+  LinkMock.displayName = "NextLinkMock";
+
+  return LinkMock;
 });
 
 jest.mock("@/stores/auth-store", () => ({

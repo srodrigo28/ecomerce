@@ -6,6 +6,7 @@ import { useState } from "react";
 
 const adminNavLinks = [
   { href: "/painel-admin", label: "Painel" },
+  { href: "/painel-admin/lojistas", label: "Gerenciar lojistas" },
   { href: "/painel-admin/relatorios", label: "Relatorios" },
   { href: "/painel-lojista", label: "Painel lojista" },
 ];

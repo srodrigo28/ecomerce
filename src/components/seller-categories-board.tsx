@@ -82,6 +82,9 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
     };
   }, [editingCategoryPreviewUrl, newCategoryPreviewUrl]);
 
+  const numericStoreId = Number(workspace.store.id);
+  const hasValidStoreSession = Number.isInteger(numericStoreId) && numericStoreId > 0;
+
   const activeCategories = useMemo(() => categories.filter((category) => category.active), [categories]);
   const inactiveCategories = useMemo(() => categories.filter((category) => !category.active), [categories]);
   const filteredActiveCategories = useMemo(
@@ -93,6 +96,12 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
     [inactiveCategories, searchTerm],
   );
   const visibleCategoriesCount = filteredActiveCategories.length + filteredInactiveCategories.length;
+
+  useEffect(() => {
+    if (!hasValidStoreSession) {
+      setFeedback("Sua sessao atual nao esta vinculada a uma loja valida para cadastrar categorias. Entre com o email do responsavel de uma loja cadastrada na API.");
+    }
+  }, [hasValidStoreSession]);
 
   const resetNewCategoryForm = () => {
     setNewCategoryName("");
@@ -147,6 +156,11 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   };
 
   const handleCreateCategory = async () => {
+    if (!hasValidStoreSession) {
+      setFeedback("Sua sessao atual nao esta vinculada a uma loja valida para cadastrar categorias. Entre com o email do responsavel de uma loja cadastrada na API.");
+      return;
+    }
+
     const trimmed = newCategoryName.trim();
 
     if (!trimmed) {
@@ -212,6 +226,11 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   };
 
   const handleSaveEdit = async (categoryId: string) => {
+    if (!hasValidStoreSession) {
+      setFeedback("Sua sessao atual nao esta vinculada a uma loja valida para editar categorias.");
+      return;
+    }
+
     const trimmed = editingCategoryName.trim();
 
     if (!trimmed) {
@@ -258,6 +277,11 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   };
 
   const handleToggleCategory = async (category: Category) => {
+    if (!hasValidStoreSession) {
+      setFeedback("Sua sessao atual nao esta vinculada a uma loja valida para atualizar categorias.");
+      return;
+    }
+
     try {
       setIsSaving(true);
       const updated = await updateSellerCategory(category.id, {
@@ -276,6 +300,11 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   };
 
   const handleDeleteCategory = async (category: Category) => {
+    if (!hasValidStoreSession) {
+      setFeedback("Sua sessao atual nao esta vinculada a uma loja valida para excluir categorias.");
+      return;
+    }
+
     try {
       setIsSaving(true);
       await deleteSellerCategory(category.id);
@@ -303,6 +332,12 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
             </p>
           </div>
 
+          {!hasValidStoreSession ? (
+            <div className="mt-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+              Esta conta nao corresponde a uma loja valida do painel. Para cadastrar categorias, faca login com o email do responsavel da loja cadastrada na API, como os `ownerEmail` reais das lojas.
+            </div>
+          ) : null}
+
           <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
             <div className="grid gap-3">
               <input
@@ -326,7 +361,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
               <button
                 type="button"
                 onClick={() => void handleCreateCategory()}
-                disabled={isSaving}
+                disabled={isSaving || !hasValidStoreSession}
                 className="rounded-2xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSaving ? "Salvando..." : "Cadastrar categoria"}
@@ -352,7 +387,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
                   setNewCategoryName(categoryName);
                   setFeedback(`Nome ${categoryName} preenchido. Agora selecione a imagem para concluir o cadastro.`);
                 }}
-                disabled={isSaving || categories.some((category) => category.slug === slugify(categoryName))}
+                disabled={!hasValidStoreSession || isSaving || categories.some((category) => category.slug === slugify(categoryName))}
                 className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {categoryName}

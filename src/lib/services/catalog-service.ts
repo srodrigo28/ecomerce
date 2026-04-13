@@ -288,7 +288,7 @@ export async function submitStoreSignup(input: StoreSignupSubmitInput) {
       street: input.street,
       number: input.number,
       complement: input.complement || null,
-      status: "draft",
+      status: "active",
     }),
     cache: "no-store",
   });
@@ -1172,7 +1172,29 @@ export async function getAdminWorkspace(): Promise<AdminWorkspace> {
     return mockAdminWorkspace;
   }
 
-  return mockAdminWorkspace;
+  try {
+    const [stores, reportSummary] = await Promise.all([
+      getFeaturedStores(),
+      getAdminApiReportSummary(),
+    ]);
+
+    return {
+      stats: {
+        totalStores: stores.length,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalCustomers: 0,
+        salesToday: reportSummary.periodSnapshots.find((snapshot) => snapshot.period === "dia")?.revenue ?? 0,
+        salesWeek: reportSummary.periodSnapshots.find((snapshot) => snapshot.period === "semana")?.revenue ?? 0,
+        salesMonth: reportSummary.periodSnapshots.find((snapshot) => snapshot.period === "mes")?.revenue ?? 0,
+      },
+      stores,
+      orders: [],
+      reportSummary,
+    };
+  } catch {
+    return mockAdminWorkspace;
+  }
 }
 
 export async function getStoreBySlug(slug: string): Promise<StoreSummary | undefined> {
@@ -1485,19 +1507,15 @@ export async function getOrderSuccessPreviewByStoreSlug(
   };
 }
 
+export async function getAdminStores(): Promise<StoreSummary[]> {
+  if (shouldUseMocks) {
+    return mockAdminWorkspace.stores;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  try {
+    return await getFeaturedStores();
+  } catch {
+    return mockAdminWorkspace.stores;
+  }
+}
 
