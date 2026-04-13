@@ -60,6 +60,8 @@ const shortenImageName = (value: string, max = 28) =>
   value.length > max ? `${value.slice(0, max - 3)}...` : value;
 
 const SELLER_PRODUCTS_SCROLL_KEY = "seller-products-scroll-target";
+const CATEGORY_ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/webp";
+const isObjectUrl = (value?: string | null) => Boolean(value?.startsWith("blob:"));
 
 export type SellerProductEditRequest = {
   id: string;
@@ -99,7 +101,10 @@ export function SellerProductForm({
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSavingCategory, setIsSavingCategory] = useState(false);
+    const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [newCategoryImageFile, setNewCategoryImageFile] = useState<File | null>(null);
+  const [newCategoryPreviewUrl, setNewCategoryPreviewUrl] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [deletedApiImageIds, setDeletedApiImageIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,15 +114,19 @@ export function SellerProductForm({
     latestImagesRef.current = draft.images;
   }, [draft.images]);
 
-  useEffect(() => {
+    useEffect(() => {
     return () => {
       latestImagesRef.current.forEach((image) => {
         if (image.source === "upload") {
           URL.revokeObjectURL(image.previewUrl);
         }
       });
+
+      if (isObjectUrl(newCategoryPreviewUrl)) {
+        URL.revokeObjectURL(newCategoryPreviewUrl);
+      }
     };
-  }, []);
+  }, [newCategoryPreviewUrl]);
 
   useEffect(() => {
     if (!externalEditRequest || typeof window === "undefined") {
@@ -268,6 +277,37 @@ export function SellerProductForm({
     setUrlInput("");
   };
 
+    const resetCategoryModalState = () => {
+    setDraft((current) => ({ ...current, newCategoryName: "" }));
+    setNewCategoryDescription("");
+    setNewCategoryImageFile(null);
+    if (isObjectUrl(newCategoryPreviewUrl)) {
+      URL.revokeObjectURL(newCategoryPreviewUrl);
+    }
+    setNewCategoryPreviewUrl(null);
+  };
+
+  const handleCategoryImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setFeedback("Selecione uma imagem valida para a categoria.");
+      event.target.value = "";
+      return;
+    }
+
+    if (isObjectUrl(newCategoryPreviewUrl)) {
+      URL.revokeObjectURL(newCategoryPreviewUrl);
+    }
+
+    setNewCategoryImageFile(file);
+    setNewCategoryPreviewUrl(URL.createObjectURL(file));
+  };
+
   const handleAddCategory = async () => {
     const trimmed = draft.newCategoryName.trim();
 
@@ -275,6 +315,11 @@ export function SellerProductForm({
       if (!trimmed) {
         setFeedback("Digite o nome da nova categoria para adicionar ao cadastro.");
       }
+      return;
+    }
+
+    if (!newCategoryImageFile) {
+      setFeedback("Selecione a imagem da categoria antes de salvar.");
       return;
     }
 
@@ -294,7 +339,8 @@ export function SellerProductForm({
       const createdCategory = await createSellerCategory({
         storeId: workspace.store.id,
         name: trimmed,
-        slug,
+        description: newCategoryDescription.trim() || undefined,
+        imageFile: newCategoryImageFile,
         active: true,
       });
 
@@ -304,6 +350,7 @@ export function SellerProductForm({
         categoryId: createdCategory.id,
         newCategoryName: "",
       }));
+      resetCategoryModalState();
       setIsCategoryModalOpen(false);
       setFeedback(`Categoria ${createdCategory.name} salva com sucesso e pronta para os proximos cadastros.`);
       return;
@@ -323,6 +370,8 @@ export function SellerProductForm({
       storeId: workspace.store.id,
       name: trimmed,
       slug,
+      description: newCategoryDescription.trim() || undefined,
+      image: newCategoryPreviewUrl ?? undefined,
       active: true,
       origin: "custom",
     };
@@ -931,26 +980,59 @@ export function SellerProductForm({
                 <h3 className="mt-2 text-2xl font-semibold text-slate-900">Adicionar sem sair do produto</h3>
                 <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Cadastre uma categoria comercial da loja e volte direto para o formulario sem perder os dados preenchidos.</p>
               </div>
-              <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-[var(--accent)]">Fechar</button>
+              <button type="button" onClick={() => { resetCategoryModalState(); setIsCategoryModalOpen(false); }} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-[var(--accent)]">Fechar</button>
             </div>
 
-            <div className="mt-6 space-y-4">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-900">Nome da categoria</span>
-                <input value={draft.newCategoryName} onChange={(event) => updateField("newCategoryName", event.target.value)} placeholder="Ex.: Vestidos, Blusas, Calcas femininas" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-              </label>
+                        <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
+              <div className="space-y-4">
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-slate-900">Nome da categoria</span>
+                  <input value={draft.newCategoryName} onChange={(event) => updateField("newCategoryName", event.target.value)} placeholder="Ex.: Vestidos, Blusas, Calcas femininas" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                </label>
 
-              <div className="flex flex-wrap gap-2">
-                {workspace.categoryBases.map((base) => (
-                  <button key={base.id} type="button" onClick={() => handleUseBaseCategory(base.name)} className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">
-                    Usar {base.name}
-                  </button>
-                ))}
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-slate-900">Descricao</span>
+                  <textarea value={newCategoryDescription} onChange={(event) => setNewCategoryDescription(event.target.value)} rows={3} placeholder="Explique como essa categoria organiza a vitrine da loja" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                </label>
+
+                <label className="grid gap-2 rounded-2xl border border-dashed border-[var(--border)] bg-slate-50 px-4 py-4 text-sm text-slate-700">
+                  <span className="font-medium text-slate-900">Imagem da categoria</span>
+                  <input type="file" accept={CATEGORY_ACCEPTED_IMAGE_TYPES} onChange={handleCategoryImageChange} className="text-sm" />
+                  <span className="text-xs text-[var(--muted)]">Obrigatoria. Essa imagem aparece no preview e sera enviada para a API.</span>
+                </label>
+
+                <div className="flex flex-wrap gap-2">
+                  {workspace.categoryBases.map((base) => (
+                    <button key={base.id} type="button" onClick={() => handleUseBaseCategory(base.name)} className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">
+                      Usar {base.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white shadow-sm">
+                  <div className="aspect-[4/5] w-full">
+                    {newCategoryPreviewUrl ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={newCategoryPreviewUrl} alt="Preview da categoria" className="h-full w-full object-cover" />
+                      </>
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 via-white to-amber-50 text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Preview da categoria
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="rounded-[1.25rem] bg-slate-50 p-3 text-xs leading-5 text-[var(--muted)]">
+                  Escolha a imagem agora para a categoria ja nascer pronta para a vitrine e para o cadastro do produto.
+                </p>
               </div>
             </div>
 
             <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">Cancelar</button>
+              <button type="button" onClick={() => { resetCategoryModalState(); setIsCategoryModalOpen(false); }} className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-[var(--accent)]">Cancelar</button>
               <button
                 type="button"
                 onClick={() => {
@@ -1043,3 +1125,12 @@ export function SellerProductForm({
     </div>
   );
 }
+
+
+
+
+
+
+
+
+

@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { createSellerCategory, deleteSellerCategory, updateSellerCategory } from "@/lib/services/catalog-service";
 import type { Category, SellerWorkspace } from "@/types/catalog";
 
 const suggestedCategoryNames = ["Vestidos", "Calcas", "Blusas", "Bermudas", "Shorts", "Camisas"];
+const acceptedImageTypes = "image/png,image/jpeg,image/webp";
 
 const slugify = (value: string) =>
   value
@@ -16,24 +17,117 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-");
 
+const isObjectUrl = (value?: string | null) => Boolean(value?.startsWith("blob:"));
+
+const renderCategoryPreview = (image?: string | null, label = "Preview da categoria") => {
+  if (image) {
+    return (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image} alt={label} className="h-full w-full object-cover" />
+      </>
+    );
+  }
+
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 via-white to-amber-50 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+      Sem imagem
+    </div>
+  );
+};
+
 export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspace }) {
   const [categories, setCategories] = useState<Category[]>(workspace.categories);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryImageId, setNewCategoryImageId] = useState("");
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [newCategoryImageFile, setNewCategoryImageFile] = useState<File | null>(null);
+  const [newCategoryPreviewUrl, setNewCategoryPreviewUrl] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
-  const [editingCategoryImageId, setEditingCategoryImageId] = useState("");
-  const [feedback, setFeedback] = useState("Cadastre categorias comerciais reais da loja, como vestidos, calcas, blusas, bermudas e shorts.");
+  const [editingCategoryDescription, setEditingCategoryDescription] = useState("");
+  const [editingCategoryImageFile, setEditingCategoryImageFile] = useState<File | null>(null);
+  const [editingCategoryPreviewUrl, setEditingCategoryPreviewUrl] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState(
+    "Cadastre categorias comerciais reais da loja, com nome, descricao e imagem obrigatoria, sempre vinculadas automaticamente a loja ativa.",
+  );
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (isObjectUrl(newCategoryPreviewUrl)) {
+        URL.revokeObjectURL(newCategoryPreviewUrl);
+      }
+      if (isObjectUrl(editingCategoryPreviewUrl)) {
+        URL.revokeObjectURL(editingCategoryPreviewUrl);
+      }
+    };
+  }, [editingCategoryPreviewUrl, newCategoryPreviewUrl]);
 
   const activeCategories = useMemo(() => categories.filter((category) => category.active), [categories]);
   const inactiveCategories = useMemo(() => categories.filter((category) => !category.active), [categories]);
 
-  const handleCreateCategory = async (categoryName?: string) => {
-    const trimmed = (categoryName ?? newCategoryName).trim();
+  const resetNewCategoryForm = () => {
+    setNewCategoryName("");
+    setNewCategoryDescription("");
+    setNewCategoryImageFile(null);
+    if (isObjectUrl(newCategoryPreviewUrl)) {
+      URL.revokeObjectURL(newCategoryPreviewUrl);
+    }
+    setNewCategoryPreviewUrl(null);
+  };
+
+  const handleNewImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setFeedback("Selecione um arquivo de imagem valido para a categoria.");
+      event.target.value = "";
+      return;
+    }
+
+    if (isObjectUrl(newCategoryPreviewUrl)) {
+      URL.revokeObjectURL(newCategoryPreviewUrl);
+    }
+
+    setNewCategoryImageFile(file);
+    setNewCategoryPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleEditingImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setFeedback("Selecione um arquivo de imagem valido para a categoria.");
+      event.target.value = "";
+      return;
+    }
+
+    if (isObjectUrl(editingCategoryPreviewUrl)) {
+      URL.revokeObjectURL(editingCategoryPreviewUrl);
+    }
+
+    setEditingCategoryImageFile(file);
+    setEditingCategoryPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleCreateCategory = async () => {
+    const trimmed = newCategoryName.trim();
 
     if (!trimmed) {
       setFeedback("Digite o nome da categoria da loja para cadastrar.");
+      return;
+    }
+
+    if (!newCategoryImageFile) {
+      setFeedback("Selecione a imagem da categoria para continuar.");
       return;
     }
 
@@ -50,14 +144,13 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
       const created = await createSellerCategory({
         storeId: workspace.store.id,
         name: trimmed,
-        slug,
-        imageId: newCategoryImageId.trim() || undefined,
+        description: newCategoryDescription.trim() || undefined,
+        imageFile: newCategoryImageFile,
         active: true,
       });
 
       setCategories((current) => [created, ...current]);
-      setNewCategoryName("");
-      setNewCategoryImageId("");
+      resetNewCategoryForm();
       setFeedback(`Categoria ${trimmed} criada com sucesso para ${workspace.store.name}.`);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Nao foi possivel criar a categoria.");
@@ -67,15 +160,27 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   };
 
   const handleStartEdit = (category: Category) => {
+    if (isObjectUrl(editingCategoryPreviewUrl)) {
+      URL.revokeObjectURL(editingCategoryPreviewUrl);
+    }
+
     setEditingCategoryId(category.id);
     setEditingCategoryName(category.name);
-    setEditingCategoryImageId(category.imageId ?? "");
+    setEditingCategoryDescription(category.description ?? "");
+    setEditingCategoryImageFile(null);
+    setEditingCategoryPreviewUrl(category.image ?? null);
   };
 
   const handleCancelEdit = () => {
+    if (isObjectUrl(editingCategoryPreviewUrl)) {
+      URL.revokeObjectURL(editingCategoryPreviewUrl);
+    }
+
     setEditingCategoryId(null);
     setEditingCategoryName("");
-    setEditingCategoryImageId("");
+    setEditingCategoryDescription("");
+    setEditingCategoryImageFile(null);
+    setEditingCategoryPreviewUrl(null);
   };
 
   const handleSaveEdit = async (categoryId: string) => {
@@ -92,6 +197,11 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
       return;
     }
 
+    if (!editingCategoryImageFile && !currentCategory.image) {
+      setFeedback("Essa categoria precisa de uma imagem para continuar.");
+      return;
+    }
+
     const slug = slugify(trimmed);
     const exists = categories.some((category) => category.id !== categoryId && category.slug === slug);
 
@@ -105,8 +215,8 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
       const updated = await updateSellerCategory(categoryId, {
         storeId: currentCategory.storeId,
         name: trimmed,
-        slug,
-        imageId: editingCategoryImageId.trim() || undefined,
+        description: editingCategoryDescription.trim() || undefined,
+        imageFile: editingCategoryImageFile ?? undefined,
         active: currentCategory.active,
       });
       setCategories((current) => current.map((category) => (category.id === categoryId ? updated : category)));
@@ -125,8 +235,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
       const updated = await updateSellerCategory(category.id, {
         storeId: category.storeId,
         name: category.name,
-        slug: category.slug,
-        imageId: category.imageId,
+        description: category.description,
         active: !category.active,
       });
       setCategories((current) => current.map((item) => (item.id === category.id ? updated : item)));
@@ -162,31 +271,48 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Nova categoria</p>
             <h2 className="mt-2 text-2xl font-semibold theme-heading">Cadastre categorias comerciais da loja</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              Organize a vitrine por tipos reais de roupa e produto. Isso melhora o cadastro, os links por categoria e a navegacao da loja.
+              Informe nome, descricao e imagem da categoria. A loja ativa do painel e vinculada automaticamente no envio.
             </p>
           </div>
 
-          <div className="mt-6 grid gap-3">
-            <input
-              value={newCategoryName}
-              onChange={(event) => setNewCategoryName(event.target.value)}
-              placeholder="Ex.: Vestidos, Calcas femininas, Blusas, Bermudas"
-              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
-            />
-            <input
-              value={newCategoryImageId}
-              onChange={(event) => setNewCategoryImageId(event.target.value)}
-              placeholder="Image ID da categoria na loja"
-              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
-            />
-            <button
-              type="button"
-              onClick={() => void handleCreateCategory()}
-              disabled={isSaving}
-              className="rounded-2xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isSaving ? "Salvando..." : "Cadastrar categoria"}
-            </button>
+          <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="grid gap-3">
+              <input
+                value={newCategoryName}
+                onChange={(event) => setNewCategoryName(event.target.value)}
+                placeholder="Ex.: Vestidos, Calcas femininas, Blusas, Bermudas"
+                className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
+              />
+              <textarea
+                value={newCategoryDescription}
+                onChange={(event) => setNewCategoryDescription(event.target.value)}
+                placeholder="Descricao da categoria para orientar o cadastro e a navegacao da loja"
+                rows={3}
+                className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
+              />
+              <label className="grid gap-2 rounded-2xl border border-dashed border-[var(--border)] bg-white px-4 py-4 text-sm text-slate-700">
+                <span className="font-medium text-slate-900">Imagem da categoria</span>
+                <input type="file" accept={acceptedImageTypes} onChange={handleNewImageChange} className="text-sm" />
+                <span className="text-xs text-[var(--muted)]">Obrigatoria. Use PNG, JPG, JPEG ou WEBP.</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => void handleCreateCategory()}
+                disabled={isSaving}
+                className="rounded-2xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSaving ? "Salvando..." : "Cadastrar categoria"}
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white shadow-sm">
+                <div className="aspect-[4/5] w-full">{renderCategoryPreview(newCategoryPreviewUrl)}</div>
+              </div>
+              <div className="rounded-[1.25rem] bg-slate-50 p-3 text-xs leading-5 text-[var(--muted)]">
+                O preview ajuda a validar a capa da categoria antes do envio para a API.
+              </div>
+            </div>
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -196,7 +322,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
                 type="button"
                 onClick={() => {
                   setNewCategoryName(categoryName);
-                  void handleCreateCategory(categoryName);
+                  setFeedback(`Nome ${categoryName} preenchido. Agora selecione a imagem para concluir o cadastro.`);
                 }}
                 disabled={isSaving || categories.some((category) => category.slug === slugify(categoryName))}
                 className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
@@ -238,29 +364,41 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
           <div className="mt-6 grid gap-3">
             {activeCategories.length ? activeCategories.map((category) => (
               <article key={category.id} className="rounded-[1.5rem] theme-surface-card p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0 flex-1">
-                    {editingCategoryId === category.id ? (
-                      <div className="space-y-2">
-                        <input
-                          value={editingCategoryName}
-                          onChange={(event) => setEditingCategoryName(event.target.value)}
-                          className="w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
-                        />
-                        <input
-                          value={editingCategoryImageId}
-                          onChange={(event) => setEditingCategoryImageId(event.target.value)}
-                          placeholder="Image ID da categoria"
-                          className="w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <strong className="block truncate theme-heading">{category.name}</strong>
-                        <p className="mt-1 text-sm text-[var(--muted)]">Slug publico: /{category.slug}</p>
-                        <p className="mt-1 text-sm text-[var(--muted)]">Image ID: {category.imageId || "Nao informado"}</p>
-                      </>
-                    )}
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex min-w-0 flex-1 gap-4">
+                    <div className="h-28 w-24 shrink-0 overflow-hidden rounded-[1.25rem] border border-[var(--border)] bg-white">
+                      {editingCategoryId === category.id
+                        ? renderCategoryPreview(editingCategoryPreviewUrl, `Preview de ${category.name}`)
+                        : renderCategoryPreview(category.image, category.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      {editingCategoryId === category.id ? (
+                        <div className="space-y-2">
+                          <input
+                            value={editingCategoryName}
+                            onChange={(event) => setEditingCategoryName(event.target.value)}
+                            className="w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
+                          />
+                          <textarea
+                            value={editingCategoryDescription}
+                            onChange={(event) => setEditingCategoryDescription(event.target.value)}
+                            placeholder="Descricao da categoria"
+                            rows={3}
+                            className="w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
+                          />
+                          <label className="grid gap-2 rounded-xl border border-dashed border-[var(--border)] bg-white px-3 py-3 text-sm text-slate-700">
+                            <span className="font-medium text-slate-900">Trocar imagem da categoria</span>
+                            <input type="file" accept={acceptedImageTypes} onChange={handleEditingImageChange} className="text-sm" />
+                          </label>
+                        </div>
+                      ) : (
+                        <>
+                          <strong className="block truncate theme-heading">{category.name}</strong>
+                          <p className="mt-1 text-sm text-[var(--muted)]">{category.description || "Sem descricao informada."}</p>
+                          <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{category.slug}</p>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {editingCategoryId === category.id ? (
@@ -296,11 +434,16 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
           <div className="mt-6 grid gap-3">
             {inactiveCategories.length ? inactiveCategories.map((category) => (
               <article key={category.id} className="rounded-[1.5rem] theme-surface-card p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <strong className="theme-heading">{category.name}</strong>
-                    <p className="mt-1 text-sm text-[var(--muted)]">Slug publico: /{category.slug}</p>
-                    <p className="mt-1 text-sm text-[var(--muted)]">Image ID: {category.imageId || "Nao informado"}</p>
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-24 w-20 overflow-hidden rounded-[1rem] border border-[var(--border)] bg-white">
+                      {renderCategoryPreview(category.image, category.name)}
+                    </div>
+                    <div>
+                      <strong className="theme-heading">{category.name}</strong>
+                      <p className="mt-1 text-sm text-[var(--muted)]">{category.description || "Sem descricao informada."}</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{category.slug}</p>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button type="button" onClick={() => void handleToggleCategory(category)} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Ativar novamente</button>
@@ -319,3 +462,4 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
     </div>
   );
 }
+

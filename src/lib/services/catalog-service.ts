@@ -56,8 +56,8 @@ export interface StoreSignupSubmitInput {
 export interface SellerCategoryUpsertInput {
   storeId: string;
   name: string;
-  slug: string;
-  imageId?: string;
+  description?: string;
+  imageFile?: File;
   active: boolean;
 }
 
@@ -72,6 +72,15 @@ const normalizeSearchValue = (value: string) =>
 const normalizeWhatsappDigits = (value: string) => value.replace(/\D/g, "");
 const onlyDigits = (value: string) => value.replace(/\D/g, "");
 const canUseStoreSignupApi = !apiConfig.useMocks && (Boolean(apiConfig.baseUrl) || /^https?:\/\//i.test(resolvedEndpoints.stores));
+
+const slugifyCategoryName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-");
 
 const toNumberValue = (value: unknown) => {
   const parsed = Number(value);
@@ -285,18 +294,19 @@ export async function createSellerCategory(input: SellerCategoryUpsertInput): Pr
     throw new Error("A API real de categorias ainda nao esta configurada neste ambiente.");
   }
 
+    const formData = new FormData();
+  formData.append("nome", input.name);
+  formData.append("descricao", input.description ?? "");
+  formData.append("lojaId", String(Number(input.storeId)));
+  formData.append("ativo", String(input.active));
+
+  if (input.imageFile) {
+    formData.append("image", input.imageFile, input.imageFile.name);
+  }
+
   const response = await fetch(resolvedEndpoints.categories, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      nome: input.name,
-      slug: input.slug,
-      imageId: input.imageId || null,
-      lojaId: Number(input.storeId),
-      ativo: input.active,
-    }),
+    body: formData,
     cache: "no-store",
   });
 
@@ -315,18 +325,19 @@ export async function updateSellerCategory(categoryId: string, input: SellerCate
     throw new Error("A API real de categorias ainda nao esta configurada neste ambiente.");
   }
 
+    const formData = new FormData();
+  formData.append("nome", input.name);
+  formData.append("descricao", input.description ?? "");
+  formData.append("lojaId", String(Number(input.storeId)));
+  formData.append("ativo", String(input.active));
+
+  if (input.imageFile) {
+    formData.append("image", input.imageFile, input.imageFile.name);
+  }
+
   const response = await fetch(`${resolvedEndpoints.categories}/${categoryId}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      nome: input.name,
-      slug: input.slug,
-      imageId: input.imageId || null,
-      lojaId: Number(input.storeId),
-      ativo: input.active,
-    }),
+    body: formData,
     cache: "no-store",
   });
 
@@ -598,15 +609,20 @@ const mapApiStoreSummary = (payload: Record<string, unknown>): StoreSummary => (
   status: String(payload.status ?? "ativo") === "inativo" ? "inativo" : "ativo",
 });
 
-const mapApiCategory = (payload: Record<string, unknown>): Category => ({
-  id: String(payload.id),
-  storeId: String(payload.lojaId ?? payload.loja_id ?? payload.storeId ?? payload.store_id),
-  name: String(payload.nome ?? payload.name),
-  slug: String(payload.slug),
-  imageId: toNullableString(payload.imageId ?? payload.image_id),
-  active: Boolean(payload.ativo ?? (String(payload.status ?? "active") !== "inactive")),
-  origin: payload.category_base_id ?? payload.categoryBaseId ? "base" : "custom",
-});
+const mapApiCategory = (payload: Record<string, unknown>): Category => {
+  const name = String(payload.nome ?? payload.name);
+
+  return {
+    id: String(payload.id),
+    storeId: String(payload.lojaId ?? payload.loja_id ?? payload.storeId ?? payload.store_id),
+    name,
+    slug: String(payload.slug ?? slugifyCategoryName(name)),
+    description: toNullableString(payload.descricao ?? payload.description),
+    image: resolveApiAssetUrl(payload.image),
+    active: Boolean(payload.ativo ?? (String(payload.status ?? "active") !== "inactive")),
+    origin: payload.category_base_id ?? payload.categoryBaseId ? "base" : "custom",
+  };
+};
 
 const mapApiProduct = (payload: Record<string, unknown>): Product => {
   const imageEntries = Array.isArray(payload.images) ? payload.images : [];
@@ -1279,6 +1295,9 @@ export async function getOrderSuccessPreviewByStoreSlug(
       : "Pedido confirmado no frontend e pronto para futura integracao com API e status reais.",
   };
 }
+
+
+
 
 
 
