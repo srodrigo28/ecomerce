@@ -1,6 +1,6 @@
 # Hierarquia
 
-Frontend em Next.js para um e-commerce multiloja de moda, construído para validar experiência pública, operação da loja e visão administrativa antes da integração da API.
+Frontend em Next.js para um e-commerce multiloja de moda, integrado gradualmente a uma API externa e a uma API própria em Spring Boot.
 
 ## Estado atual do projeto
 
@@ -9,16 +9,10 @@ Nesta fase, o frontend já entrega uma base madura do produto:
 - home comercial com navegação clara, CTA para lojista e busca pública;
 - página de cadastro de loja, login e vitrine de lojas parceiras;
 - busca pública por loja, categoria e produto;
-- filtros visuais na vitrine geral e na página de cada loja;
-- jornada pública completa com loja, produto, carrinho, checkout e pedido confirmado;
-- vitrine da loja em formato marketplace, com compartilhamento da loja, categoria e produto;
-- modal de compra no detalhe do produto com endereço da loja, WhatsApp, Pix e salvamento local do pedido;
-- painel do lojista com dashboard, módulo dedicado de pedidos, estoque, relatórios e configuração da loja;
-- leitura de pedidos locais da vitrine dentro do módulo de pedidos do lojista;
-- painel admin com dashboard inicial e módulo dedicado de relatórios;
-- sistema de temas com `light`, `dark`, `areia` e `grafite`;
-- estados de rota para loading e error nos segmentos principais do storefront e do painel do lojista;
-- camada de serviços, mocks e tipos pronta para troca gradual por API.
+- jornada pública com loja, produto, carrinho, checkout e pedido confirmado;
+- painel do lojista com dashboard, categorias, pedidos, estoque, relatórios e configuração da loja;
+- integração inicial com API real para cadastro de lojas e CRUD de categorias;
+- camada de serviços pronta para continuar a troca gradual dos mocks por API.
 
 ## Stack atual
 
@@ -26,38 +20,6 @@ Nesta fase, o frontend já entrega uma base madura do produto:
 - React 19
 - TypeScript
 - Tailwind CSS 4
-
-## Estrutura principal
-
-```text
-src/
-  app/
-    page.tsx
-    lojas-parceiras/
-    lojas/[slug]/
-    painel-lojista/
-    painel-admin/
-  components/
-    public-flow-progress.tsx
-    seller-product-form.tsx
-    seller-orders-board.tsx
-    seller-stock-board.tsx
-    seller-reports-board.tsx
-    store-purchase-modal.tsx
-    store-settings-form.tsx
-    theme-switcher.tsx
-    ui-button.tsx
-    ui-badge.tsx
-    ui-card.tsx
-    ui-form.tsx
-    ui-modal.tsx
-  lib/
-    config.ts
-    mock-data.ts
-    local-order-storage.ts
-    services/
-  types/
-```
 
 ## Como rodar
 
@@ -78,87 +40,80 @@ http://localhost:3000
 npm run dev
 npm run lint
 npm run build
+npm run test:e2e
 ```
 
 ## Variáveis de ambiente
 
-Use o arquivo `.env.example` como referência e preencha `.env` conforme a evolução do projeto.
+Use [`.env.example`](./.env.example) como referência, mas para rodar localmente crie um arquivo `.env.local`.
 
-Os grupos principais são:
+Exemplo para consumir a API online publicada:
 
-- URL pública do app
-- URL base da API
-- endpoints por recurso
-- timeout de requisição
-- token server-to-server
-- ativação de mocks locais
-- credenciais administrativas locais de desenvolvimento quando necessário
+```env
+NEXT_PUBLIC_APP_NAME="OS Loja ONline"
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_API=https://99dev.pro/loja-api-v1/api/lojas
+NEXT_PUBLIC_USE_API_MOCKS=false
+```
 
-## O que já está validado
+Exemplo para consumir a API local:
 
-### Área pública
+```env
+NEXT_PUBLIC_APP_NAME="OS Loja ONline"
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_API=http://localhost:8080/api/lojas
+NEXT_PUBLIC_USE_API_MOCKS=false
+```
 
-- proposta comercial clara na home;
-- busca pública da vitrine;
-- lojas parceiras como prova social;
-- página pública de loja em formato marketplace;
-- links compartilháveis da loja e das categorias;
-- página pública de produto com modal comercial de compra;
-- carrinho visual;
-- checkout visual;
-- pedido confirmado no frontend.
+Observacoes importantes:
 
-### Painel do lojista
+- o Next.js nao carrega `.env.example` em runtime;
+- depois de alterar `.env.local`, reinicie o `npm run dev`;
+- `NEXT_PUBLIC_API` aponta para o endpoint de lojas e o frontend deriva a base da API a partir dele;
+- com isso, o frontend monta automaticamente recursos como `/api/categorias`.
 
-- dashboard inicial com categorias, pedidos e relatórios;
-- cadastro de produtos com categorias base e custom;
-- módulo dedicado de pedidos;
-- leitura de pedidos locais gerados pela vitrine;
-- módulo dedicado de estoque e movimentações;
-- módulo dedicado de relatórios;
-- módulo próprio de configuração da loja com identidade, WhatsApp, Pix, endereço e política de entrega.
+## Fluxos integrados hoje
 
-### Painel admin
+### Cadastro de loja
 
-- dashboard inicial com visão macro;
-- leitura por período e por lojista;
-- módulo dedicado de relatórios admin.
+O frontend envia cadastro para:
 
-### Base visual e UX
+```text
+POST /api/lojas
+```
 
-- tema global com `light`, `dark`, `areia` e `grafite`;
-- correções de contraste para dark mode;
-- componentes reutilizáveis de botão, badge, card, modal, inputs, textarea, select e filtros;
-- loading e error routes nos segmentos principais do App Router.
+### Categorias por loja
 
-## Direção atual do produto
+O frontend ja suporta CRUD completo de categorias com os campos:
 
-A ordem de evolução agora é esta:
+- `nome`
+- `slug`
+- `imageId`
+- `lojaId`
+- `ativo`
 
-1. manter o frontend estável e bem documentado;
-2. preservar contratos e componentes reutilizáveis;
-3. continuar usando mocks enquanto a API nasce com calma;
-4. iniciar a API em Python Flask dentro de `api-lojas`;
-5. substituir mocks gradualmente por serviços reais.
+Endpoints esperados:
 
-## Direção da futura API
+```text
+GET    /api/categorias?lojaId={id}
+POST   /api/categorias
+PUT    /api/categorias/{id}
+DELETE /api/categorias/{id}
+```
 
-Quando o frontend estiver confortável, a etapa final será construir a API em Python Flask.
+## Validacao local
 
-Ordem recomendada para essa fase:
+Ja validado neste projeto:
 
-1. estrutura base do projeto Flask;
-2. rotas de lojas e categorias;
-3. rotas de produtos;
-4. rotas de pedidos;
-5. rotas de estoque e movimentos;
-6. rotas de vendas e relatórios;
-7. autenticação;
-8. troca gradual dos mocks por chamadas reais.
+- `npm run build`
+- `npm run test:e2e`
+- cadastro de loja no frontend
+- login inicial do lojista no frontend
+- CRUD de categorias no painel do lojista
 
-## Próximos passos
+## Proximos passos
 
-- estruturar a API Flask em `api-lojas`;
-- começar por lojas, categorias e produtos;
-- depois ligar pedidos, estoque, vendas e relatórios;
-- manter README e plano sincronizados conforme a transição do frontend para backend.
+- publicar a API com o recurso `/api/categorias` no ambiente online;
+- continuar a integracao de produtos vinculados a `loja` e `categoria`;
+- evoluir o login atual para autenticacao real na API;
+- manter README e plano sincronizados com cada nova fase.

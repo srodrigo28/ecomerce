@@ -47,6 +47,7 @@ export interface Category {
   storeId: string;
   name: string;
   slug: string;
+  imageId?: string;
   active: boolean;
   origin?: "base" | "custom";
 }
@@ -471,3 +472,4 @@ export interface ApiListResponse<T> {
   data: T[];
   total: number;
 }
+

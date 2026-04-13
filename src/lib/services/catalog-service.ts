@@ -57,8 +57,8 @@ export interface SellerCategoryUpsertInput {
   storeId: string;
   name: string;
   slug: string;
+  imageId?: string;
   active: boolean;
-  categoryBaseId?: string | null;
 }
 
 const normalizeSearchValue = (value: string) =>
@@ -291,55 +291,69 @@ export async function createSellerCategory(input: SellerCategoryUpsertInput): Pr
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      store_id: Number(input.storeId),
-      category_base_id: input.categoryBaseId ? Number(input.categoryBaseId) : null,
-      name: input.name,
+      nome: input.name,
       slug: input.slug,
-      description: null,
-      status: input.active ? "active" : "inactive",
-      sort_order: 0,
+      imageId: input.imageId || null,
+      lojaId: Number(input.storeId),
+      ativo: input.active,
     }),
     cache: "no-store",
   });
 
-  const payload = (await response.json()) as { data?: Record<string, unknown>; message?: string; details?: string[] };
+  const payload = (await response.json()) as Record<string, unknown> & { message?: string; errors?: Record<string, string> };
 
-  if (!response.ok || !payload.data) {
-    const detailLabel = Array.isArray(payload.details) && payload.details.length > 0 ? ` ${payload.details.join(" ")}` : "";
+  if (!response.ok) {
+    const detailLabel = payload.errors ? ` ${Object.values(payload.errors).join(" ")}` : "";
     throw new Error(`${payload.message ?? "Nao foi possivel criar a categoria na API."}${detailLabel}`.trim());
   }
 
-  return mapApiCategory(payload.data);
+  return mapApiCategory(payload);
 }
 
-export async function updateSellerCategory(categoryId: string, input: Partial<SellerCategoryUpsertInput>): Promise<Category> {
+export async function updateSellerCategory(categoryId: string, input: SellerCategoryUpsertInput): Promise<Category> {
   if (shouldUseMocks) {
     throw new Error("A API real de categorias ainda nao esta configurada neste ambiente.");
   }
 
   const response = await fetch(`${resolvedEndpoints.categories}/${categoryId}`, {
-    method: "PATCH",
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      ...(input.storeId ? { store_id: Number(input.storeId) } : {}),
-      ...(input.categoryBaseId !== undefined ? { category_base_id: input.categoryBaseId ? Number(input.categoryBaseId) : null } : {}),
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.slug !== undefined ? { slug: input.slug } : {}),
-      ...(input.active !== undefined ? { status: input.active ? "active" : "inactive" } : {}),
+      nome: input.name,
+      slug: input.slug,
+      imageId: input.imageId || null,
+      lojaId: Number(input.storeId),
+      ativo: input.active,
     }),
     cache: "no-store",
   });
 
-  const payload = (await response.json()) as { data?: Record<string, unknown>; message?: string; details?: string[] };
+  const payload = (await response.json()) as Record<string, unknown> & { message?: string; errors?: Record<string, string> };
 
-  if (!response.ok || !payload.data) {
-    const detailLabel = Array.isArray(payload.details) && payload.details.length > 0 ? ` ${payload.details.join(" ")}` : "";
+  if (!response.ok) {
+    const detailLabel = payload.errors ? ` ${Object.values(payload.errors).join(" ")}` : "";
     throw new Error(`${payload.message ?? "Nao foi possivel atualizar a categoria na API."}${detailLabel}`.trim());
   }
 
-  return mapApiCategory(payload.data);
+  return mapApiCategory(payload);
+}
+
+export async function deleteSellerCategory(categoryId: string): Promise<void> {
+  if (shouldUseMocks) {
+    throw new Error("A API real de categorias ainda nao esta configurada neste ambiente.");
+  }
+
+  const response = await fetch(`${resolvedEndpoints.categories}/${categoryId}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json()) as { message?: string };
+    throw new Error(payload.message ?? "Nao foi possivel remover a categoria na API.");
+  }
 }
 
 export async function submitSellerProduct(input: SellerProductSubmitInput): Promise<Product> {
@@ -586,10 +600,11 @@ const mapApiStoreSummary = (payload: Record<string, unknown>): StoreSummary => (
 
 const mapApiCategory = (payload: Record<string, unknown>): Category => ({
   id: String(payload.id),
-  storeId: String(payload.store_id ?? payload.storeId),
-  name: String(payload.name),
+  storeId: String(payload.lojaId ?? payload.loja_id ?? payload.storeId ?? payload.store_id),
+  name: String(payload.nome ?? payload.name),
   slug: String(payload.slug),
-  active: String(payload.status ?? "active") !== "inactive",
+  imageId: toNullableString(payload.imageId ?? payload.image_id),
+  active: Boolean(payload.ativo ?? (String(payload.status ?? "active") !== "inactive")),
   origin: payload.category_base_id ?? payload.categoryBaseId ? "base" : "custom",
 });
 
@@ -908,7 +923,7 @@ export async function getSellerWorkspace(storeSlug?: string): Promise<SellerWork
     const storeId = Number(primaryStorePayload.id);
 
     const [categoriesPayload, productsPayload, stockPayload, sellerOrdersData, sellerReportData] = await Promise.all([
-      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.categories}?store_id=${storeId}`),
+      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.categories}?lojaId=${storeId}`),
       fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.products}?store_id=${storeId}`),
       fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.stock}/movements?store_id=${storeId}`),
       getSellerApiOrdersByStoreSlug(primaryStore.slug),
@@ -982,7 +997,7 @@ export async function getPublicStoreCatalogBySlug(slug: string): Promise<PublicS
   try {
     const storeId = Number(store.id);
     const [categoriesPayload, productsPayload] = await Promise.all([
-      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.categories}?store_id=${storeId}`),
+      fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.categories}?lojaId=${storeId}`),
       fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.products}?store_id=${storeId}`),
     ]);
 
@@ -1264,6 +1279,8 @@ export async function getOrderSuccessPreviewByStoreSlug(
       : "Pedido confirmado no frontend e pronto para futura integracao com API e status reais.",
   };
 }
+
+
 
 
 

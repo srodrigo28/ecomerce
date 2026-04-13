@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { createSellerCategory, updateSellerCategory } from "@/lib/services/catalog-service";
+import { createSellerCategory, deleteSellerCategory, updateSellerCategory } from "@/lib/services/catalog-service";
 import type { Category, SellerWorkspace } from "@/types/catalog";
 
 const suggestedCategoryNames = ["Vestidos", "Calcas", "Blusas", "Bermudas", "Shorts", "Camisas"];
@@ -19,8 +19,10 @@ const slugify = (value: string) =>
 export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspace }) {
   const [categories, setCategories] = useState<Category[]>(workspace.categories);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryImageId, setNewCategoryImageId] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
+  const [editingCategoryImageId, setEditingCategoryImageId] = useState("");
   const [feedback, setFeedback] = useState("Cadastre categorias comerciais reais da loja, como vestidos, calcas, blusas, bermudas e shorts.");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -49,11 +51,13 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
         storeId: workspace.store.id,
         name: trimmed,
         slug,
+        imageId: newCategoryImageId.trim() || undefined,
         active: true,
       });
 
       setCategories((current) => [created, ...current]);
       setNewCategoryName("");
+      setNewCategoryImageId("");
       setFeedback(`Categoria ${trimmed} criada com sucesso para ${workspace.store.name}.`);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Nao foi possivel criar a categoria.");
@@ -65,6 +69,13 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   const handleStartEdit = (category: Category) => {
     setEditingCategoryId(category.id);
     setEditingCategoryName(category.name);
+    setEditingCategoryImageId(category.imageId ?? "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategoryId(null);
+    setEditingCategoryName("");
+    setEditingCategoryImageId("");
   };
 
   const handleSaveEdit = async (categoryId: string) => {
@@ -72,6 +83,12 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
 
     if (!trimmed) {
       setFeedback("O nome da categoria nao pode ficar vazio.");
+      return;
+    }
+
+    const currentCategory = categories.find((category) => category.id === categoryId);
+    if (!currentCategory) {
+      setFeedback("Nao foi possivel localizar a categoria para editar.");
       return;
     }
 
@@ -85,10 +102,15 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
 
     try {
       setIsSaving(true);
-      const updated = await updateSellerCategory(categoryId, { name: trimmed, slug });
+      const updated = await updateSellerCategory(categoryId, {
+        storeId: currentCategory.storeId,
+        name: trimmed,
+        slug,
+        imageId: editingCategoryImageId.trim() || undefined,
+        active: currentCategory.active,
+      });
       setCategories((current) => current.map((category) => (category.id === categoryId ? updated : category)));
-      setEditingCategoryId(null);
-      setEditingCategoryName("");
+      handleCancelEdit();
       setFeedback(`Categoria ${trimmed} atualizada com sucesso.`);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Nao foi possivel atualizar a categoria.");
@@ -100,11 +122,33 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   const handleToggleCategory = async (category: Category) => {
     try {
       setIsSaving(true);
-      const updated = await updateSellerCategory(category.id, { active: !category.active });
+      const updated = await updateSellerCategory(category.id, {
+        storeId: category.storeId,
+        name: category.name,
+        slug: category.slug,
+        imageId: category.imageId,
+        active: !category.active,
+      });
       setCategories((current) => current.map((item) => (item.id === category.id ? updated : item)));
       setFeedback(`Categoria ${category.name} ${category.active ? "desativada" : "ativada"} com sucesso.`);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Nao foi possivel atualizar o status da categoria.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category: Category) => {
+    try {
+      setIsSaving(true);
+      await deleteSellerCategory(category.id);
+      setCategories((current) => current.filter((item) => item.id !== category.id));
+      if (editingCategoryId === category.id) {
+        handleCancelEdit();
+      }
+      setFeedback(`Categoria ${category.name} removida com sucesso.`);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Nao foi possivel excluir a categoria.");
     } finally {
       setIsSaving(false);
     }
@@ -122,11 +166,17 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
             </p>
           </div>
 
-          <div className="mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="mt-6 grid gap-3">
             <input
               value={newCategoryName}
               onChange={(event) => setNewCategoryName(event.target.value)}
               placeholder="Ex.: Vestidos, Calcas femininas, Blusas, Bermudas"
+              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
+            />
+            <input
+              value={newCategoryImageId}
+              onChange={(event) => setNewCategoryImageId(event.target.value)}
+              placeholder="Image ID da categoria na loja"
               className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
             />
             <button
@@ -144,7 +194,10 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
               <button
                 key={categoryName}
                 type="button"
-                onClick={() => void handleCreateCategory(categoryName)}
+                onClick={() => {
+                  setNewCategoryName(categoryName);
+                  void handleCreateCategory(categoryName);
+                }}
                 disabled={isSaving || categories.some((category) => category.slug === slugify(categoryName))}
                 className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -186,25 +239,40 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
             {activeCategories.length ? activeCategories.map((category) => (
               <article key={category.id} className="rounded-[1.5rem] theme-surface-card p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     {editingCategoryId === category.id ? (
-                      <input
-                        value={editingCategoryName}
-                        onChange={(event) => setEditingCategoryName(event.target.value)}
-                        className="w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
-                      />
+                      <div className="space-y-2">
+                        <input
+                          value={editingCategoryName}
+                          onChange={(event) => setEditingCategoryName(event.target.value)}
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
+                        />
+                        <input
+                          value={editingCategoryImageId}
+                          onChange={(event) => setEditingCategoryImageId(event.target.value)}
+                          placeholder="Image ID da categoria"
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
+                        />
+                      </div>
                     ) : (
-                      <strong className="block truncate theme-heading">{category.name}</strong>
+                      <>
+                        <strong className="block truncate theme-heading">{category.name}</strong>
+                        <p className="mt-1 text-sm text-[var(--muted)]">Slug publico: /{category.slug}</p>
+                        <p className="mt-1 text-sm text-[var(--muted)]">Image ID: {category.imageId || "Nao informado"}</p>
+                      </>
                     )}
-                    <p className="mt-1 text-sm text-[var(--muted)]">Slug publico: /{category.slug}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {editingCategoryId === category.id ? (
-                      <button type="button" onClick={() => void handleSaveEdit(category.id)} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Salvar</button>
+                      <>
+                        <button type="button" onClick={() => void handleSaveEdit(category.id)} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Salvar</button>
+                        <button type="button" onClick={handleCancelEdit} className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">Cancelar</button>
+                      </>
                     ) : (
                       <button type="button" onClick={() => handleStartEdit(category)} className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">Editar</button>
                     )}
                     <button type="button" onClick={() => void handleToggleCategory(category)} className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">Desativar</button>
+                    <button type="button" onClick={() => void handleDeleteCategory(category)} className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">Excluir</button>
                   </div>
                 </div>
               </article>
@@ -232,8 +300,12 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
                   <div>
                     <strong className="theme-heading">{category.name}</strong>
                     <p className="mt-1 text-sm text-[var(--muted)]">Slug publico: /{category.slug}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">Image ID: {category.imageId || "Nao informado"}</p>
                   </div>
-                  <button type="button" onClick={() => void handleToggleCategory(category)} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Ativar novamente</button>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => void handleToggleCategory(category)} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Ativar novamente</button>
+                    <button type="button" onClick={() => void handleDeleteCategory(category)} className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">Excluir</button>
+                  </div>
                 </div>
               </article>
             )) : (

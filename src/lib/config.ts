@@ -11,11 +11,19 @@ const normalizePath = (value: string | undefined, fallback: string) => {
   return value.startsWith("/") ? value : `/${value}`;
 };
 
+const deriveApiBaseUrl = (storesEndpoint: string | undefined) => {
+  if (!storesEndpoint || !isAbsoluteUrl(storesEndpoint)) return "";
+  return storesEndpoint.replace(/\/api\/lojas\/?$/i, "");
+};
+
 const joinUrl = (baseUrl: string, path: string) => {
   if (isAbsoluteUrl(path)) return path;
   if (!baseUrl) return path;
   return `${baseUrl.replace(/\/$/, "")}${normalizePath(path, "")}`;
 };
+
+const apiStoresEndpoint = process.env.NEXT_PUBLIC_API;
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || deriveApiBaseUrl(apiStoresEndpoint);
 
 export const appConfig = {
   name: process.env.NEXT_PUBLIC_APP_NAME || "Hierarquia",
@@ -23,7 +31,7 @@ export const appConfig = {
 };
 
 export const apiConfig = {
-  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "",
+  baseUrl: apiBaseUrl,
   timeoutMs: toNumber(process.env.API_TIMEOUT_MS, 10000),
   token: process.env.API_TOKEN || "",
   useMocks: process.env.NEXT_PUBLIC_USE_API_MOCKS === "true",
@@ -31,10 +39,10 @@ export const apiConfig = {
 
 export const endpointMap = {
   auth: normalizePath(process.env.NEXT_PUBLIC_API_AUTH_ENDPOINT, "/auth"),
-  stores: normalizePath(process.env.NEXT_PUBLIC_API, "/api/lojas"),
+  stores: normalizePath(apiStoresEndpoint, "/api/lojas"),
   categories: normalizePath(
     process.env.NEXT_PUBLIC_API_CATEGORIES_ENDPOINT,
-    "/categories"
+    "/api/categorias"
   ),
   products: normalizePath(
     process.env.NEXT_PUBLIC_API_PRODUCTS_ENDPOINT,
@@ -50,4 +58,3 @@ export const resolvedEndpoints = Object.fromEntries(
 ) as Record<keyof typeof endpointMap, string>;
 
 export const hasServerApiToken = Boolean(apiConfig.token);
-
