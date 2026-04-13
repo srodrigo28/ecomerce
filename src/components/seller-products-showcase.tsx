@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui-modal";
 import { Button } from "@/components/ui-button";
 import type { SellerProductEditRequest } from "@/components/seller-product-form";
 import { deleteSellerProduct, deleteSellerProductImage, getSellerProductById, submitSellerProduct } from "@/lib/services/catalog-service";
-import type { ProductApiImageMeta, SellerWorkspace } from "@/types/catalog";
+import type { ProductApiImageMeta, ProductVariant, SellerWorkspace } from "@/types/catalog";
 import {
   deleteLocalSellerProduct,
   readLocalSellerProducts,
@@ -42,6 +42,7 @@ type ShowcaseProductRecord = {
   minStock: number;
   imageUrl?: string;
   images: ProductApiImageMeta[];
+  variants?: ProductVariant[];
   createdAt: string;
   source: "api" | "local";
 };
@@ -54,6 +55,58 @@ const normalizeSearch = (value: string) =>
     .trim();
 
 const SELLER_PRODUCTS_SCROLL_KEY = "seller-products-scroll-target";
+
+type ParsedShowcaseDescriptionMeta = {
+  notes: string;
+  shelfSection: string;
+  shelfPosition: string;
+  sizeLabel: string;
+  audience: string;
+};
+
+const parseShowcaseDescription = (value: string | undefined): ParsedShowcaseDescriptionMeta => {
+  const baseMeta: ParsedShowcaseDescriptionMeta = {
+    notes: value?.trim() ?? "",
+    shelfSection: "A",
+    shelfPosition: "1",
+    sizeLabel: "",
+    audience: "Feminino",
+  };
+
+  if (!value) return baseMeta;
+
+  const startMarker = "[operacao-loja]";
+  const endMarker = "[/operacao-loja]";
+  const startIndex = value.indexOf(startMarker);
+  const endIndex = value.indexOf(endMarker);
+
+  if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+    return baseMeta;
+  }
+
+  const metaBlock = value.slice(startIndex + startMarker.length, endIndex).trim();
+  const notes = value.slice(0, startIndex).trim();
+  const entries = metaBlock
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .reduce((accumulator, line) => {
+      const separatorIndex = line.indexOf("=");
+      if (separatorIndex === -1) return accumulator;
+      const key = line.slice(0, separatorIndex).trim();
+      const entryValue = line.slice(separatorIndex + 1).trim();
+      if (key) accumulator[key] = entryValue;
+      return accumulator;
+    }, {} as Record<string, string>);
+
+  return {
+    notes,
+    shelfSection: entries.shelfSection || baseMeta.shelfSection,
+    shelfPosition: entries.shelfPosition || baseMeta.shelfPosition,
+    sizeLabel: entries.sizeLabel || baseMeta.sizeLabel,
+    audience: entries.audience || baseMeta.audience,
+  };
+};
 
 const viewModeOptions: Array<{ value: ProductViewMode; label: string }> = [
   { value: "vitrine", label: "Vitrine" },
@@ -153,6 +206,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
       minStock: product.minStock ?? 0,
       imageUrl: product.imageUrls[0],
       images: product.images ?? [],
+      variants: product.variants ?? [],
       createdAt: new Date().toISOString(),
       source: "api" as const,
     }));
@@ -179,6 +233,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
           isMain: (product.mainImageUrl ?? product.images[0]?.previewUrl) === image.previewUrl,
           position: index + 1,
         })),
+        variants: product.variants ?? [],
         createdAt: product.createdAt,
         source: "local" as const,
       }));
@@ -333,6 +388,23 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
     workspace.categories.find((category) => category.id === manageDraft.categoryId)?.name
     ?? manageTarget?.categoryName
     ?? "Sem categoria";
+  const managePersistedVariants = (manageTarget?.variants ?? []).map((variant, index) => ({
+    id: variant.id ?? `variant-${index + 1}`,
+    sizeLabel: variant.sizeLabel,
+    stock: variant.stock,
+    minStock: variant.minStock ?? 0,
+    priceRetail: variant.priceRetail,
+    priceWholesale: variant.priceWholesale,
+    pricePromotion: variant.pricePromotion,
+    position: variant.position ?? index + 1,
+  }));
+  const manageDescriptionMeta = parseShowcaseDescription(manageTarget?.description);
+  const manageVariantBadges = (manageTarget?.variants?.length
+    ? manageTarget.variants
+    : manageDescriptionMeta.sizeLabel
+      ? [{ sizeLabel: manageDescriptionMeta.sizeLabel, stock: manageTarget?.stock ?? 0 }]
+      : []
+  ).filter((variant) => variant.sizeLabel);
 
   const mapProductToShowcaseRecord = (product: {
     id: string;
@@ -347,6 +419,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
     minStock?: number;
     imageUrls: string[];
     images?: ProductApiImageMeta[];
+    variants?: ProductVariant[];
   }): ShowcaseProductRecord => ({
     id: product.id,
     name: product.name,
@@ -361,6 +434,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
     minStock: product.minStock ?? 0,
     imageUrl: product.imageUrls[0],
     images: product.images ?? [],
+    variants: product.variants ?? [],
     createdAt: new Date().toISOString(),
     source: "api",
   });
@@ -396,6 +470,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
           stock: nextStock,
           minStock: manageTarget.minStock,
           images: manageGallery.map((image) => ({ id: image.id, name: image.name, previewUrl: image.imageUrl })),
+          variants: managePersistedVariants,
           mainImageUrl: managePreviewImage?.imageUrl,
           createdAt: manageTarget.createdAt,
         });
@@ -421,6 +496,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
           pricePromotion: nextPricePromotion,
           stock: nextStock,
           minStock: manageTarget.minStock,
+          variants: managePersistedVariants,
           images: apiImages,
           mainImageId: apiImages.find((image) => image.isMain)?.id,
         });
@@ -469,6 +545,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
           stock: manageTarget.stock,
           minStock: manageTarget.minStock,
           images: remainingImages.map((image) => ({ id: image.id, name: image.name, previewUrl: image.imageUrl })),
+          variants: managePersistedVariants,
           mainImageUrl: nextMainImage?.imageUrl,
           createdAt: manageTarget.createdAt,
         });
@@ -477,6 +554,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
           ...manageTarget,
           imageUrl: nextMainImage?.imageUrl,
           images: remainingImages.map((image, index) => ({ ...image, isMain: index == 0 })),
+          variants: managePersistedVariants,
         });
         setManageImageId(nextMainImage?.id ?? null);
       } else {
@@ -870,8 +948,18 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                   <p className="mt-2 text-sm text-[var(--muted)]">Estoque minimo configurado: {manageTarget.minStock} unidade(s)</p>
                 </div>
 
+                {manageVariantBadges.length ? (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {manageVariantBadges.map((variant, index) => (
+                      <span key={`${variant.sizeLabel}-${index}`} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-sm font-semibold text-slate-700">
+                        {variant.sizeLabel} · {variant.stock} unid
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
                 <div className="mt-5 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
-                  <p className="text-sm leading-6 text-[var(--muted)]">{manageTarget.description || "Adicione uma descricao mais forte para a vitrine publica e para a operacao da loja."}</p>
+                  <p className="text-sm leading-6 text-[var(--muted)]">{manageDescriptionMeta.notes || "Adicione uma descricao mais forte para a vitrine publica e para a operacao da loja."}</p>
                 </div>
 
                 <div className="mt-4 flex gap-2 rounded-[1rem] border border-[var(--border)] bg-[var(--surface)] p-1">
