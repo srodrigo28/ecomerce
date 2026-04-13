@@ -1172,11 +1172,10 @@ export async function getAdminWorkspace(): Promise<AdminWorkspace> {
     return mockAdminWorkspace;
   }
 
+  const stores = await getAdminStores();
+
   try {
-    const [stores, reportSummary] = await Promise.all([
-      getFeaturedStores(),
-      getAdminApiReportSummary(),
-    ]);
+    const reportSummary = await getAdminApiReportSummary();
 
     return {
       stats: {
@@ -1193,7 +1192,28 @@ export async function getAdminWorkspace(): Promise<AdminWorkspace> {
       reportSummary,
     };
   } catch {
-    return mockAdminWorkspace;
+    return {
+      stats: {
+        totalStores: stores.length,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalCustomers: 0,
+        salesToday: 0,
+        salesWeek: 0,
+        salesMonth: 0,
+      },
+      stores,
+      orders: [],
+      reportSummary: {
+        periodSnapshots: reportPeriods.map((period) => ({
+          period,
+          revenue: 0,
+          orders: 0,
+          averageTicket: 0,
+        })),
+        byStore: [],
+      },
+    };
   }
 }
 
@@ -1517,5 +1537,40 @@ export async function getAdminStores(): Promise<StoreSummary[]> {
   } catch {
     return mockAdminWorkspace.stores;
   }
+}
+
+
+export async function updateAdminStoreStatus(storeId: string, active: boolean): Promise<StoreSummary> {
+  if (shouldUseMocks) {
+    const matchedStore = mockAdminWorkspace.stores.find((store) => store.id === storeId);
+
+    if (!matchedStore) {
+      throw new Error("Loja nao encontrada para atualizar o status.");
+    }
+
+    return {
+      ...matchedStore,
+      status: active ? "ativo" : "inativo",
+    };
+  }
+
+  const response = await fetch(`${resolvedEndpoints.stores}/${storeId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      status: active ? "active" : "inactive",
+    }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as Record<string, unknown> & { message?: string };
+
+  if (!response.ok) {
+    throw new Error(payload.message ?? "Nao foi possivel atualizar o status da loja.");
+  }
+
+  return mapApiStoreSummary(payload);
 }
 
