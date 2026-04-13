@@ -46,7 +46,7 @@ export const endpointMap = {
   ),
   products: normalizePath(
     process.env.NEXT_PUBLIC_API_PRODUCTS_ENDPOINT,
-    "/products"
+    "/api/produtos"
   ),
   orders: normalizePath(process.env.NEXT_PUBLIC_API_ORDERS_ENDPOINT, "/orders"),
   reports: normalizePath(process.env.NEXT_PUBLIC_API_REPORTS_ENDPOINT, "/reports"),

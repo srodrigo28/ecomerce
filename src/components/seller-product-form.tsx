@@ -599,8 +599,8 @@ export function SellerProductForm({
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm font-medium theme-heading">Observacoes</span>
-            <textarea value={draft.description} onChange={(event) => updateField("description", event.target.value)} rows={4} placeholder="Digite observacoes adicionais, acabamento, cor ou instrucoes do item..." className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+            <span className="text-sm font-medium theme-heading">Descricao</span>
+            <textarea value={draft.description} onChange={(event) => updateField("description", event.target.value)} rows={4} placeholder="Descreva o produto, acabamento, cor, caimento e detalhes importantes para a venda..." className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
           </label>
 
         </section>
