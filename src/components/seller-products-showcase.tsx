@@ -980,31 +980,31 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
                       type="button"
                       variant="secondary"
                       onClick={handleOpenImageEditor}
-                      className="inline-flex h-12 w-12 items-center justify-center rounded-full border-amber-200 bg-amber-50 p-0 text-amber-700 hover:border-amber-300 hover:bg-amber-100"
+                      className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-amber-300 bg-amber-100 p-0 text-amber-700 shadow-[0_10px_25px_rgba(251,191,36,0.18)] hover:border-amber-400 hover:bg-amber-200"
                       aria-label="Editar"
                       title="Editar"
                     >
-                      <FiEdit3 className="h-5 w-5" aria-hidden="true" />
+                      <FiEdit3 className="h-6 w-6" aria-hidden="true" />
                     </Button>
                     <Button
                       type="button"
                       variant="secondary"
                       onClick={() => handleCopyLink(manageTarget)}
-                      className="inline-flex h-12 w-12 items-center justify-center rounded-full border-sky-200 bg-sky-50 p-0 text-sky-700 hover:border-sky-300 hover:bg-sky-100"
+                      className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-sky-300 bg-sky-100 p-0 text-sky-700 shadow-[0_10px_25px_rgba(14,165,233,0.18)] hover:border-sky-400 hover:bg-sky-200"
                       aria-label="Compartilhar"
                       title="Compartilhar"
                     >
-                      <FiShare2 className="h-5 w-5" aria-hidden="true" />
+                      <FiShare2 className="h-6 w-6" aria-hidden="true" />
                     </Button>
                     <Button
                       type="button"
-                      variant="dark"
+                      variant="secondary"
                       onClick={() => setDeleteTarget(manageTarget)}
-                      className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-rose-700 p-0 text-white hover:bg-rose-600"
+                      className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-rose-300 bg-rose-600 p-0 text-white shadow-[0_10px_25px_rgba(225,29,72,0.2)] hover:border-rose-400 hover:bg-rose-700"
                       aria-label="Excluir"
                       title="Excluir"
                     >
-                      <FiTrash2 className="h-5 w-5" aria-hidden="true" />
+                      <FiTrash2 className="h-6 w-6" aria-hidden="true" />
                     </Button>
                   </div>
                 </div>

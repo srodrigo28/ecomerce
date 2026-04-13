@@ -126,6 +126,9 @@ describe("SellerProductsShowcase", () => {
     render(<SellerProductsShowcase workspace={workspace} />);
 
     await user.click(screen.getByRole("button", { name: "Gerenciar" }));
+    expect(screen.getByRole("button", { name: "Editar" })).toHaveClass("h-14", "w-14", "border-amber-300", "bg-amber-100", "text-amber-700");
+    expect(screen.getByRole("button", { name: "Compartilhar" })).toHaveClass("h-14", "w-14", "border-sky-300", "bg-sky-100", "text-sky-700");
+    expect(screen.getByRole("button", { name: "Excluir" })).toHaveClass("h-14", "w-14", "border-rose-300", "bg-rose-600", "text-white");
     await user.clear(screen.getByLabelText("Titulo"));
     await user.type(screen.getByLabelText("Titulo"), "Camiseta Premium");
     await user.selectOptions(screen.getAllByLabelText("Categoria")[1], "cat-infantil");
