@@ -1,13 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useAuthStore } from "@/stores/auth-store";
 import type { StoreSummary } from "@/types/catalog";
 
 export function SellerTopbar({ store }: { store: StoreSummary }) {
+  const router = useRouter();
+  const logout = useAuthStore((state) => state.logout);
   const [open, setOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      setIsLeaving(true);
+      await logout();
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setIsLeaving(false);
+      setOpen(false);
+    }
+  };
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-[var(--border)] bg-[color:var(--surface)]/95 backdrop-blur">
@@ -70,7 +87,9 @@ export function SellerTopbar({ store }: { store: StoreSummary }) {
               <div className="mt-3 grid gap-2">
                 <Link href="/painel-lojista/configuracao" className="rounded-2xl theme-border-button px-4 py-3 text-sm font-semibold transition" onClick={() => setOpen(false)}>Alterar dados da empresa</Link>
                 <Link href={`/lojas/${store.slug}`} className="rounded-2xl theme-border-button px-4 py-3 text-sm font-semibold transition" onClick={() => setOpen(false)}>Abrir vitrine publica</Link>
-                <Link href="/login" className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700" onClick={() => setOpen(false)}>Sair</Link>
+                <button type="button" onClick={() => void handleLogout()} disabled={isLeaving} className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70">
+                  {isLeaving ? "Saindo..." : "Sair"}
+                </button>
               </div>
             </div>
           ) : null}
@@ -79,4 +98,3 @@ export function SellerTopbar({ store }: { store: StoreSummary }) {
     </header>
   );
 }
-

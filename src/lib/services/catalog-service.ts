@@ -35,6 +35,17 @@ export interface PublicStoreCatalog {
   featuredProducts: Product[];
 }
 
+export interface SellerAuthSession {
+  authenticated: boolean;
+  token: string;
+  user: {
+    role: string;
+    ownerName: string;
+    ownerEmail: string;
+  };
+  store: StoreSummary;
+}
+
 export interface StoreSignupSubmitInput {
   name: string;
   slug: string;
@@ -72,6 +83,7 @@ const normalizeSearchValue = (value: string) =>
 const normalizeWhatsappDigits = (value: string) => value.replace(/\D/g, "");
 const onlyDigits = (value: string) => value.replace(/\D/g, "");
 const canUseStoreSignupApi = !apiConfig.useMocks && (Boolean(apiConfig.baseUrl) || /^https?:\/\//i.test(resolvedEndpoints.stores));
+const canUseAuthApi = !apiConfig.useMocks && (Boolean(apiConfig.baseUrl) || /^https?:\/\//i.test(resolvedEndpoints.auth));
 
 const slugifyCategoryName = (value: string) =>
   value
@@ -113,6 +125,7 @@ const emptySellerStore: StoreSummary = {
   id: "store-empty",
   name: "Sua loja",
   slug: "sua-loja",
+  ownerEmail: undefined,
   status: "ativo",
 };
 
@@ -297,6 +310,100 @@ export async function submitStoreSignup(input: StoreSignupSubmitInput) {
     name: String(payload.name ?? input.name),
     slug: String(payload.slug ?? input.slug),
   };
+}
+
+const mapSellerAuthSession = (payload: Record<string, unknown>): SellerAuthSession => {
+  const user = (payload.user ?? {}) as Record<string, unknown>;
+  const store = (payload.store ?? {}) as Record<string, unknown>;
+
+  return {
+    authenticated: Boolean(payload.authenticated),
+    token: String(payload.token ?? ""),
+    user: {
+      role: String(user.role ?? "lojista"),
+      ownerName: String(user.ownerName ?? ""),
+      ownerEmail: String(user.ownerEmail ?? ""),
+    },
+    store: mapApiStoreSummary(store),
+  };
+};
+
+export async function loginSellerAuth(email: string, password: string): Promise<SellerAuthSession> {
+  if (!canUseAuthApi) {
+    throw new Error("O endpoint de autenticacao ainda nao esta configurado neste ambiente.");
+  }
+
+  const response = await fetch(`${resolvedEndpoints.auth}/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+      password,
+    }),
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as Record<string, unknown> & { message?: string };
+
+  if (!response.ok) {
+    throw new Error(payload.message ?? "Nao foi possivel autenticar a loja agora.");
+  }
+
+  return mapSellerAuthSession(payload);
+}
+
+export async function getCurrentSellerSession(authToken?: string): Promise<SellerAuthSession | null> {
+  if (!canUseAuthApi) {
+    return null;
+  }
+
+  const response = await fetch(`${resolvedEndpoints.auth}/me`, {
+    method: "GET",
+    headers: authToken
+      ? {
+          Authorization: `Bearer ${authToken}`,
+        }
+      : undefined,
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (response.status === 401) {
+    return null;
+  }
+
+  const payload = (await response.json()) as Record<string, unknown> & { message?: string };
+
+  if (!response.ok) {
+    throw new Error(payload.message ?? "Nao foi possivel carregar a sessao autenticada.");
+  }
+
+  return mapSellerAuthSession(payload);
+}
+
+export async function logoutSellerSession(authToken?: string): Promise<void> {
+  if (!canUseAuthApi) {
+    return;
+  }
+
+  const response = await fetch(`${resolvedEndpoints.auth}/logout`, {
+    method: "POST",
+    headers: authToken
+      ? {
+          Authorization: `Bearer ${authToken}`,
+        }
+      : undefined,
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json()) as { message?: string };
+    throw new Error(payload.message ?? "Nao foi possivel encerrar a sessao da loja.");
+  }
 }
 
 export async function createSellerCategory(input: SellerCategoryUpsertInput): Promise<Category> {
@@ -611,6 +718,7 @@ const mapApiStoreSummary = (payload: Record<string, unknown>): StoreSummary => (
   id: String(payload.id),
   name: String(payload.name),
   slug: String(payload.slug),
+  ownerEmail: toNullableString(payload.owner_email ?? payload.ownerEmail),
   city: toNullableString(payload.city),
   state: toNullableString(payload.state),
   district: toNullableString(payload.district),
@@ -935,20 +1043,88 @@ export async function getFeaturedStores(): Promise<StoreSummary[]> {
   }
 }
 
-export async function getSellerWorkspace(storeSlug?: string): Promise<SellerWorkspace> {
+export async function getSellerWorkspace(storeSlug?: string, ownerEmail?: string, authToken?: string): Promise<SellerWorkspace> {
   if (shouldUseMocks) {
     return createEmptySellerWorkspace(mockStores[0]);
   }
 
   try {
+    const normalizedStoreSlug = toNullableString(storeSlug);
+    const normalizedOwnerEmail = toNullableString(ownerEmail)?.toLowerCase();
+
+    if (authToken) {
+      const authSession = await getCurrentSellerSession(authToken);
+
+      if (authSession?.store?.id) {
+        const primaryStore = authSession.store;
+        const storeId = Number(primaryStore.id);
+
+        const [categoriesPayload, productsPayload, stockPayload, sellerOrdersData, sellerReportData] = await Promise.all([
+          fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.categories}?lojaId=${storeId}`),
+          fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.products}?store_id=${storeId}`),
+          fetchApiList<Record<string, unknown>>(`${resolvedEndpoints.stock}/movements?store_id=${storeId}`),
+          getSellerApiOrdersByStoreSlug(primaryStore.slug),
+          getSellerApiReportByStoreSlug(primaryStore.slug),
+        ]);
+
+        const categories = categoriesPayload.map(mapApiCategory);
+        const products = productsPayload.map(mapApiProduct);
+        const stockMovements = stockPayload.map(mapApiStockMovement);
+        const orders = sellerOrdersData.orders;
+        const pendingOrders = orders.filter((order) => order.status !== "concluido" && order.status !== "cancelado").length;
+
+        return {
+          store: primaryStore,
+          categoryBases: [],
+          categories,
+          products,
+          stockMovements,
+          orders,
+          reportSummary: {
+            snapshots: sellerReportData.snapshots,
+            byCategory: sellerReportData.byCategory,
+          },
+          stats: {
+            activeProducts: products.length,
+            lowStockProducts: products.filter((product) => product.stock <= (product.minStock ?? 0)).length,
+            pendingOrders,
+            catalogViews: 0,
+            salesToday: sellerReportData.snapshots.find((snapshot) => snapshot.period === "dia")?.revenue ?? 0,
+            salesWeek: sellerReportData.snapshots.find((snapshot) => snapshot.period === "semana")?.revenue ?? 0,
+            salesMonth: sellerReportData.snapshots.find((snapshot) => snapshot.period === "mes")?.revenue ?? 0,
+          },
+        };
+      }
+
+      return createEmptySellerWorkspace({
+        ...emptySellerStore,
+        slug: normalizedStoreSlug ?? emptySellerStore.slug,
+        ownerEmail: normalizedOwnerEmail,
+      });
+    }
+
     const stores = await fetchApiList<Record<string, unknown>>(resolvedEndpoints.stores);
 
     if (stores.length === 0) {
       return createEmptySellerWorkspace();
     }
 
-    const matchedStorePayload = storeSlug ? stores.find((store) => String(store.slug) === storeSlug) : undefined;
-    const primaryStorePayload = matchedStorePayload ?? stores[stores.length - 1];
+    const matchedStorePayloadBySlug = normalizedStoreSlug
+      ? stores.find((store) => String(store.slug) === normalizedStoreSlug)
+      : undefined;
+    const matchedStorePayloadByOwnerEmail = normalizedOwnerEmail
+      ? stores.find((store) => String(store.owner_email ?? store.ownerEmail ?? "").toLowerCase() === normalizedOwnerEmail)
+      : undefined;
+    const primaryStorePayload = matchedStorePayloadBySlug ?? matchedStorePayloadByOwnerEmail;
+
+    if (!primaryStorePayload) {
+      return createEmptySellerWorkspace({
+        ...emptySellerStore,
+        slug: normalizedStoreSlug ?? emptySellerStore.slug,
+        ownerEmail: normalizedOwnerEmail,
+      });
+    }
+
     const primaryStore = mapApiStoreSummary(primaryStorePayload);
     const storeId = Number(primaryStorePayload.id);
 
@@ -991,7 +1167,6 @@ export async function getSellerWorkspace(storeSlug?: string): Promise<SellerWork
     return createEmptySellerWorkspace();
   }
 }
-
 export async function getAdminWorkspace(): Promise<AdminWorkspace> {
   if (shouldUseMocks) {
     return mockAdminWorkspace;
@@ -1309,6 +1484,10 @@ export async function getOrderSuccessPreviewByStoreSlug(
       : "Pedido confirmado no frontend e pronto para futura integracao com API e status reais.",
   };
 }
+
+
+
+
 
 
 

@@ -7,7 +7,13 @@ import { getSellerWorkspace } from "@/lib/services/catalog-service";
 export default async function SellerStockPage() {
   const cookieStore = await cookies();
   const currentStoreSlug = cookieStore.get("seller_store_slug")?.value;
-  const workspace = await getSellerWorkspace(currentStoreSlug);
+  const currentOwnerEmail = cookieStore.get("seller_owner_email")?.value;
+  const currentAuthToken = cookieStore.get("seller_auth_token")?.value ?? cookieStore.get("loja99_auth")?.value;
+  const workspace = await getSellerWorkspace(
+    currentStoreSlug,
+    currentOwnerEmail ? decodeURIComponent(currentOwnerEmail) : undefined,
+    currentAuthToken ? decodeURIComponent(currentAuthToken) : undefined,
+  );
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10 2xl:px-12">
@@ -37,3 +43,4 @@ export default async function SellerStockPage() {
     </main>
   );
 }
+

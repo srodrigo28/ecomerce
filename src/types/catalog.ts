@@ -21,6 +21,7 @@ export interface StoreSummary {
   id: string;
   name: string;
   slug: string;
+  ownerEmail?: string;
   city?: string;
   state?: string;
   district?: string;

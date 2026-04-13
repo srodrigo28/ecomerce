@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui-button";
-import { findLocalSellerAuth } from "@/lib/local-auth-storage";
+import { useAuthStore } from "@/stores/auth-store";
 
 const accessCards = [
   {
@@ -27,13 +27,15 @@ const ADMIN_DEMO_PASSWORD = "admin123";
 
 export default function LoginPage() {
   const router = useRouter();
+  const login = useAuthStore((state) => state.login);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(
-    "Use o e-mail e a senha criados no cadastro da loja. O login real da API entra na proxima fase.",
+    "Use o e-mail e a senha reais da loja para entrar no painel com autenticacao da API.",
   );
 
-  const handleFrontendLogin = () => {
+  const handleFrontendLogin = async () => {
     if (!email.trim() || !password.trim()) {
       setFeedback("Preencha e-mail e senha para validar o acesso.");
       return;
@@ -49,19 +51,17 @@ export default function LoginPage() {
       return;
     }
 
-    const sellerAccess = findLocalSellerAuth(email, password);
-
-    if (!sellerAccess) {
-      setFeedback("E-mail ou senha invalidos para este ambiente de teste. Use os dados criados no cadastro da loja.");
-      return;
-    }
-
-    document.cookie = `seller_store_slug=${sellerAccess.storeSlug}; path=/; max-age=2592000; samesite=lax`;
-    setFeedback(`Acesso validado para ${sellerAccess.storeName}. Redirecionando para o painel da loja...`);
-
-    window.setTimeout(() => {
+    try {
+      setIsSubmitting(true);
+      const session = await login(normalizedEmail, password);
+      setFeedback(`Acesso validado para ${session.store.name}. Redirecionando para o painel da loja...`);
       router.push("/painel-lojista");
-    }, 500);
+      router.refresh();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Nao foi possivel autenticar a loja agora.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -89,14 +89,14 @@ export default function LoginPage() {
       <section className="grid gap-6 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)] lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:p-8">
         <div className="space-y-6">
           <span className="inline-flex rounded-full bg-[rgba(15,118,110,0.12)] px-4 py-2 text-sm font-semibold text-[var(--accent-strong)]">
-            Login validado localmente
+            Login real da API
           </span>
           <div className="space-y-4">
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
               Entre com os dados reais criados no cadastro da sua loja.
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
-              Enquanto a autenticacao oficial da API nao entra, o ambiente usa validacao local para impedir acessos falsos e manter o contexto correto da loja no painel.
+              O acesso do lojista agora usa autenticacao real da API para abrir o painel com a conta correta da loja.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -127,7 +127,7 @@ export default function LoginPage() {
             className="mt-5 space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              handleFrontendLogin();
+              void handleFrontendLogin();
             }}
           >
             <label className="block space-y-2">
@@ -152,9 +152,10 @@ export default function LoginPage() {
             </label>
             <button
               type="submit"
-              className="w-full rounded-2xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
+              disabled={isSubmitting}
+              className="w-full rounded-2xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Entrar no painel
+              {isSubmitting ? "Entrando..." : "Entrar no painel"}
             </button>
           </form>
           <div className="mt-5 rounded-[1.5rem] border border-[var(--border)] bg-slate-50 p-4 text-sm leading-6 text-[var(--muted)]">

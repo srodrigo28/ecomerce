@@ -3,6 +3,7 @@ export type LocalSellerAuthRecord = {
   password: string;
   storeSlug: string;
   storeName: string;
+  ownerEmail?: string;
 };
 
 const STORAGE_KEY = "hierarquia-local-seller-auth";
@@ -37,7 +38,8 @@ export const readLocalSellerAuthRecords = (): LocalSellerAuthRecord[] => {
             && typeof item.email === "string"
             && typeof item.password === "string"
             && typeof item.storeSlug === "string"
-            && typeof item.storeName === "string",
+            && typeof item.storeName === "string"
+            && (item.ownerEmail === undefined || typeof item.ownerEmail === "string"),
         )
       : [];
   } catch {

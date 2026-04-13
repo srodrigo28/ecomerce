@@ -80,6 +80,7 @@ export function StoreSignupForm() {
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [createdStore, setCreatedStore] = useState<{ id: number; name: string; slug: string } | null>(null);
+  const [zipLookupFailed, setZipLookupFailed] = useState(false);
   const [address, setAddress] = useState<AddressState>({
     zipCode: "",
     state: "",
@@ -116,11 +117,13 @@ export function StoreSignupForm() {
 
     try {
       setIsLoadingZip(true);
+      setZipLookupFailed(false);
 
       const response = await fetch(`https://viacep.com.br/ws/${cleanZip}/json/`);
       const data = await response.json();
 
       if (!response.ok || data.erro) {
+        setZipLookupFailed(true);
         return;
       }
 
@@ -134,6 +137,7 @@ export function StoreSignupForm() {
       }));
       lastZipLookupRef.current = cleanZip;
     } catch {
+      setZipLookupFailed(true);
       return;
     } finally {
       setIsLoadingZip(false);
@@ -177,7 +181,7 @@ export function StoreSignupForm() {
     }
 
     if (targetStep === 2) {
-      if (onlyDigits(address.zipCode).length !== 8 || !address.city.trim() || !address.state.trim() || !address.street.trim() || !address.number.trim()) {
+      if (onlyDigits(address.zipCode).length !== 8 || !address.city.trim() || !address.state.trim() || !address.district.trim() || !address.street.trim() || !address.number.trim()) {
         return false;
       }
     }
@@ -244,8 +248,10 @@ export function StoreSignupForm() {
         password,
         storeSlug: created.slug,
         storeName: created.name,
+        ownerEmail: email.trim().toLowerCase(),
       });
       document.cookie = `seller_store_slug=${created.slug}; path=/; max-age=2592000; samesite=lax`;
+      document.cookie = `seller_owner_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=2592000; samesite=lax`;
       window.setTimeout(() => {
         router.push("/painel-lojista");
       }, 1200);
@@ -354,7 +360,10 @@ export function StoreSignupForm() {
                 <span className="text-sm font-medium text-slate-900">CEP</span>
                 <input
                   value={address.zipCode}
-                  onChange={(event) => updateAddressField("zipCode", formatCep(event.target.value))}
+                  onChange={(event) => {
+                    setZipLookupFailed(false);
+                    updateAddressField("zipCode", formatCep(event.target.value));
+                  }}
                   inputMode="numeric"
                   type="text"
                   placeholder="00000-000"
@@ -363,19 +372,19 @@ export function StoreSignupForm() {
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-medium text-slate-900">Estado</span>
-                <input value={address.state} readOnly disabled={isLoadingZip} type="text" placeholder="UF" className="w-full rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm uppercase outline-none transition disabled:cursor-wait disabled:opacity-100" />
+                <input value={address.state} onChange={(event) => updateAddressField("state", event.target.value.toUpperCase().slice(0, 2))} readOnly={isLoadingZip} disabled={isLoadingZip} type="text" placeholder="UF" className={`w-full rounded-2xl border border-[var(--border)] px-4 py-3 text-sm uppercase outline-none transition ${isLoadingZip ? "bg-slate-50 disabled:cursor-wait disabled:opacity-100" : "bg-white focus:border-[var(--accent)]"}`} />
               </label>
               <label className="space-y-2 md:col-span-2">
                 <span className="text-sm font-medium text-slate-900">Cidade</span>
-                <input value={address.city} readOnly disabled={isLoadingZip} type="text" placeholder="Sua cidade" className="w-full rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm outline-none transition disabled:cursor-wait disabled:opacity-100" />
+                <input value={address.city} onChange={(event) => updateAddressField("city", event.target.value)} readOnly={isLoadingZip} disabled={isLoadingZip} type="text" placeholder="Sua cidade" className={`w-full rounded-2xl border border-[var(--border)] px-4 py-3 text-sm outline-none transition ${isLoadingZip ? "bg-slate-50 disabled:cursor-wait disabled:opacity-100" : "bg-white focus:border-[var(--accent)]"}`} />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-medium text-slate-900">Bairro</span>
-                <input value={address.district} readOnly disabled={isLoadingZip} type="text" placeholder="Seu bairro" className="w-full rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm outline-none transition disabled:cursor-wait disabled:opacity-100" />
+                <input value={address.district} onChange={(event) => updateAddressField("district", event.target.value)} readOnly={isLoadingZip} disabled={isLoadingZip} type="text" placeholder="Seu bairro" className={`w-full rounded-2xl border border-[var(--border)] px-4 py-3 text-sm outline-none transition ${isLoadingZip ? "bg-slate-50 disabled:cursor-wait disabled:opacity-100" : "bg-white focus:border-[var(--accent)]"}`} />
               </label>
               <label className="space-y-2 md:col-span-3">
                 <span className="text-sm font-medium text-slate-900">Rua</span>
-                <input value={address.street} readOnly disabled={isLoadingZip} type="text" placeholder="Rua ou avenida" className="w-full rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm outline-none transition disabled:cursor-wait disabled:opacity-100" />
+                <input value={address.street} onChange={(event) => updateAddressField("street", event.target.value)} readOnly={isLoadingZip} disabled={isLoadingZip} type="text" placeholder="Rua ou avenida" className={`w-full rounded-2xl border border-[var(--border)] px-4 py-3 text-sm outline-none transition ${isLoadingZip ? "bg-slate-50 disabled:cursor-wait disabled:opacity-100" : "bg-white focus:border-[var(--accent)]"}`} />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-medium text-slate-900">Numero</span>
@@ -386,6 +395,11 @@ export function StoreSignupForm() {
                 <input value={address.complement} onChange={(event) => updateAddressField("complement", event.target.value)} type="text" placeholder="Sala, loja, referencia" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]" />
               </label>
             </div>
+            {zipLookupFailed ? (
+              <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                Nao foi possivel preencher o endereco automaticamente pelo CEP agora. Voce pode continuar digitando os campos manualmente.
+              </div>
+            ) : null}
           </div>
         ) : null}
 
