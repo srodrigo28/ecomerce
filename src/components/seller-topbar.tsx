@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { FiArchive, FiBarChart2, FiExternalLink, FiGrid, FiHome, FiLogOut, FiPackage, FiPlusCircle, FiSettings, FiShoppingBag, FiTag } from "react-icons/fi";
 
 import { useAuthStore } from "@/stores/auth-store";
@@ -34,6 +34,16 @@ export function SellerTopbar({ store }: { store: StoreSummary }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
   const closeMenus = () => {
     setOpen(false);
     setRegisterOpen(false);
@@ -237,6 +247,7 @@ export function SellerTopbar({ store }: { store: StoreSummary }) {
     </header>
   );
 }
+
 
 
 
