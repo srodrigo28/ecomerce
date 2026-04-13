@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { AdminEventCalendar } from "@/components/admin-event-calendar";
 import { Badge } from "@/components/ui-badge";
 import { Button } from "@/components/ui-button";
 import type { Category, OrderStatus, ReportPeriod, SellerOrder, SellerWorkspace } from "@/types/catalog";
@@ -181,7 +182,7 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] xl:items-start">
         <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -244,26 +245,30 @@ export function SellerOperationsDashboard({ workspace }: { workspace: SellerWork
           </div>
         </article>
 
-        <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Feedback do painel</p>
-          <div className="mt-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
-            {feedback}
-          </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[1.5rem] theme-surface-card p-4">
-              <p className="text-sm text-[var(--muted)]">Vendas hoje</p>
-              <strong className="mt-2 block text-2xl text-slate-900">{formatCurrency(workspace.stats.salesToday)}</strong>
+        <div className="grid gap-6">
+          <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Feedback do painel</p>
+            <div className="mt-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 text-sm leading-6 text-[var(--muted)]">
+              {feedback}
             </div>
-            <div className="rounded-[1.5rem] theme-surface-card p-4">
-              <p className="text-sm text-[var(--muted)]">Pedidos pendentes</p>
-              <strong className="mt-2 block text-2xl text-slate-900">{workspace.stats.pendingOrders}</strong>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="rounded-[1.5rem] theme-surface-card p-4">
+                <p className="text-sm text-[var(--muted)]">Vendas hoje</p>
+                <strong className="mt-2 block text-2xl text-slate-900">{formatCurrency(workspace.stats.salesToday)}</strong>
+              </div>
+              <div className="rounded-[1.5rem] theme-surface-card p-4">
+                <p className="text-sm text-[var(--muted)]">Pedidos pendentes</p>
+                <strong className="mt-2 block text-2xl text-slate-900">{workspace.stats.pendingOrders}</strong>
+              </div>
+              <div className="rounded-[1.5rem] theme-surface-card p-4">
+                <p className="text-sm text-[var(--muted)]">Estoque baixo</p>
+                <strong className="mt-2 block text-2xl text-slate-900">{workspace.stats.lowStockProducts}</strong>
+              </div>
             </div>
-            <div className="rounded-[1.5rem] theme-surface-card p-4">
-              <p className="text-sm text-[var(--muted)]">Estoque baixo</p>
-              <strong className="mt-2 block text-2xl text-slate-900">{workspace.stats.lowStockProducts}</strong>
-            </div>
-          </div>
-        </article>
+          </article>
+
+          <AdminEventCalendar />
+        </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">

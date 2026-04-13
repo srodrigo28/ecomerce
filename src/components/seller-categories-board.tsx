@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { createSellerCategory, deleteSellerCategory, updateSellerCategory } from "@/lib/services/catalog-service";
 import type { Category, SellerWorkspace } from "@/types/catalog";
 
-const suggestedCategoryNames = ["Vestidos", "Calcas", "Blusas", "Bermudas", "Shorts", "Camisas"];
 const acceptedImageTypes = "image/png,image/jpeg,image/webp";
+const initialCategoryFeedback = "Cadastre categorias comerciais reais da loja, com nome, descricao e imagem obrigatoria, sempre vinculadas automaticamente a loja ativa.";
 
 const slugify = (value: string) =>
   value
@@ -50,11 +50,13 @@ const categoryMatchesSearch = (category: Category, searchTerm: string) => {
     return true;
   }
 
-  return [category.name, category.description ?? "", category.slug]
-    .some((value) => normalizeSearchValue(value).includes(normalizedSearch));
+  return [category.name, category.description ?? "", category.slug].some((value) =>
+    normalizeSearchValue(value).includes(normalizedSearch),
+  );
 };
 
 export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspace }) {
+  const newCategoryImageInputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<Category[]>(workspace.categories);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
@@ -66,9 +68,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   const [editingCategoryImageFile, setEditingCategoryImageFile] = useState<File | null>(null);
   const [editingCategoryPreviewUrl, setEditingCategoryPreviewUrl] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [feedback, setFeedback] = useState(
-    "Cadastre categorias comerciais reais da loja, com nome, descricao e imagem obrigatoria, sempre vinculadas automaticamente a loja ativa.",
-  );
+  const [feedback, setFeedback] = useState(initialCategoryFeedback);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -107,10 +107,25 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
     setNewCategoryName("");
     setNewCategoryDescription("");
     setNewCategoryImageFile(null);
+    if (newCategoryImageInputRef.current) {
+      newCategoryImageInputRef.current.value = "";
+    }
     if (newCategoryPreviewUrl && isObjectUrl(newCategoryPreviewUrl)) {
       URL.revokeObjectURL(newCategoryPreviewUrl);
     }
     setNewCategoryPreviewUrl(null);
+  };
+
+  const handleRemoveNewImage = () => {
+    if (newCategoryPreviewUrl && isObjectUrl(newCategoryPreviewUrl)) {
+      URL.revokeObjectURL(newCategoryPreviewUrl);
+    }
+    setNewCategoryImageFile(null);
+    setNewCategoryPreviewUrl(null);
+    if (newCategoryImageInputRef.current) {
+      newCategoryImageInputRef.current.value = "";
+    }
+    setFeedback("Imagem removida. Selecione uma imagem da categoria para continuar.");
   };
 
   const handleNewImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -321,117 +336,127 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
   };
 
   return (
-    <div className="space-y-8">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
-        <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Nova categoria</p>
-            <h2 className="mt-2 text-2xl font-semibold theme-heading">Cadastre categorias comerciais da loja</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              Informe nome, descricao e imagem da categoria. A loja ativa do painel e vinculada automaticamente no envio.
-            </p>
+    <div className="space-y-6">
+      <section className="mx-auto w-full max-w-[430px] rounded-[2rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
+        {!hasValidStoreSession ? (
+          <div className="mb-4 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            Esta conta nao corresponde a uma loja valida do painel. Para cadastrar categorias, faca login com o email do responsavel da loja cadastrada na API, como os `ownerEmail` reais das lojas.
           </div>
+        ) : null}
 
-          {!hasValidStoreSession ? (
-            <div className="mt-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-              Esta conta nao corresponde a uma loja valida do painel. Para cadastrar categorias, faca login com o email do responsavel da loja cadastrada na API, como os `ownerEmail` reais das lojas.
+        <div className="relative overflow-hidden rounded-[1.6rem] border border-[var(--border)] bg-[#eef2f6]">
+          <button
+            type="button"
+            onClick={() => newCategoryImageInputRef.current?.click()}
+            disabled={!hasValidStoreSession || isSaving}
+            className="block w-full text-left"
+            aria-label={newCategoryPreviewUrl ? "Trocar imagem da categoria" : "Enviar imagem da categoria"}
+          >
+            <div className="aspect-[4/3] min-h-[245px] bg-[#eef2f6]">
+              {newCategoryPreviewUrl ? (
+                renderCategoryPreview(newCategoryPreviewUrl)
+              ) : (
+                <div className="flex h-full min-h-[245px] items-center justify-center px-12 text-center text-[15px] leading-7 text-slate-800">
+                  Envie a imagem da categoria.
+                </div>
+              )}
             </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => newCategoryImageInputRef.current?.click()}
+            disabled={!hasValidStoreSession || isSaving}
+            className="absolute bottom-4 right-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent)] text-2xl font-medium text-white shadow-[0_18px_36px_rgba(37,99,235,0.24)] transition hover:scale-[1.03] hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
+            aria-label={newCategoryPreviewUrl ? "Trocar imagem da categoria" : "Enviar imagem da categoria"}
+            title={newCategoryPreviewUrl ? "Trocar imagem" : "Enviar imagem"}
+          >
+            +
+          </button>
+          <input
+            ref={newCategoryImageInputRef}
+            type="file"
+            accept={acceptedImageTypes}
+            onChange={handleNewImageChange}
+            className="hidden"
+          />
+        </div>
+
+        <div className="mt-4 flex items-center justify-end gap-3">
+          {newCategoryPreviewUrl ? (
+            <button
+              type="button"
+              onClick={handleRemoveNewImage}
+              disabled={isSaving}
+              className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              Remover
+            </button>
           ) : null}
+          <span className="rounded-full border border-[var(--border)] bg-white px-4 py-1.5 text-sm font-semibold text-slate-900 shadow-sm">
+            {newCategoryPreviewUrl ? "1" : "0"}/1
+          </span>
+        </div>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-            <div className="grid gap-3">
-              <input
-                value={newCategoryName}
-                onChange={(event) => setNewCategoryName(event.target.value)}
-                placeholder="Ex.: Vestidos, Calcas femininas, Blusas, Bermudas"
-                className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
-              />
-              <textarea
-                value={newCategoryDescription}
-                onChange={(event) => setNewCategoryDescription(event.target.value)}
-                placeholder="Descricao da categoria para orientar o cadastro e a navegacao da loja"
-                rows={3}
-                className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
-              />
-              <label className="grid gap-2 rounded-2xl border border-dashed border-[var(--border)] bg-white px-4 py-4 text-sm text-slate-700">
-                <span className="font-medium text-slate-900">Imagem da categoria</span>
-                <input type="file" accept={acceptedImageTypes} onChange={handleNewImageChange} className="text-sm" />
-                <span className="text-xs text-[var(--muted)]">Obrigatoria. Use PNG, JPG, JPEG ou WEBP.</span>
-              </label>
-              <button
-                type="button"
-                onClick={() => void handleCreateCategory()}
-                disabled={isSaving || !hasValidStoreSession}
-                className="rounded-2xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isSaving ? "Salvando..." : "Cadastrar categoria"}
-              </button>
-            </div>
+        <div className="mt-4 grid gap-4">
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-950">Nome da categoria</span>
+            <input
+              value={newCategoryName}
+              onChange={(event) => setNewCategoryName(event.target.value)}
+              placeholder="Ex.: Vestidos, Calcas femininas, Blusas, Bermudas"
+              className="h-[50px] w-full rounded-[1rem] border border-[var(--border)] bg-white px-4 text-center text-base text-slate-900 outline-none transition focus:border-[var(--accent)]"
+            />
+          </label>
 
-            <div className="space-y-3">
-              <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white shadow-sm">
-                <div className="aspect-[4/5] w-full">{renderCategoryPreview(newCategoryPreviewUrl)}</div>
-              </div>
-              <div className="rounded-[1.25rem] bg-slate-50 p-3 text-xs leading-5 text-[var(--muted)]">
-                O preview ajuda a validar a capa da categoria antes do envio para a API.
-              </div>
-            </div>
-          </div>
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-950">Descricao opcional</span>
+            <textarea
+              value={newCategoryDescription}
+              onChange={(event) => setNewCategoryDescription(event.target.value)}
+              placeholder="Descricao da categoria para orientar o cadastro e a navegacao da loja"
+              rows={3}
+              className="w-full resize-none rounded-[1rem] border border-[var(--border)] bg-white px-4 py-3 text-center text-base text-slate-900 outline-none transition focus:border-[var(--accent)]"
+            />
+          </label>
+        </div>
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            {suggestedCategoryNames.map((categoryName) => (
-              <button
-                key={categoryName}
-                type="button"
-                onClick={() => {
-                  setNewCategoryName(categoryName);
-                  setFeedback(`Nome ${categoryName} preenchido. Agora selecione a imagem para concluir o cadastro.`);
-                }}
-                disabled={!hasValidStoreSession || isSaving || categories.some((category) => category.slug === slugify(categoryName))}
-                className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {categoryName}
-              </button>
-            ))}
-          </div>
-        </article>
+        <div className="sr-only" aria-live="polite">
+          {newCategoryImageFile ? `Imagem selecionada: ${newCategoryImageFile.name}` : "Nenhuma imagem selecionada"}
+        </div>
 
-        <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Resumo da organizacao</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[1.5rem] theme-surface-card p-4">
-              <p className="text-sm text-[var(--muted)]">Categorias ativas</p>
-              <strong className="mt-2 block text-3xl theme-heading">{activeCategories.length}</strong>
-            </div>
-            <div className="rounded-[1.5rem] theme-surface-card p-4">
-              <p className="text-sm text-[var(--muted)]">Categorias inativas</p>
-              <strong className="mt-2 block text-3xl theme-heading">{inactiveCategories.length}</strong>
-            </div>
-          </div>
-          <div className="mt-4 rounded-[1.5rem] theme-surface-card p-4">
-            <label className="grid gap-2">
-              <span className="text-sm font-medium theme-text">Buscar categoria</span>
-              <input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por nome, descricao ou slug"
-                className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
-              />
-            </label>
-            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-              {searchTerm
-                ? `${visibleCategoriesCount} categoria(s) visivel(is) para a busca atual.`
-                : "Use a busca para localizar categorias rapidamente sem percorrer toda a lista."}
-            </p>
-          </div>
-          <div className="mt-4 rounded-[1.5rem] theme-surface-card p-4 text-sm leading-6 text-[var(--muted)]">
-            {feedback}
-          </div>
-        </article>
+        {feedback !== initialCategoryFeedback ? (
+          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm leading-6 text-[var(--muted)]">{feedback}</div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => void handleCreateCategory()}
+          disabled={isSaving || !hasValidStoreSession}
+          className="mt-4 w-full rounded-2xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isSaving ? "Salvando..." : "Cadastrar categoria"}
+        </button>
+      </section>
+
+      <section className="rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
+        <label className="grid gap-2">
+          <span className="text-sm font-medium theme-text">Buscar categoria</span>
+          <input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Buscar por nome, descricao ou slug"
+            className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
+          />
+        </label>
+        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+          {searchTerm
+            ? `${visibleCategoriesCount} categoria(s) visivel(is) para a busca atual.`
+            : "Use a busca para localizar categorias rapidamente sem percorrer toda a lista."}
+        </p>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
+        <article className="rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)] sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Categorias ativas</p>
@@ -461,7 +486,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
                           <textarea
                             value={editingCategoryDescription}
                             onChange={(event) => setEditingCategoryDescription(event.target.value)}
-                            placeholder="Descricao da categoria"
+                            placeholder="Descricao da categoria para orientar o cadastro e a navegacao da loja"
                             rows={3}
                             className="w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm theme-text outline-none transition focus:border-[var(--accent)]"
                           />
@@ -503,7 +528,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
           </div>
         </article>
 
-        <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6">
+        <article className="rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)] sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600">Categorias inativas</p>
@@ -534,9 +559,7 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
               </article>
             )) : (
               <div className="rounded-[1.5rem] border border-dashed border-[var(--border)] bg-white p-6 text-sm leading-6 text-[var(--muted)]">
-                {searchTerm
-                  ? "Nenhuma categoria inativa corresponde a busca atual."
-                  : "Nenhuma categoria inativa no momento."}
+                {searchTerm ? "Nenhuma categoria inativa corresponde a busca atual." : "Nenhuma categoria inativa no momento."}
               </div>
             )}
           </div>
@@ -545,3 +568,8 @@ export function SellerCategoriesBoard({ workspace }: { workspace: SellerWorkspac
     </div>
   );
 }
+
+
+
+
+

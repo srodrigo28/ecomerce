@@ -446,6 +446,10 @@ export interface ProductFormDraft {
   pricePromotion: string;
   stock: string;
   minStock: string;
+  shelfSection: string;
+  shelfPosition: string;
+  sizeLabel: string;
+  audience: string;
   images: ProductImage[];
 }
 

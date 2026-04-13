@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { Modal } from "@/components/ui-modal";
 import { SellerProductForm, type SellerProductEditRequest } from "@/components/seller-product-form";
@@ -13,11 +13,8 @@ const formatCurrency = (value: number) =>
 
 export function SellerProductsPageClient({ workspace }: { workspace: SellerWorkspace }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editRequest, setEditRequest] = useState<SellerProductEditRequest | null>(null);
-  const isCreateProductModalOpen = searchParams.get("modal") === "novo-produto" && !editRequest;
 
   useEffect(() => {
     const handleEditRequest = (event: Event) => {
@@ -31,16 +28,13 @@ export function SellerProductsPageClient({ workspace }: { workspace: SellerWorks
     return () => window.removeEventListener("seller-product-edit", handleEditRequest as EventListener);
   }, []);
 
-  const handleOpenNewProductModal = () => {
-    setEditRequest(null);
-    setIsProductModalOpen(true);
-    router.replace(`${pathname}?modal=novo-produto`, { scroll: false });
+  const handleOpenNewProductPage = () => {
+    router.push("/painel-lojista/produtos/novo");
   };
 
   const handleCloseProductModal = () => {
     setIsProductModalOpen(false);
     setEditRequest(null);
-    router.replace(pathname, { scroll: false });
   };
 
   return (
@@ -66,7 +60,7 @@ export function SellerProductsPageClient({ workspace }: { workspace: SellerWorks
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  handleOpenNewProductModal();
+                  handleOpenNewProductPage();
                 }}
                 className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
               >
@@ -145,11 +139,11 @@ export function SellerProductsPageClient({ workspace }: { workspace: SellerWorks
 
       <SellerProductsShowcase workspace={workspace} />
 
-      {isProductModalOpen || isCreateProductModalOpen ? (
+      {isProductModalOpen ? (
         <Modal
           onClose={handleCloseProductModal}
-          title={editRequest ? "Editar produto" : "Novo produto"}
-          description="Cadastre ou atualize o produto sem sair da listagem. Ao concluir, a vitrine interna continua como foco da tela."
+          title="Editar produto"
+          description="Atualize o produto sem sair da listagem. Ao concluir, a vitrine interna continua como foco da tela."
         >
           <div className="mt-6">
             <SellerProductForm workspace={workspace} externalEditRequest={editRequest} onCompleted={handleCloseProductModal} onCancel={handleCloseProductModal} />

@@ -16,26 +16,24 @@ export default async function SellerCategoriesPage() {
   );
 
   return (
-    <main className="fixed inset-0 z-50 bg-slate-950/70 px-4 py-8 backdrop-blur-sm">
-      <div className="mx-auto flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Operacao da loja</p>
-            <h1 className="mt-2 text-2xl font-semibold theme-heading sm:text-3xl">Categorias do lojista</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--muted)]">
-              Gerencie as categorias comerciais da vitrine em um painel fixo, sem competir com o restante da navegacao.
-            </p>
-          </div>
-          <Link href="/painel-lojista" className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">
-            Fechar
+    <main className="mx-auto flex min-h-screen w-full max-w-[980px] flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+      <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-3xl font-semibold theme-heading">Categorias</h1>
+          <Link
+            href="/painel-lojista"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-lg font-semibold text-rose-600 transition hover:bg-rose-100"
+            aria-label="Fechar categorias"
+            title="Fechar"
+          >
+            X
           </Link>
         </div>
 
-        <div className="mt-6 flex-1 overflow-y-auto pr-1">
+        <div className="mt-5">
           <SellerCategoriesBoard workspace={workspace} />
         </div>
-      </div>
+      </section>
     </main>
   );
 }
-
