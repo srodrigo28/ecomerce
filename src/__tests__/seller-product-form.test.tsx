@@ -137,6 +137,36 @@ describe("SellerProductForm", () => {
     jest.restoreAllMocks();
   });
 
+  it("deve carregar imagens ao abrir a edicao por externalEditRequest", async () => {
+    render(<SellerProductForm
+      workspace={workspace}
+      externalEditRequest={{
+        id: "prod-201",
+        source: "local",
+        name: "Vestido Floral",
+        slug: "vestido-floral",
+        description: "Leve e solto",
+        categoryId: "cat-camisetas",
+        priceRetail: 79.9,
+        stock: 12,
+        minStock: 2,
+        imageUrl: "/uploads/produtos/vestido-floral-capa.png",
+        images: [
+          { id: "api-img-1", name: "vestido-floral-1.png", imageUrl: "/uploads/produtos/vestido-floral-1.png", isMain: true },
+          { id: "api-img-2", name: "vestido-floral-2.png", imageUrl: "/uploads/produtos/vestido-floral-2.png", isMain: false },
+        ],
+        variants: [
+          { id: "variant-1", sizeLabel: "M", stock: 12, minStock: 2, position: 1 },
+        ],
+      }}
+    />);
+
+    expect(await screen.findByText("Produto Vestido Floral carregado para edicao. Revise os tamanhos, os estoques e salve novamente.")).toBeInTheDocument();
+    expect(screen.getAllByRole("img", { name: "vestido-floral-1.png" })[0]).toHaveAttribute("src", "/uploads/produtos/vestido-floral-1.png");
+    expect(screen.getAllByRole("img", { name: "vestido-floral-2.png" })[0]).toHaveAttribute("src", "/uploads/produtos/vestido-floral-2.png");
+    expect(screen.getByLabelText("Produto")).toHaveValue("Vestido Floral");
+  });
+
   it("deve cadastrar produto com varios tamanhos e enviar variants para a API", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     const onCompleted = jest.fn();

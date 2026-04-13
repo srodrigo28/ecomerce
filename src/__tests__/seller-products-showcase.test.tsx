@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { SellerProductsShowcase } from "@/components/seller-products-showcase";
@@ -171,6 +171,27 @@ describe("SellerProductsShowcase", () => {
     });
 
     expect(await screen.findByText("Produto Camiseta Premium atualizado com sucesso.")).toBeInTheDocument();
+  });
+
+  it("deve abrir a edicao completa ao clicar em editar dentro de gerenciar", async () => {
+    const user = userEvent.setup();
+    const onEditProduct = jest.fn();
+
+    render(<SellerProductsShowcase workspace={workspace} onEditProduct={onEditProduct} />);
+
+    await user.click(screen.getByRole("button", { name: "Gerenciar" }));
+    await user.click(screen.getByRole("button", { name: "Editar" }));
+
+    await act(async () => {
+      await new Promise((resolve) => window.requestAnimationFrame(() => resolve(undefined)));
+    });
+
+    expect(onEditProduct).toHaveBeenCalledWith(expect.objectContaining({
+      id: "local-1",
+      name: "Camiseta Basica",
+      categoryId: "cat-camisetas",
+    }));
+    expect(screen.queryByText("Salvar alteracoes")).not.toBeInTheDocument();
   });
 
   it("deve permitir excluir um produto local pela tela de produtos", async () => {

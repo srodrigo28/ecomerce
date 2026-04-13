@@ -32,6 +32,11 @@ export function SellerProductsPageClient({ workspace }: { workspace: SellerWorks
     router.push("/painel-lojista/produtos/novo");
   };
 
+  const handleOpenEditProductModal = (request: SellerProductEditRequest) => {
+    setEditRequest(request);
+    setIsProductModalOpen(true);
+  };
+
   const handleCloseProductModal = () => {
     setIsProductModalOpen(false);
     setEditRequest(null);
@@ -137,7 +142,7 @@ export function SellerProductsPageClient({ workspace }: { workspace: SellerWorks
         </details>
       </section>
 
-      <SellerProductsShowcase workspace={workspace} />
+      <SellerProductsShowcase workspace={workspace} onEditProduct={handleOpenEditProductModal} />
 
       {isProductModalOpen ? (
         <Modal

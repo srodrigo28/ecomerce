@@ -217,71 +217,74 @@ export function SellerProductForm({
     };
   }, [newCategoryPreviewUrl]);
 
+  const applyEditRequest = (detail: SellerProductEditRequest) => {
+    const parsedDescription = parseStructuredDescription(detail.description);
+    const nextImages: ProductImage[] = (detail.images ?? []).length
+      ? (detail.images ?? []).map((image, index) => ({
+          id: `api-${image.id}-${index}`,
+          source: "api" as const,
+          name: image.name,
+          previewUrl: image.imageUrl,
+          apiImageId: image.id,
+          isMain: image.isMain,
+        }))
+      : detail.imageUrl
+        ? [{ id: `existing-${detail.id}`, source: "url" as const, name: detail.name, previewUrl: detail.imageUrl }]
+        : [];
+
+    const selectedMain = nextImages.find((image) => image.isMain) ?? nextImages[0] ?? null;
+    const nextVariants = detail.variants?.length
+      ? detail.variants.map((variant, index) => ({
+          ...createVariantDraft(),
+          id: variant.id ? `api-${variant.id}` : `variant-${index + 1}`,
+          sizeLabel: variant.sizeLabel,
+          stock: String(variant.stock ?? 0),
+          minStock: String(variant.minStock ?? 0),
+          priceRetail: variant.priceRetail !== undefined ? String(variant.priceRetail) : "",
+          priceWholesale: variant.priceWholesale !== undefined ? String(variant.priceWholesale) : "",
+          pricePromotion: variant.pricePromotion !== undefined ? String(variant.pricePromotion) : "",
+        }))
+      : [
+          {
+            ...createVariantDraft(),
+            sizeLabel: parsedDescription.sizeLabel,
+            stock: String(detail.stock),
+            minStock: String(detail.minStock),
+          },
+        ];
+
+    setEditingProductId(detail.id);
+    setDraft({
+      name: detail.name,
+      description: parsedDescription.notes,
+      categoryId: detail.categoryId,
+      newCategoryName: "",
+      priceRetail: String(detail.priceRetail || ""),
+      priceWholesale: detail.priceWholesale ? String(detail.priceWholesale) : "",
+      pricePromotion: detail.pricePromotion ? String(detail.pricePromotion) : "",
+      shelfSection: parsedDescription.shelfSection,
+      shelfPosition: parsedDescription.shelfPosition,
+      audience: parsedDescription.audience,
+      variants: nextVariants,
+      images: nextImages,
+    });
+    setMainImageId(selectedMain?.id ?? null);
+    setDeletedApiImageIds([]);
+    setSubmittedLabel(null);
+    setFeedback(`Produto ${detail.name} carregado para edicao. Revise os tamanhos, os estoques e salve novamente.`);
+    document.getElementById("cadastro-produto-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   useEffect(() => {
-    if (!externalEditRequest || typeof window === "undefined") return;
-    window.dispatchEvent(new CustomEvent("seller-product-edit", { detail: externalEditRequest }));
+    if (!externalEditRequest) return;
+    applyEditRequest(externalEditRequest);
   }, [externalEditRequest]);
 
   useEffect(() => {
     const handleEditProduct = (event: Event) => {
       const customEvent = event as CustomEvent<SellerProductEditRequest>;
-      const detail = customEvent.detail;
-      if (!detail) return;
-
-      const parsedDescription = parseStructuredDescription(detail.description);
-      const nextImages: ProductImage[] = (detail.images ?? []).length
-        ? (detail.images ?? []).map((image, index) => ({
-            id: `api-${image.id}-${index}`,
-            source: "api" as const,
-            name: image.name,
-            previewUrl: image.imageUrl,
-            apiImageId: image.id,
-            isMain: image.isMain,
-          }))
-        : detail.imageUrl
-          ? [{ id: `existing-${detail.id}`, source: "url" as const, name: detail.name, previewUrl: detail.imageUrl }]
-          : [];
-
-      const selectedMain = nextImages.find((image) => image.isMain) ?? nextImages[0] ?? null;
-      const nextVariants = detail.variants?.length
-        ? detail.variants.map((variant, index) => ({
-            ...createVariantDraft(),
-            id: variant.id ? `api-${variant.id}` : `variant-${index + 1}`,
-            sizeLabel: variant.sizeLabel,
-            stock: String(variant.stock ?? 0),
-            minStock: String(variant.minStock ?? 0),
-            priceRetail: variant.priceRetail !== undefined ? String(variant.priceRetail) : "",
-            priceWholesale: variant.priceWholesale !== undefined ? String(variant.priceWholesale) : "",
-            pricePromotion: variant.pricePromotion !== undefined ? String(variant.pricePromotion) : "",
-          }))
-        : [
-            {
-              ...createVariantDraft(),
-              sizeLabel: parsedDescription.sizeLabel,
-              stock: String(detail.stock),
-              minStock: String(detail.minStock),
-            },
-          ];
-      setEditingProductId(detail.id);
-      setDraft({
-        name: detail.name,
-        description: parsedDescription.notes,
-        categoryId: detail.categoryId,
-        newCategoryName: "",
-        priceRetail: String(detail.priceRetail || ""),
-        priceWholesale: detail.priceWholesale ? String(detail.priceWholesale) : "",
-        pricePromotion: detail.pricePromotion ? String(detail.pricePromotion) : "",
-        shelfSection: parsedDescription.shelfSection,
-        shelfPosition: parsedDescription.shelfPosition,
-        audience: parsedDescription.audience,
-        variants: nextVariants,
-        images: nextImages,
-      });
-      setMainImageId(selectedMain?.id ?? null);
-      setDeletedApiImageIds([]);
-      setSubmittedLabel(null);
-      setFeedback(`Produto ${detail.name} carregado para edicao. Revise os tamanhos, os estoques e salve novamente.`);
-      document.getElementById("cadastro-produto-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (!customEvent.detail) return;
+      applyEditRequest(customEvent.detail);
     };
 
     window.addEventListener("seller-product-edit", handleEditProduct as EventListener);
@@ -684,7 +687,7 @@ export function SellerProductForm({
 
               <div className="mt-4 space-y-3">
                 {draft.variants.map((variant, index) => (
-                  <div key={variant.id} className="grid gap-3 rounded-[1rem] border border-[var(--border)] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_44px]">
+                  <div key={variant.id} className="grid grid-cols-2 gap-3 rounded-[1rem] border border-[var(--border)] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_44px]">
                     <label className="space-y-2">
                       <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Tamanho</span>
                       <input aria-label={`Tamanho ${index + 1}`} value={variant.sizeLabel} onChange={(event) => updateVariantField(variant.id, "sizeLabel", event.target.value.toUpperCase())} placeholder="34, 36, P, M, G" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />

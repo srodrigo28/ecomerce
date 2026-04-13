@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { FilterSelect } from "@/components/filter-select";
 import { Modal } from "@/components/ui-modal";
 import { Button } from "@/components/ui-button";
+import type { SellerProductEditRequest } from "@/components/seller-product-form";
 import { deleteSellerProduct, deleteSellerProductImage, getSellerProductById, submitSellerProduct } from "@/lib/services/catalog-service";
 import type { ProductApiImageMeta, SellerWorkspace } from "@/types/catalog";
 import {
@@ -59,7 +60,7 @@ const viewModeOptions: Array<{ value: ProductViewMode; label: string }> = [
   { value: "lista", label: "Lista" },
 ];
 
-export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspace }) {
+export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace: SellerWorkspace; onEditProduct?: (request: SellerProductEditRequest) => void }) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("todas");
@@ -270,6 +271,11 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
   const handleEdit = (product: ShowcaseProductRecord) => {
     setManageTarget(null);
     window.requestAnimationFrame(() => {
+      if (onEditProduct) {
+        onEditProduct(product);
+        return;
+      }
+
       window.dispatchEvent(
         new CustomEvent("seller-product-edit", {
           detail: product,
@@ -787,7 +793,7 @@ export function SellerProductsShowcase({ workspace }: { workspace: SellerWorkspa
                   {manageGallery.length < 5 ? (
                     <button
                       type="button"
-                      onClick={handleOpenImageEditor}
+                      onClick={() => handleEdit(manageTarget)}
                       className="flex aspect-[4/5] items-center justify-center rounded-[1rem] border border-dashed border-[var(--border)] bg-[var(--surface)] text-3xl font-light text-[var(--accent)] transition hover:border-[var(--accent)]"
                       aria-label="Adicionar imagem"
                       title="Adicionar imagem"
