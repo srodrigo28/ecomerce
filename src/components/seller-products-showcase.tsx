@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { FiEdit3, FiShare2, FiTrash2 } from "react-icons/fi";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { FilterSelect } from "@/components/filter-select";
@@ -27,6 +28,7 @@ type ProductViewMode = "vitrine" | "lista";
 type ProductFilterMode = "todos" | "estoque_baixo" | "sem_imagem" | "api" | "novo";
 type ProductSortMode = "recentes" | "nome" | "preco" | "estoque";
 type ManageSection = "catalogo" | "precos";
+type ProductEditFocusSection = "catalogo" | "imagens" | "estoque";
 
 type ShowcaseProductRecord = {
   id: string;
@@ -55,6 +57,7 @@ const normalizeSearch = (value: string) =>
     .trim();
 
 const SELLER_PRODUCTS_SCROLL_KEY = "seller-products-scroll-target";
+const SELLER_PRODUCT_EDIT_STORAGE_KEY = "seller-product-edit-request";
 
 type ParsedShowcaseDescriptionMeta = {
   notes: string;
@@ -136,12 +139,17 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
     stock: "",
     categoryId: "",
   });
+  const [hasMounted, setHasMounted] = useState(false);
 
   const localProducts = useSyncExternalStore<LocalSellerProductRecord[]>(
     subscribeLocalSellerProducts,
     readLocalSellerProducts,
     () => EMPTY_LOCAL_PRODUCTS,
   );
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!manageTarget) {
@@ -188,9 +196,11 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [localProducts.length, workspace.products.length]);
+  }, []);
 
   const mergedProducts = useMemo<ShowcaseProductRecord[]>(() => {
+    const renderedLocalProducts = hasMounted ? localProducts : EMPTY_LOCAL_PRODUCTS;
+
     const apiProducts = workspace.products.map((product) => ({
       id: product.id,
       name: product.name,
@@ -207,11 +217,11 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
       imageUrl: product.imageUrls[0],
       images: product.images ?? [],
       variants: product.variants ?? [],
-      createdAt: new Date().toISOString(),
+      createdAt: `api-${product.id}`,
       source: "api" as const,
     }));
 
-    const localMapped = localProducts
+    const localMapped = renderedLocalProducts
       .filter((product) => product.storeId === workspace.store.id)
       .map((product) => ({
         id: product.id,
@@ -239,7 +249,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
       }));
 
     return [...localMapped, ...apiProducts];
-  }, [localProducts, workspace.categories, workspace.products, workspace.store.id]);
+  }, [hasMounted, localProducts, workspace.categories, workspace.products, workspace.store.id]);
 
   const categoryOptions = useMemo(
     () => [
@@ -290,9 +300,11 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
         return right.stock - left.stock;
       }
 
-      return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      return 0;
     });
   }, [filterMode, mergedProducts, searchTerm, selectedCategory, sortMode]);
+
+  const totalStockUnits = useMemo(() => mergedProducts.reduce((accumulator, product) => accumulator + Math.max(product.stock, 0), 0), [mergedProducts]);
 
   const summary = useMemo(() => {
     const lowStock = filteredProducts.filter((product) => product.stock <= product.minStock).length;
@@ -323,19 +335,16 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
     }
   };
 
-  const handleEdit = (product: ShowcaseProductRecord) => {
+  const handleEdit = (product: ShowcaseProductRecord, focusSection: ProductEditFocusSection = "catalogo") => {
     setManageTarget(null);
     window.requestAnimationFrame(() => {
       if (onEditProduct) {
-        onEditProduct(product);
+        onEditProduct({ ...product, focusSection });
         return;
       }
 
-      window.dispatchEvent(
-        new CustomEvent("seller-product-edit", {
-          detail: product,
-        }),
-      );
+      window.sessionStorage.setItem(SELLER_PRODUCT_EDIT_STORAGE_KEY, JSON.stringify({ ...product, focusSection }));
+      router.push("/painel-lojista/produtos");
     });
     setActionFeedback(`Produto ${product.name} carregado no formulario para edicao.`);
   };
@@ -510,10 +519,16 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
     }
   };
 
+  const handleOpenStockEditor = () => {
+    if (!manageTarget) return;
+    setActionFeedback(`Abrindo a edicao completa de ${manageDisplayName} na area de estoque.`);
+    handleEdit(manageTarget, "estoque");
+  };
+
   const handleOpenImageEditor = () => {
     if (!manageTarget) return;
     setActionFeedback(`Abrindo a edicao completa de ${manageDisplayName} para adicionar ou reorganizar imagens.`);
-    handleEdit(manageTarget);
+    handleEdit(manageTarget, "imagens");
   };
 
   const handleDeleteSelectedManageImage = async () => {
@@ -597,19 +612,31 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
 
   return (
     <section id="produtos-cadastrados" className={`rounded-[2rem] border bg-[var(--surface)] p-5 shadow-[var(--shadow)] transition-all duration-300 sm:p-6 ${isShowcaseFocused ? "border-[var(--accent)] shadow-[0_0_0_3px_rgba(37,99,235,0.12)]" : "border-[var(--border)]"}`}>
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Vitrine interna</p>
           <h2 className="mt-2 text-2xl font-semibold theme-heading">Produtos cadastrados da loja</h2>
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
             Agora essa area tambem funciona como base de gestao, com busca, filtros e dois modos de leitura do catalogo.
           </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">{summary.total} resultado(s)</span>
+            <span className="rounded-full theme-badge-warning px-3 py-1 text-xs font-semibold">{summary.lowStock} com estoque baixo</span>
+            {actionFeedback ? <span className="rounded-full theme-badge-success px-3 py-1 text-xs font-semibold">{actionFeedback}</span> : null}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">{summary.total} resultado(s)</span>
-          <span className="rounded-full theme-badge-warning px-3 py-1 text-xs font-semibold">{summary.lowStock} com estoque baixo</span>
-          {actionFeedback ? <span className="rounded-full theme-badge-success px-3 py-1 text-xs font-semibold">{actionFeedback}</span> : null}
-        </div>
+
+        <Link
+          href="/painel-lojista/estoque"
+          className="group relative overflow-hidden rounded-[1.6rem] border border-[var(--border)] bg-[linear-gradient(135deg,#0f172a_0%,#172554_54%,#2563eb_100%)] p-4 text-white shadow-[0_20px_45px_rgba(37,99,235,0.22)] transition hover:-translate-y-1 hover:shadow-[0_24px_55px_rgba(37,99,235,0.3)]"
+        >
+          <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-white/10 blur-2xl transition group-hover:scale-110" aria-hidden="true" />
+          <div className="relative flex min-h-[122px] flex-col items-center justify-center gap-3 text-center">
+            <strong className="block text-[clamp(2.1rem,3.2vw,3rem)] font-semibold leading-none text-white">{totalStockUnits}</strong>
+            <span className="block text-[13px] font-semibold uppercase tracking-[0.16em] text-blue-50/90">Total em Estoque</span>
+          </div>
+        </Link>
       </div>
 
       <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
@@ -864,7 +891,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                   {manageGallery.length < 5 ? (
                     <button
                       type="button"
-                      onClick={() => handleEdit(manageTarget)}
+                      onClick={() => handleEdit(manageTarget, "imagens")}
                       className="flex aspect-[4/5] items-center justify-center rounded-[1rem] border border-dashed border-[var(--border)] bg-[var(--surface)] text-3xl font-light text-[var(--accent)] transition hover:border-[var(--accent)]"
                       aria-label="Adicionar imagem"
                       title="Adicionar imagem"
@@ -1084,45 +1111,66 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                   )}
                 </form>
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 xl:mt-auto xl:border-t xl:border-[var(--border)] xl:pt-4">
-                  <Button
-                    type="button"
-                    variant="primary"
-                    onClick={() => void handleQuickSaveAndClose()}
-                    className="rounded-[0.9rem] px-4"
-                  >
-                    Salvar alteracoes
-                  </Button>
-                  <div className="flex flex-wrap gap-3">
+                <div className="mt-4 space-y-3 xl:mt-auto xl:border-t xl:border-[var(--border)] xl:pt-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={() => void handleQuickSaveAndClose()}
+                      className="rounded-[0.9rem] px-4"
+                    >
+                      Salvar alteracoes
+                    </Button>
+                    <div className="flex flex-wrap gap-3">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleOpenImageEditor}
+                        className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-[var(--accent)] bg-[var(--accent)] p-0 text-white shadow-[0_10px_25px_rgba(37,99,235,0.22)] hover:border-[var(--accent-strong)] hover:bg-[var(--accent-strong)]"
+                        aria-label="Editar produto"
+                        title="Editar produto"
+                      >
+                        <FiEdit3 className="h-6 w-6" aria-hidden="true" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => handleCopyLink(manageTarget)}
+                        className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-sky-300 bg-sky-100 p-0 text-sky-700 shadow-[0_10px_25px_rgba(14,165,233,0.18)] hover:border-sky-400 hover:bg-sky-200"
+                        aria-label="Compartilhar"
+                        title="Compartilhar"
+                      >
+                        <FiShare2 className="h-6 w-6" aria-hidden="true" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setDeleteTarget(manageTarget)}
+                        className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-rose-300 bg-rose-600 p-0 text-white shadow-[0_10px_25px_rgba(225,29,72,0.2)] hover:border-rose-400 hover:bg-rose-700"
+                        aria-label="Excluir"
+                        title="Excluir"
+                      >
+                        <FiTrash2 className="h-6 w-6" aria-hidden="true" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleOpenStockEditor}
+                      className="justify-center rounded-[1rem] border border-[var(--border)] bg-white px-4 py-3 text-center theme-text hover:border-[var(--accent)]"
+                    >
+                      Editar estoque no formulario
+                    </Button>
                     <Button
                       type="button"
                       variant="secondary"
                       onClick={handleOpenImageEditor}
-                      className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-amber-300 bg-amber-100 p-0 text-amber-700 shadow-[0_10px_25px_rgba(251,191,36,0.18)] hover:border-amber-400 hover:bg-amber-200"
-                      aria-label="Editar"
-                      title="Editar"
+                      className="justify-center rounded-[1rem] border border-[var(--border)] bg-white px-4 py-3 text-center theme-text hover:border-[var(--accent)]"
                     >
-                      <FiEdit3 className="h-6 w-6" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => handleCopyLink(manageTarget)}
-                      className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-sky-300 bg-sky-100 p-0 text-sky-700 shadow-[0_10px_25px_rgba(14,165,233,0.18)] hover:border-sky-400 hover:bg-sky-200"
-                      aria-label="Compartilhar"
-                      title="Compartilhar"
-                    >
-                      <FiShare2 className="h-6 w-6" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setDeleteTarget(manageTarget)}
-                      className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-rose-300 bg-rose-600 p-0 text-white shadow-[0_10px_25px_rgba(225,29,72,0.2)] hover:border-rose-400 hover:bg-rose-700"
-                      aria-label="Excluir"
-                      title="Excluir"
-                    >
-                      <FiTrash2 className="h-6 w-6" aria-hidden="true" />
+                      Adicionar ou remover imagens
                     </Button>
                   </div>
                 </div>
@@ -1157,7 +1205,6 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
     </section>
   );
 }
-
 
 
 

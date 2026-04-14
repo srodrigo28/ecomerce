@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { FormField, TextArea, TextInput } from "@/components/ui-form";
+import type { StoreSummary } from "@/types/catalog";
 
 const onlyDigits = (value: string) => value.replace(/\D/g, "");
 
@@ -38,29 +39,29 @@ interface AddressState {
   complement: string;
 }
 
-export function StoreSettingsForm() {
-  const [storeName, setStoreName] = useState("Aurora Atelier");
-  const [slug, setSlug] = useState("aurora-atelier");
-  const [description, setDescription] = useState("Moda feminina com curadoria de pecas premium para vitrine, atendimento no WhatsApp e fechamento com Pix.");
-  const [logoUrl, setLogoUrl] = useState("https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=600&q=80");
-  const [coverImageUrl, setCoverImageUrl] = useState("https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=80");
-  const [whatsapp, setWhatsapp] = useState("(11) 99999-0000");
-  const [email, setEmail] = useState("contato@auroraatelier.com");
-  const [pixKey, setPixKey] = useState("financeiro@auroraatelier.com");
-  const [businessHours, setBusinessHours] = useState("Seg a Sex, das 9h as 18h");
-  const [deliveryPolicy, setDeliveryPolicy] = useState("Entrega local em Sao Paulo no mesmo dia e retirada imediata na loja mediante confirmacao pelo WhatsApp.");
+export function StoreSettingsForm({ store }: { store: StoreSummary }) {
+  const [storeName, setStoreName] = useState(store.name || "");
+  const [slug, setSlug] = useState(store.slug || "");
+  const [description, setDescription] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [coverImageUrl, setCoverImageUrl] = useState(store.coverImageUrl ?? "");
+  const [whatsapp, setWhatsapp] = useState(formatPhone(store.whatsapp ?? ""));
+  const [email, setEmail] = useState(store.ownerEmail ?? "");
+  const [pixKey, setPixKey] = useState(store.pixKey ?? "");
+  const [businessHours, setBusinessHours] = useState("");
+  const [deliveryPolicy, setDeliveryPolicy] = useState(store.deliveryLabel ?? "");
   const [step, setStep] = useState(0);
-  const [feedback, setFeedback] = useState("Centralize aqui a configuracao publica da loja para a vitrine, o WhatsApp e a operacao comercial.");
+  const [feedback, setFeedback] = useState(`Dados atuais da loja ${store.name || "selecionada"} carregados para edicao. Campos visuais ainda sem suporte na API permanecem locais por enquanto.`);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<AddressState>({
-    zipCode: "01424-001",
-    state: "SP",
-    city: "Sao Paulo",
-    district: "Jardins",
-    street: "Alameda Lorena",
-    number: "640",
-    complement: "Sala 12",
+    zipCode: store.zipCode ?? "",
+    state: store.state ?? "",
+    city: store.city ?? "",
+    district: store.district ?? "",
+    street: store.street ?? "",
+    number: store.number ?? "",
+    complement: store.complement ?? "",
   });
   const [zipStatus, setZipStatus] = useState("O endereco da loja alimenta a vitrine, a retirada e a mensagem enviada no WhatsApp.");
   const [isLoadingZip, setIsLoadingZip] = useState(false);
@@ -151,7 +152,7 @@ export function StoreSettingsForm() {
     await new Promise((resolve) => setTimeout(resolve, 300));
     setIsSubmitting(false);
     setSubmitted(true);
-    setFeedback("Configuracao da loja validada localmente. Esta base ja sustenta vitrine, WhatsApp, Pix e retirada.");
+    setFeedback("Configuracao validada localmente. Os dados base agora sao carregados da loja autenticada e os campos visuais seguem locais ate a API cobrir esse cadastro.");
   };
 
   return (
@@ -196,6 +197,9 @@ export function StoreSettingsForm() {
             <div>
               <h3 className="text-xl font-semibold theme-heading">Identidade da loja</h3>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Esses dados definem como a loja aparece na vitrine e nos links compartilhados.</p>
+            </div>
+            <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+              Nome, slug, contato, Pix e endereco vieram da loja autenticada. Logo, capa, descricao, horario e politica ainda dependem de suporte dedicado na API para persistencia completa.
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <FormField label="Nome da loja" className="md:col-span-2">
@@ -329,7 +333,7 @@ export function StoreSettingsForm() {
               {isSubmitting ? "Salvando..." : "Salvar configuracoes"}
             </button>
           )}
-          <Link href="/lojas/aurora-atelier" className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
+          <Link href={`/lojas/${slug || store.slug}`} className="rounded-full px-5 py-3 text-sm font-semibold transition theme-dark-cta">
             Ver vitrine atual
           </Link>
         </div>
@@ -337,7 +341,7 @@ export function StoreSettingsForm() {
 
       {submitted ? (
         <div className="mt-6 rounded-[1.5rem] border border-emerald-300 bg-emerald-500/10 p-4 text-sm leading-6 text-emerald-900 dark:text-emerald-100">
-          Configuracao validada localmente com sucesso. A loja ja fica pronta para sustentar vitrine, compartilhamento, WhatsApp e Pix no fluxo atual.
+          Configuracao validada localmente com sucesso. Os dados base agora abrem com a loja autenticada em vez de valores mockados fixos.
         </div>
       ) : null}
     </article>

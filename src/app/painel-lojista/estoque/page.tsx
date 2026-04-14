@@ -29,7 +29,7 @@ export default async function SellerStockPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/painel-lojista" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
+            <Link href="/painel-lojista" className="rounded-full theme-primary-cta px-5 py-3 text-sm font-semibold transition">
               Voltar para painel
             </Link>
             <Link href="/painel-lojista/pedidos" className="rounded-full theme-border-button px-5 py-3 text-sm font-semibold transition">

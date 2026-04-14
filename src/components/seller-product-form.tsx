@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { saveLocalSellerProduct } from "@/lib/local-product-storage";
@@ -171,6 +171,7 @@ export type SellerProductEditRequest = {
   imageUrl?: string;
   images?: ProductApiImageMeta[];
   variants?: ProductVariant[];
+  focusSection?: "catalogo" | "imagens" | "estoque";
 };
 
 export function SellerProductForm({
@@ -202,6 +203,14 @@ export function SellerProductForm({
   const categoryImageInputRef = useRef<HTMLInputElement>(null);
   const latestImagesRef = useRef<ProductImage[]>([]);
 
+  const scrollToFocusSection = (focusSection?: "catalogo" | "imagens" | "estoque") => {
+    if (!focusSection || typeof window === "undefined") return;
+    const targetId = focusSection === "imagens" ? "produto-form-imagens" : focusSection === "estoque" ? "produto-form-estoque" : "cadastro-produto-form";
+    window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+  };
+
   useEffect(() => {
     latestImagesRef.current = draft.images;
   }, [draft.images]);
@@ -217,7 +226,7 @@ export function SellerProductForm({
     };
   }, [newCategoryPreviewUrl]);
 
-  const applyEditRequest = (detail: SellerProductEditRequest) => {
+  const applyEditRequest = useEffectEvent((detail: SellerProductEditRequest) => {
     const parsedDescription = parseStructuredDescription(detail.description);
     const nextImages: ProductImage[] = (detail.images ?? []).length
       ? (detail.images ?? []).map((image, index) => ({
@@ -272,12 +281,16 @@ export function SellerProductForm({
     setDeletedApiImageIds([]);
     setSubmittedLabel(null);
     setFeedback(`Produto ${detail.name} carregado para edicao. Revise os tamanhos, os estoques e salve novamente.`);
-    document.getElementById("cadastro-produto-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+    scrollToFocusSection(detail.focusSection);
+  });
 
   useEffect(() => {
     if (!externalEditRequest) return;
-    applyEditRequest(externalEditRequest);
+    const timeoutId = window.setTimeout(() => {
+      applyEditRequest(externalEditRequest);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [externalEditRequest]);
 
   useEffect(() => {
@@ -643,7 +656,15 @@ export function SellerProductForm({
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.86fr)_minmax(0,1.14fr)]">
-        <section className="space-y-4 rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
+        <section id="produto-form-imagens" className="space-y-4 rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium theme-heading">Imagens do produto</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">Adicione novas imagens, escolha a principal e remova as que nao devem mais aparecer.</p>
+              </div>
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl theme-primary-cta px-4 py-2 text-sm font-semibold transition">Adicionar imagem</button>
+            </div>
           <div className="relative overflow-hidden rounded-[1.6rem] border border-[var(--border)] bg-[linear-gradient(180deg,#ffffff_0%,#eef4ff_100%)]">
             <div className="aspect-[4/3] bg-slate-100">
               {mainImage ? <>
@@ -654,6 +675,7 @@ export function SellerProductForm({
             <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-4 right-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-[0_18px_36px_rgba(37,99,235,0.24)] transition hover:scale-[1.03] hover:bg-[var(--accent-strong)]" aria-label="Enviar imagens do produto">+
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
+          </div>
           </div>
 
           <div>
@@ -676,13 +698,24 @@ export function SellerProductForm({
               </label>
             </div>
 
-            <div className="mt-4 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div id="produto-form-estoque" className="mt-4 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium theme-heading">Grade e estoque</p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">Cadastre varios tamanhos do mesmo produto com quantidades independentes.</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">Edite as quantidades por tamanho abaixo. Esse bloco define o estoque principal do produto.</p>
                 </div>
                 <button type="button" onClick={handleAddVariant} className="rounded-xl bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">Adicionar tamanho</button>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[1rem] border border-[var(--border)] bg-white p-3">
+                  <p className="text-xs uppercase tracking-[0.08em] text-[var(--muted)]">Estoque total</p>
+                  <strong className="mt-1 block text-lg theme-heading">{totalStock} unid</strong>
+                </div>
+                <div className="rounded-[1rem] border border-[var(--border)] bg-white p-3">
+                  <p className="text-xs uppercase tracking-[0.08em] text-[var(--muted)]">Estoque minimo total</p>
+                  <strong className="mt-1 block text-lg theme-heading">{totalMinStock} unid</strong>
+                </div>
               </div>
 
               <div className="mt-4 space-y-3">
@@ -731,7 +764,7 @@ export function SellerProductForm({
           })}</div> : null}
         </section>
 
-        <section className="space-y-4 rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
+        <section id="produto-form-imagens" className="space-y-4 rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
           <label className="space-y-2">
             <span className="text-sm font-medium theme-heading">Categoria</span>
             <div className="grid grid-cols-[minmax(0,1fr)_52px] gap-3">

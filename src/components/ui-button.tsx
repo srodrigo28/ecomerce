@@ -1,7 +1,7 @@
 import type { ElementType, ReactNode } from "react";
 
 const buttonVariants = {
-  primary: "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)]",
+  primary: "theme-primary-cta",
   secondary: "theme-border-button",
   dark: "theme-dark-cta",
 } as const;

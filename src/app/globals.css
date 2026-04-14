@@ -322,6 +322,20 @@ html[data-theme="dark"] .hover\:bg-slate-700:hover {
   color: var(--button-dark-text);
 }
 
+.theme-primary-cta {
+  background: var(--accent);
+  color: white !important;
+}
+
+.theme-primary-cta:hover {
+  background: var(--accent-strong);
+  color: white !important;
+}
+
+.theme-primary-cta:visited {
+  color: white !important;
+}
+
 .theme-dark-cta:hover {
   background: var(--button-dark-hover);
 }

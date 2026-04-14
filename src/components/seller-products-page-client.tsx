@@ -11,11 +11,29 @@ import type { SellerWorkspace } from "@/types/catalog";
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
+const SELLER_PRODUCT_EDIT_STORAGE_KEY = "seller-product-edit-request";
+
 export function SellerProductsPageClient({ workspace }: { workspace: SellerWorkspace }) {
   const router = useRouter();
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editRequest, setEditRequest] = useState<SellerProductEditRequest | null>(null);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const pendingEditRequest = window.sessionStorage.getItem(SELLER_PRODUCT_EDIT_STORAGE_KEY);
+    if (!pendingEditRequest) return;
+
+    try {
+      const parsedRequest = JSON.parse(pendingEditRequest) as SellerProductEditRequest;
+      setEditRequest(parsedRequest);
+      setIsProductModalOpen(true);
+    } catch {
+      // Ignore invalid session payload and continue.
+    } finally {
+      window.sessionStorage.removeItem(SELLER_PRODUCT_EDIT_STORAGE_KEY);
+    }
+  }, []);
   useEffect(() => {
     const handleEditRequest = (event: Event) => {
       const customEvent = event as CustomEvent<SellerProductEditRequest>;
@@ -67,7 +85,7 @@ export function SellerProductsPageClient({ workspace }: { workspace: SellerWorks
                   event.stopPropagation();
                   handleOpenNewProductPage();
                 }}
-                className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
+                className="rounded-full theme-primary-cta px-4 py-2 text-sm font-semibold transition"
               >
                 Adicionar +
               </button>
