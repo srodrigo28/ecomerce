@@ -698,6 +698,28 @@ export function SellerProductForm({
               </label>
             </div>
 
+            <div className="mt-4 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div>
+                <p className="text-sm font-medium theme-heading">Precos do produto</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">Defina os valores base de varejo, atacado e promocional. Esses precos alimentam a vitrine e servem como referencia para os tamanhos.</p>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <label className="space-y-2">
+                  <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Preco varejo</span>
+                  <input aria-label="Preco varejo" type="number" min="0" step="0.01" value={draft.priceRetail} onChange={(event) => updateField("priceRetail", event.target.value)} placeholder="149.90" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                </label>
+                <label className="space-y-2">
+                  <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Preco atacado</span>
+                  <input aria-label="Preco atacado" type="number" min="0" step="0.01" value={draft.priceWholesale} onChange={(event) => updateField("priceWholesale", event.target.value)} placeholder="129.90" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                </label>
+                <label className="space-y-2">
+                  <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Preco promocional</span>
+                  <input aria-label="Preco promocional" type="number" min="0" step="0.01" value={draft.pricePromotion} onChange={(event) => updateField("pricePromotion", event.target.value)} placeholder="139.90" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                </label>
+              </div>
+            </div>
+
             <div id="produto-form-estoque" className="mt-4 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -720,21 +742,38 @@ export function SellerProductForm({
 
               <div className="mt-4 space-y-3">
                 {draft.variants.map((variant, index) => (
-                  <div key={variant.id} className="grid grid-cols-2 gap-3 rounded-[1rem] border border-[var(--border)] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_44px]">
-                    <label className="space-y-2">
-                      <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Tamanho</span>
-                      <input aria-label={`Tamanho ${index + 1}`} value={variant.sizeLabel} onChange={(event) => updateVariantField(variant.id, "sizeLabel", event.target.value.toUpperCase())} placeholder="34, 36, P, M, G" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                    </label>
-                    <label className="space-y-2">
-                      <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Qtd</span>
-                      <input aria-label={`Qtd ${index + 1}`} type="number" min="0" step="1" value={variant.stock} onChange={(event) => updateVariantField(variant.id, "stock", event.target.value)} placeholder="30" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                    </label>
-                    <label className="space-y-2">
-                      <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Min.</span>
-                      <input aria-label={`Minimo ${index + 1}`} type="number" min="0" step="1" value={variant.minStock} onChange={(event) => updateVariantField(variant.id, "minStock", event.target.value)} placeholder="0" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                    </label>
-                    <div className="flex items-end">
-                      <button type="button" onClick={() => handleRemoveVariant(variant.id)} className="flex h-[50px] w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-lg font-semibold text-rose-600 transition hover:bg-rose-100" aria-label={`Remover tamanho ${index + 1}`}>X</button>
+                  <div key={variant.id} className="rounded-[1rem] border border-[var(--border)] bg-white p-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_44px]">
+                      <label className="space-y-2">
+                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Tamanho</span>
+                        <input aria-label={`Tamanho ${index + 1}`} value={variant.sizeLabel} onChange={(event) => updateVariantField(variant.id, "sizeLabel", event.target.value.toUpperCase())} placeholder="34, 36, P, M, G" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Qtd</span>
+                        <input aria-label={`Qtd ${index + 1}`} type="number" min="0" step="1" value={variant.stock} onChange={(event) => updateVariantField(variant.id, "stock", event.target.value)} placeholder="30" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Min.</span>
+                        <input aria-label={`Minimo ${index + 1}`} type="number" min="0" step="1" value={variant.minStock} onChange={(event) => updateVariantField(variant.id, "minStock", event.target.value)} placeholder="0" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                      </label>
+                      <div className="flex items-end">
+                        <button type="button" onClick={() => handleRemoveVariant(variant.id)} className="flex h-[50px] w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-lg font-semibold text-rose-600 transition hover:bg-rose-100" aria-label={`Remover tamanho ${index + 1}`}>X</button>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      <label className="space-y-2">
+                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Varejo do tamanho</span>
+                        <input aria-label={`Preco varejo tamanho ${index + 1}`} type="number" min="0" step="0.01" value={variant.priceRetail} onChange={(event) => updateVariantField(variant.id, "priceRetail", event.target.value)} placeholder="Opcional" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Atacado do tamanho</span>
+                        <input aria-label={`Preco atacado tamanho ${index + 1}`} type="number" min="0" step="0.01" value={variant.priceWholesale} onChange={(event) => updateVariantField(variant.id, "priceWholesale", event.target.value)} placeholder="Opcional" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Promocional do tamanho</span>
+                        <input aria-label={`Preco promocional tamanho ${index + 1}`} type="number" min="0" step="0.01" value={variant.pricePromotion} onChange={(event) => updateVariantField(variant.id, "pricePromotion", event.target.value)} placeholder="Opcional" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+                      </label>
                     </div>
                   </div>
                 ))}

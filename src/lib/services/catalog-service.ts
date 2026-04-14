@@ -111,6 +111,26 @@ const toRequiredNumericId = (value: unknown, fieldLabel: string) => {
 
 const toNullableString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
 
+const readAuthCookie = (name: string) => {
+  if (typeof document === "undefined") return undefined;
+  const prefix = `${name}=`;
+  const entry = document.cookie.split("; ").find((item) => item.startsWith(prefix));
+  return entry ? decodeURIComponent(entry.slice(prefix.length)) : undefined;
+};
+
+const getSellerAuthToken = () => readAuthCookie("seller_auth_token") ?? readAuthCookie("loja99_auth");
+
+const createSellerAuthHeaders = (baseHeaders?: HeadersInit) => {
+  const headers = new Headers(baseHeaders);
+  const authToken = getSellerAuthToken();
+
+  if (authToken) {
+    headers.set("Authorization", `Bearer ${authToken}`);
+  }
+
+  return headers;
+};
+
 const resolveApiAssetUrl = (value: unknown) => {
   const rawValue = toNullableString(value);
 
@@ -502,9 +522,9 @@ export async function submitSellerProduct(input: SellerProductSubmitInput): Prom
 
   const createResponse = await fetch(targetProductId ? `${resolvedEndpoints.products}/${targetProductId}` : resolvedEndpoints.products, {
     method: targetProductId ? "PATCH" : "POST",
-    headers: {
+    headers: createSellerAuthHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify({
       store_id: storeId,
       category_id: categoryId,
@@ -532,6 +552,7 @@ export async function submitSellerProduct(input: SellerProductSubmitInput): Prom
       is_featured: false,
       notes: null,
     }),
+    credentials: "include",
     cache: "no-store",
   });
 
@@ -554,7 +575,9 @@ export async function submitSellerProduct(input: SellerProductSubmitInput): Prom
 
     const uploadResponse = await fetch(`${resolvedEndpoints.products}/${createdProductId}/images`, {
       method: "POST",
+      headers: createSellerAuthHeaders(),
       body: formData,
+      credentials: "include",
       cache: "no-store",
     });
 
@@ -583,7 +606,11 @@ export async function getSellerProductById(productId: string): Promise<Product> 
     throw new Error("A API real de produtos ainda nao esta configurada neste ambiente.");
   }
 
-  const response = await fetch(`${resolvedEndpoints.products}/${productId}`, { cache: "no-store" });
+  const response = await fetch(`${resolvedEndpoints.products}/${productId}`, {
+    headers: createSellerAuthHeaders(),
+    credentials: "include",
+    cache: "no-store",
+  });
   const payload = (await response.json()) as { data?: Record<string, unknown>; message?: string };
 
   if (!response.ok || !payload.data) {
@@ -600,6 +627,8 @@ export async function setSellerProductMainImage(productId: string, imageId: stri
 
   const response = await fetch(`${resolvedEndpoints.products}/${productId}/images/${imageId}/set-main`, {
     method: "POST",
+    headers: createSellerAuthHeaders(),
+    credentials: "include",
     cache: "no-store",
   });
 
@@ -618,6 +647,8 @@ export async function deleteSellerProductImage(productId: string, imageId: strin
 
   const response = await fetch(`${resolvedEndpoints.products}/${productId}/images/${imageId}`, {
     method: "DELETE",
+    headers: createSellerAuthHeaders(),
+    credentials: "include",
     cache: "no-store",
   });
 
@@ -636,6 +667,8 @@ export async function deleteSellerProduct(productId: string): Promise<void> {
 
   const response = await fetch(`${resolvedEndpoints.products}/${productId}`, {
     method: "DELETE",
+    headers: createSellerAuthHeaders(),
+    credentials: "include",
     cache: "no-store",
   });
 
