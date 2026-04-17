@@ -33,12 +33,14 @@ type NavLink = {
   label: string;
   hint: string;
   icon: ComponentType<{ className?: string }>;
+  exact?: boolean;
+  excludeStartsWith?: string[];
 };
 
 const sellerMenuLinks: NavLink[] = [
-  { href: "/painel-lojista", label: "Painel", hint: "Resumo da loja", icon: FiHome },
-  { href: "/painel-lojista/produtos/novo", label: "Cadastrar produto", hint: "Foto, categoria e estoque", icon: FiPlusCircle },
-  { href: "/painel-lojista/produtos", label: "Produtos", hint: "Catalogo cadastrado", icon: FiPackage },
+  { href: "/painel-lojista", label: "Painel", hint: "Resumo da loja", icon: FiHome, exact: true },
+  { href: "/painel-lojista/produtos/novo", label: "Cadastrar produto", hint: "Foto, categoria e estoque", icon: FiPlusCircle, exact: true },
+  { href: "/painel-lojista/produtos", label: "Produtos", hint: "Catalogo cadastrado", icon: FiPackage, excludeStartsWith: ["/painel-lojista/produtos/novo"] },
   { href: "/painel-lojista/categorias", label: "Categorias", hint: "Imagem, nome e descricao", icon: FiTag },
   { href: "/painel-lojista/pedidos", label: "Pedidos", hint: "Acompanhar vendas", icon: FiShoppingBag },
   { href: "/painel-lojista/estoque", label: "Estoque", hint: "Quantidades e alertas", icon: FiArchive },
@@ -154,7 +156,10 @@ export function SellerTopbar({ store }: { store: StoreSummary }) {
             <div className="grid gap-2">
               {sellerMenuLinks.map((item) => {
                 const Icon = item.icon;
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const isExcluded = item.excludeStartsWith?.some((prefix) => pathname.startsWith(prefix)) ?? false;
+                const active = item.exact
+                  ? pathname === item.href
+                  : !isExcluded && (pathname === item.href || pathname.startsWith(`${item.href}/`));
 
                 return (
                   <Link
@@ -351,9 +356,12 @@ export function SellerTopbar({ store }: { store: StoreSummary }) {
               </div>
 
               <nav className="mt-6 grid gap-2" aria-label="Menu mobile do lojista">
-                {sellerMenuLinks.map((item) => {
-                  const Icon = item.icon;
-                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              {sellerMenuLinks.map((item) => {
+                const Icon = item.icon;
+                const isExcluded = item.excludeStartsWith?.some((prefix) => pathname.startsWith(prefix)) ?? false;
+                const active = item.exact
+                  ? pathname === item.href
+                  : !isExcluded && (pathname === item.href || pathname.startsWith(`${item.href}/`));
 
                   return (
                     <motion.div
