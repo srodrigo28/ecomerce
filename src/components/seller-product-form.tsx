@@ -174,6 +174,11 @@ export type SellerProductEditRequest = {
   focusSection?: "catalogo" | "imagens" | "estoque";
 };
 
+type EditProductTab = "catalogo" | "comercial" | "estoque" | "imagens";
+
+const getEditTabFromFocus = (focusSection?: "catalogo" | "imagens" | "estoque"): EditProductTab =>
+  focusSection === "imagens" ? "imagens" : focusSection === "estoque" ? "estoque" : "catalogo";
+
 export function SellerProductForm({
   workspace,
   externalEditRequest,
@@ -199,12 +204,18 @@ export function SellerProductForm({
   const [newCategoryPreviewUrl, setNewCategoryPreviewUrl] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [deletedApiImageIds, setDeletedApiImageIds] = useState<string[]>([]);
+  const [activeEditTab, setActiveEditTab] = useState<EditProductTab>("catalogo");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const categoryImageInputRef = useRef<HTMLInputElement>(null);
   const latestImagesRef = useRef<ProductImage[]>([]);
 
   const scrollToFocusSection = (focusSection?: "catalogo" | "imagens" | "estoque") => {
-    if (!focusSection || typeof window === "undefined") return;
+    if (!focusSection) return;
+    if (editingProductId) {
+      setActiveEditTab(getEditTabFromFocus(focusSection));
+      return;
+    }
+    if (typeof window === "undefined") return;
     const targetId = focusSection === "imagens" ? "produto-form-imagens" : focusSection === "estoque" ? "produto-form-estoque" : "cadastro-produto-form";
     window.setTimeout(() => {
       document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -263,6 +274,7 @@ export function SellerProductForm({
         ];
 
     setEditingProductId(detail.id);
+    setActiveEditTab(getEditTabFromFocus(detail.focusSection));
     setDraft({
       name: detail.name,
       description: parsedDescription.notes,
@@ -512,6 +524,7 @@ export function SellerProductForm({
     setMainImageId(null);
     setEditingProductId(null);
     setDeletedApiImageIds([]);
+    setActiveEditTab("catalogo");
   };
 
   const handleSubmit = async () => {
@@ -638,150 +651,180 @@ export function SellerProductForm({
     }, 200);
   };
 
-  return (
-    <div id="cadastro-produto-form" className="space-y-5 rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-6">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-3xl font-semibold theme-heading">{editingProductId ? "Editar" : "Cadastro"}</h2>
-        {onCancel ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-lg font-semibold text-rose-600 transition hover:bg-rose-100"
-            aria-label="Fechar cadastro"
-            title="Fechar"
-          >
-            X
-          </button>
-        ) : null}
+  const editTabOptions: Array<{ value: EditProductTab; label: string; helper: string }> = [
+    { value: "catalogo", label: "Informacoes gerais", helper: "Nome, categoria e descricao" },
+    { value: "comercial", label: "Precificacao", helper: "Precos e numeracao interna" },
+    { value: "estoque", label: "Estoque", helper: "Grade, quantidades e minimo" },
+    { value: "imagens", label: "Imagens", helper: "Galeria e imagem principal" },
+  ];
+
+  const productDataSection = (
+    <section className="rounded-[1.8rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-lg font-semibold theme-heading">Dados do produto</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">Informacoes comerciais e de identificacao da peca.</p>
+        </div>
+        <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">Essencial</span>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.86fr)_minmax(0,1.14fr)]">
-        <section id="produto-form-imagens" className="space-y-4 rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
-          <div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label className="space-y-2 lg:col-span-1">
+          <span className="text-sm font-medium theme-heading">Categoria</span>
+          <div className="grid grid-cols-[minmax(0,1fr)_52px] gap-3">
+            <select value={draft.categoryId} onChange={(event) => updateField("categoryId", event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]">
+              <option value="">Selecione uma categoria</option>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+            <button type="button" onClick={() => setIsCategoryModalOpen(true)} className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-[var(--accent)] text-2xl font-semibold text-white transition hover:bg-[var(--accent-strong)]" aria-label="Adicionar categoria">+</button>
+          </div>
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-sm font-medium theme-heading">Publico</span>
+          <select aria-label="Selecione" value={draft.audience} onChange={(event) => updateField("audience", event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]">
+            {audienceOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+          </select>
+        </label>
+
+        <label className="space-y-2 lg:col-span-2">
+          <span className="text-sm font-medium theme-heading">Nome ou codigo do produto</span>
+          <input aria-label="Produto" value={draft.name} onChange={(event) => updateField("name", event.target.value)} placeholder="Ex.: Calca wide leg jeans premium" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+        </label>
+
+        <label className="space-y-2 lg:col-span-2">
+          <span className="text-sm font-medium theme-heading">Descricao</span>
+          <textarea aria-label="Descricao" value={draft.description} onChange={(event) => updateField("description", event.target.value)} rows={5} placeholder="Descreva o produto, acabamento, cor, caimento e detalhes importantes para a venda..." className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+        </label>
+      </div>
+    </section>
+  );
+
+  const pricingSection = (
+    <section className="rounded-[1.8rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-lg font-semibold theme-heading">Precificacao e numeracao interna</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">Agrupe valores e localizacao fisica do item em um unico bloco.</p>
+        </div>
+        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">Comercial</span>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        <label className="space-y-2">
+          <span className="text-sm font-medium theme-heading">Prateleira</span>
+          <input aria-label="Prateleira" value={draft.shelfSection} onChange={(event) => updateField("shelfSection", event.target.value.toUpperCase().slice(0, 2))} placeholder="A" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-center outline-none transition focus:border-[var(--accent)]" />
+        </label>
+        <label className="space-y-2">
+          <span className="text-sm font-medium theme-heading">Posicao</span>
+          <input aria-label="Posicao" value={draft.shelfPosition} onChange={(event) => updateField("shelfPosition", event.target.value)} placeholder="1" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-center outline-none transition focus:border-[var(--accent)]" />
+        </label>
+        <label className="space-y-2 lg:col-span-1">
+          <span className="text-sm font-medium theme-heading">Preco varejo</span>
+          <input aria-label="Preco varejo" type="number" min="0" step="0.01" value={draft.priceRetail} onChange={(event) => updateField("priceRetail", event.target.value)} placeholder="149.90" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+        </label>
+        <label className="space-y-2 lg:col-span-1">
+          <span className="text-sm font-medium theme-heading">Preco atacado</span>
+          <input aria-label="Preco atacado" type="number" min="0" step="0.01" value={draft.priceWholesale} onChange={(event) => updateField("priceWholesale", event.target.value)} placeholder="129.90" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+        </label>
+        <label className="space-y-2 lg:col-span-1">
+          <span className="text-sm font-medium theme-heading">Preco promocional</span>
+          <input aria-label="Preco promocional" type="number" min="0" step="0.01" value={draft.pricePromotion} onChange={(event) => updateField("pricePromotion", event.target.value)} placeholder="139.90" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+        </label>
+      </div>
+    </section>
+  );
+
+  const stockSection = (
+    <section id="produto-form-estoque" className="rounded-[1.8rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-lg font-semibold theme-heading">Grade, numeracao e estoque</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">Centralize tamanhos, quantidade, estoque minimo e preco por grade.</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <div className="rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Estoque total</p>
+            <strong className="mt-1 block text-xl theme-heading">{totalStock} unid</strong>
+          </div>
+          <div className="rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Minimo total</p>
+            <strong className="mt-1 block text-xl theme-heading">{totalMinStock} unid</strong>
+          </div>
+          <button type="button" onClick={handleAddVariant} className="rounded-2xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">Adicionar tamanho</button>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {draft.variants.map((variant, index) => (
+          <article key={variant.id} className="rounded-[1.25rem] border border-[var(--border)] bg-slate-50/60 p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium theme-heading">Imagens do produto</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">Adicione novas imagens, escolha a principal e remova as que nao devem mais aparecer.</p>
-              </div>
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl theme-primary-cta px-4 py-2 text-sm font-semibold transition">Adicionar imagem</button>
-            </div>
-          <div className="relative overflow-hidden rounded-[1.6rem] border border-[var(--border)] bg-[linear-gradient(180deg,#ffffff_0%,#eef4ff_100%)]">
-            <div className="aspect-[4/3] bg-slate-100">
-              {mainImage ? <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={mainImage.previewUrl} alt={mainImage.name} className="h-full w-full object-cover" />
-              </> : <div className="flex h-full items-center justify-center px-8 text-center text-sm leading-6 text-[var(--muted)]">Envie a foto principal do produto. Ela sera a primeira imagem usada na vitrine e na gestao da loja.</div>}
-            </div>
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-4 right-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-[0_18px_36px_rgba(37,99,235,0.24)] transition hover:scale-[1.03] hover:bg-[var(--accent-strong)]" aria-label="Enviar imagens do produto">+
-            </button>
-            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
-          </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between gap-3">
-              <div className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-slate-700">
-                {variantPayload.length} tamanho(s) · {totalStock} unidade(s)
-              </div>
-              <span className="rounded-full theme-border-button px-3 py-1.5 text-xs font-semibold transition">{draft.images.length}/{MAX_IMAGES}</span>
+              <p className="text-sm font-semibold theme-heading">Variacao {index + 1}</p>
+              <button type="button" onClick={() => handleRemoveVariant(variant.id)} className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-100" aria-label={`Remover tamanho ${index + 1}`}>Remover</button>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <label className="space-y-2">
-                <span className="text-sm font-medium theme-heading">Prateleira</span>
-                <input aria-label="Prateleira" value={draft.shelfSection} onChange={(event) => updateField("shelfSection", event.target.value.toUpperCase().slice(0, 2))} placeholder="A" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-center outline-none transition focus:border-[var(--accent)]" />
+            <div className="grid gap-3 xl:grid-cols-6">
+              <label className="space-y-2 xl:col-span-1">
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Tamanho</span>
+                <input aria-label={`Tamanho ${index + 1}`} value={variant.sizeLabel} onChange={(event) => updateVariantField(variant.id, "sizeLabel", event.target.value.toUpperCase())} placeholder="34, 36, P, M, G" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
               </label>
-
-              <label className="space-y-2">
-                <span className="text-sm font-medium theme-heading">Posicao</span>
-                <input aria-label="Posicao" value={draft.shelfPosition} onChange={(event) => updateField("shelfPosition", event.target.value)} placeholder="1" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-center outline-none transition focus:border-[var(--accent)]" />
+              <label className="space-y-2 xl:col-span-1">
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Qtd</span>
+                <input aria-label={`Qtd ${index + 1}`} type="number" min="0" step="1" value={variant.stock} onChange={(event) => updateVariantField(variant.id, "stock", event.target.value)} placeholder="30" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+              </label>
+              <label className="space-y-2 xl:col-span-1">
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Minimo</span>
+                <input aria-label={`Minimo ${index + 1}`} type="number" min="0" step="1" value={variant.minStock} onChange={(event) => updateVariantField(variant.id, "minStock", event.target.value)} placeholder="0" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+              </label>
+              <label className="space-y-2 xl:col-span-1">
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Varejo</span>
+                <input aria-label={`Preco varejo tamanho ${index + 1}`} type="number" min="0" step="0.01" value={variant.priceRetail} onChange={(event) => updateVariantField(variant.id, "priceRetail", event.target.value)} placeholder="Opcional" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+              </label>
+              <label className="space-y-2 xl:col-span-1">
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Atacado</span>
+                <input aria-label={`Preco atacado tamanho ${index + 1}`} type="number" min="0" step="0.01" value={variant.priceWholesale} onChange={(event) => updateVariantField(variant.id, "priceWholesale", event.target.value)} placeholder="Opcional" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
+              </label>
+              <label className="space-y-2 xl:col-span-1">
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Promocional</span>
+                <input aria-label={`Preco promocional tamanho ${index + 1}`} type="number" min="0" step="0.01" value={variant.pricePromotion} onChange={(event) => updateVariantField(variant.id, "pricePromotion", event.target.value)} placeholder="Opcional" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
               </label>
             </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 
-            <div className="mt-4 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
-              <div>
-                <p className="text-sm font-medium theme-heading">Precos do produto</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">Defina os valores base de varejo, atacado e promocional. Esses precos alimentam a vitrine e servem como referencia para os tamanhos.</p>
-              </div>
+  const imagesSection = (
+    <section id="produto-form-imagens" className="rounded-[1.8rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6 xl:sticky xl:top-32">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-lg font-semibold theme-heading">Imagens e apresentacao</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">Escolha a imagem principal e organize a galeria da vitrine.</p>
+        </div>
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl theme-primary-cta px-4 py-2 text-sm font-semibold transition">Adicionar imagem</button>
+      </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Preco varejo</span>
-                  <input aria-label="Preco varejo" type="number" min="0" step="0.01" value={draft.priceRetail} onChange={(event) => updateField("priceRetail", event.target.value)} placeholder="149.90" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Preco atacado</span>
-                  <input aria-label="Preco atacado" type="number" min="0" step="0.01" value={draft.priceWholesale} onChange={(event) => updateField("priceWholesale", event.target.value)} placeholder="129.90" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Preco promocional</span>
-                  <input aria-label="Preco promocional" type="number" min="0" step="0.01" value={draft.pricePromotion} onChange={(event) => updateField("pricePromotion", event.target.value)} placeholder="139.90" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                </label>
-              </div>
+      <div className="relative overflow-hidden rounded-[1.6rem] border border-[var(--border)] bg-[linear-gradient(180deg,#ffffff_0%,#eef4ff_100%)]">
+        <div className="aspect-[4/3] bg-slate-100">
+          {mainImage ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={mainImage.previewUrl} alt={mainImage.name} className="h-full w-full object-cover" />
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center px-8 text-center text-sm leading-6 text-[var(--muted)]">
+              Envie a foto principal do produto. Ela sera usada primeiro na vitrine e no painel.
             </div>
+          )}
+        </div>
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-4 right-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-[0_18px_36px_rgba(37,99,235,0.24)] transition hover:scale-[1.03] hover:bg-[var(--accent-strong)]" aria-label="Enviar imagens do produto">+</button>
+        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
+      </div>
 
-            <div id="produto-form-estoque" className="mt-4 rounded-[1.4rem] border border-[var(--border)] bg-[var(--surface)] p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium theme-heading">Grade e estoque</p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">Edite as quantidades por tamanho abaixo. Esse bloco define o estoque principal do produto.</p>
-                </div>
-                <button type="button" onClick={handleAddVariant} className="rounded-xl bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">Adicionar tamanho</button>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1rem] border border-[var(--border)] bg-white p-3">
-                  <p className="text-xs uppercase tracking-[0.08em] text-[var(--muted)]">Estoque total</p>
-                  <strong className="mt-1 block text-lg theme-heading">{totalStock} unid</strong>
-                </div>
-                <div className="rounded-[1rem] border border-[var(--border)] bg-white p-3">
-                  <p className="text-xs uppercase tracking-[0.08em] text-[var(--muted)]">Estoque minimo total</p>
-                  <strong className="mt-1 block text-lg theme-heading">{totalMinStock} unid</strong>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                {draft.variants.map((variant, index) => (
-                  <div key={variant.id} className="rounded-[1rem] border border-[var(--border)] bg-white p-3">
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_44px]">
-                      <label className="space-y-2">
-                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Tamanho</span>
-                        <input aria-label={`Tamanho ${index + 1}`} value={variant.sizeLabel} onChange={(event) => updateVariantField(variant.id, "sizeLabel", event.target.value.toUpperCase())} placeholder="34, 36, P, M, G" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                      </label>
-                      <label className="space-y-2">
-                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Qtd</span>
-                        <input aria-label={`Qtd ${index + 1}`} type="number" min="0" step="1" value={variant.stock} onChange={(event) => updateVariantField(variant.id, "stock", event.target.value)} placeholder="30" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                      </label>
-                      <label className="space-y-2">
-                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Min.</span>
-                        <input aria-label={`Minimo ${index + 1}`} type="number" min="0" step="1" value={variant.minStock} onChange={(event) => updateVariantField(variant.id, "minStock", event.target.value)} placeholder="0" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                      </label>
-                      <div className="flex items-end">
-                        <button type="button" onClick={() => handleRemoveVariant(variant.id)} className="flex h-[50px] w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-lg font-semibold text-rose-600 transition hover:bg-rose-100" aria-label={`Remover tamanho ${index + 1}`}>X</button>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                      <label className="space-y-2">
-                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Varejo do tamanho</span>
-                        <input aria-label={`Preco varejo tamanho ${index + 1}`} type="number" min="0" step="0.01" value={variant.priceRetail} onChange={(event) => updateVariantField(variant.id, "priceRetail", event.target.value)} placeholder="Opcional" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                      </label>
-                      <label className="space-y-2">
-                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Atacado do tamanho</span>
-                        <input aria-label={`Preco atacado tamanho ${index + 1}`} type="number" min="0" step="0.01" value={variant.priceWholesale} onChange={(event) => updateVariantField(variant.id, "priceWholesale", event.target.value)} placeholder="Opcional" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                      </label>
-                      <label className="space-y-2">
-                        <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">Promocional do tamanho</span>
-                        <input aria-label={`Preco promocional tamanho ${index + 1}`} type="number" min="0" step="0.01" value={variant.pricePromotion} onChange={(event) => updateVariantField(variant.id, "pricePromotion", event.target.value)} placeholder="Opcional" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-                      </label>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {draft.images.length ? <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">{draft.images.map((image) => {
+      {draft.images.length ? (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {draft.images.map((image) => {
             const isMain = image.id === mainImageId;
             return (
               <article key={image.id} className={`overflow-hidden rounded-[1.2rem] border bg-[var(--surface)] ${isMain ? "border-[var(--accent)] shadow-[0_0_0_2px_rgba(37,99,235,0.08)]" : "border-[var(--border)]"}`}>
@@ -800,50 +843,117 @@ export function SellerProductForm({
                 </div>
               </article>
             );
-          })}</div> : null}
-        </section>
+          })}
+        </div>
+      ) : null}
+    </section>
+  );
 
-        <section id="produto-form-imagens" className="space-y-4 rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
-          <label className="space-y-2">
-            <span className="text-sm font-medium theme-heading">Categoria</span>
-            <div className="grid grid-cols-[minmax(0,1fr)_52px] gap-3">
-              <select value={draft.categoryId} onChange={(event) => updateField("categoryId", event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]">
-                <option value="">Selecione uma categoria</option>
-                {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-              </select>
-              <button type="button" onClick={() => setIsCategoryModalOpen(true)} className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-[var(--accent)] text-2xl font-semibold text-white transition hover:bg-[var(--accent-strong)]" aria-label="Adicionar categoria">+</button>
+  const isEditMode = Boolean(editingProductId);
+
+  return (
+    <div id="cadastro-produto-form" className="space-y-6">
+      <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6 lg:p-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Cadastro inteligente</p>
+            <h2 className="mt-2 text-3xl font-semibold theme-heading">{editingProductId ? "Editar produto" : "Novo produto"}</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
+              Organize o cadastro em blocos claros: dados do produto, imagens, precificacao, numeracao e estoque.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+              {variantPayload.length} tamanho(s)
             </div>
-          </label>
+            <div className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+              {draft.images.length}/{MAX_IMAGES} imagens
+            </div>
+            <div className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+              {totalStock} unid em estoque
+            </div>
+            {onCancel ? (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-lg font-semibold text-rose-600 transition hover:bg-rose-100"
+                aria-label="Fechar cadastro"
+                title="Fechar"
+              >
+                X
+              </button>
+            ) : null}
+          </div>
+        </div>
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium theme-heading">Selecione</span>
-            <select aria-label="Selecione" value={draft.audience} onChange={(event) => updateField("audience", event.target.value)} className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]">
-              {audienceOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </label>
+        {isEditMode ? (
+          <div className="mt-6 rounded-[1.6rem] border border-[var(--border)] bg-white/80 p-2 shadow-[var(--shadow-soft)]">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              {editTabOptions.map((tab) => {
+                const isActive = activeEditTab === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => setActiveEditTab(tab.value)}
+                    className={`rounded-[1.2rem] border px-4 py-3 text-left transition ${isActive ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_10px_24px_rgba(37,99,235,0.12)]" : "border-transparent bg-slate-50 hover:border-[var(--border)] hover:bg-white"}`}
+                  >
+                    <strong className={`block text-sm ${isActive ? "text-[var(--accent-strong)]" : "theme-heading"}`}>{tab.label}</strong>
+                    <span className="mt-1 block text-xs leading-5 text-[var(--muted)]">{tab.helper}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+      </section>
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium theme-heading">Produto</span>
-            <input aria-label="Produto" value={draft.name} onChange={(event) => updateField("name", event.target.value)} placeholder="Nome ou codigo do produto" className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-          </label>
+      {isEditMode ? (
+        <>
+          {activeEditTab === "catalogo" ? (
+            <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+              <div>{productDataSection}</div>
+              <aside>{imagesSection}</aside>
+            </div>
+          ) : null}
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium theme-heading">Descricao</span>
-            <textarea aria-label="Descricao" value={draft.description} onChange={(event) => updateField("description", event.target.value)} rows={4} placeholder="Descreva o produto, acabamento, cor, caimento e detalhes importantes para a venda..." className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]" />
-          </label>
+          {activeEditTab === "comercial" ? (
+            <div className="max-w-[1100px]">{pricingSection}</div>
+          ) : null}
 
-        </section>
-      </div>
+          {activeEditTab === "estoque" ? (
+            <div>{stockSection}</div>
+          ) : null}
 
-      <div className="rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm leading-6 text-[var(--muted)]">{feedback}</div>
+          {activeEditTab === "imagens" ? (
+            <div>{imagesSection}</div>
+          ) : null}
+        </>
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-12">
+          <div className="space-y-6 xl:col-span-7">
+            {productDataSection}
+            {pricingSection}
+            {stockSection}
+          </div>
 
-      <div className="flex justify-end">
-        <button type="button" onClick={() => { void handleSubmit(); }} disabled={isSubmitting} className={`rounded-2xl bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] ${isSubmitting ? "cursor-not-allowed opacity-70" : ""}`}>
-          {isSubmitting ? "Salvando..." : editingProductId ? "Salvar produto" : "Cadastrar"}
-        </button>
-      </div>
+          <aside className="space-y-6 xl:col-span-5">
+            {imagesSection}
+          </aside>
+        </div>
+      )}
 
-      {submittedLabel ? <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">Produto <strong>{submittedLabel}</strong></div> : null}
+      <section className="rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm leading-6 text-[var(--muted)] lg:flex-1">{feedback}</div>
+          <div className="flex flex-wrap justify-end gap-3">
+            {submittedLabel ? <div className="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">Produto <strong>{submittedLabel}</strong></div> : null}
+            <button type="button" onClick={() => { void handleSubmit(); }} disabled={isSubmitting} className={`rounded-2xl bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] ${isSubmitting ? "cursor-not-allowed opacity-70" : ""}`}>
+              {isSubmitting ? "Salvando..." : editingProductId ? "Salvar produto" : "Cadastrar produto"}
+            </button>
+          </div>
+        </div>
+      </section>
 
       {isCategoryModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-8">

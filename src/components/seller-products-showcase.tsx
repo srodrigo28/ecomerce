@@ -336,14 +336,20 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
   };
 
   const handleEdit = (product: ShowcaseProductRecord, focusSection: ProductEditFocusSection = "catalogo") => {
+    const editRequest = { ...product, focusSection };
+
+    if (onEditProduct) {
+      onEditProduct(editRequest);
+      window.requestAnimationFrame(() => {
+        setManageTarget(null);
+      });
+      setActionFeedback(`Produto ${product.name} carregado no formulario para edicao.`);
+      return;
+    }
+
     setManageTarget(null);
     window.requestAnimationFrame(() => {
-      if (onEditProduct) {
-        onEditProduct({ ...product, focusSection });
-        return;
-      }
-
-      window.sessionStorage.setItem(SELLER_PRODUCT_EDIT_STORAGE_KEY, JSON.stringify({ ...product, focusSection }));
+      window.sessionStorage.setItem(SELLER_PRODUCT_EDIT_STORAGE_KEY, JSON.stringify(editRequest));
       router.push("/painel-lojista/produtos");
     });
     setActionFeedback(`Produto ${product.name} carregado no formulario para edicao.`);

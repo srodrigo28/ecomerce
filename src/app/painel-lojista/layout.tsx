@@ -17,7 +17,9 @@ export default async function SellerAreaLayout({ children }: { children: React.R
   return (
     <>
       <SellerTopbar store={workspace.store} />
-      <div className="pt-24">{children}</div>
+      <div className="pt-28 lg:pl-[var(--seller-sidebar-width,18rem)]">
+        <div className="min-h-screen px-4 pb-8 sm:px-6 lg:px-8 lg:pb-10 2xl:px-10">{children}</div>
+      </div>
     </>
   );
 }
