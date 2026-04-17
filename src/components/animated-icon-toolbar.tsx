@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
+import { motion } from "motion/react";
 
 type ToolbarItem = {
   href: string;
@@ -21,7 +22,7 @@ export function AnimatedIconToolbar({
   const pathname = usePathname();
 
   return (
-    <div className="hidden items-center gap-2 lg:flex">
+    <div className="hidden items-center gap-2 xl:flex">
       {items.map((item) => {
         const Icon = item.icon;
         const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -31,7 +32,13 @@ export function AnimatedIconToolbar({
             : "border-[rgba(var(--accent-rgb),0.28)] bg-[rgba(var(--accent-rgb),0.14)] text-[var(--foreground)] shadow-[0_18px_45px_rgba(var(--accent-rgb),0.16)]";
 
         return (
-          <div key={item.href} className="group relative">
+          <motion.div
+            key={item.href}
+            className="group relative"
+            whileHover={{ y: -4 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 320, damping: 22 }}
+          >
             <Link
               href={item.href}
               aria-label={item.label}
@@ -43,7 +50,7 @@ export function AnimatedIconToolbar({
             <span className="panel-tooltip">
               {item.label}
             </span>
-          </div>
+          </motion.div>
         );
       })}
     </div>

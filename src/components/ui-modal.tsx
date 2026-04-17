@@ -12,8 +12,8 @@ export function Modal({
   description?: string;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6 xl:px-8 xl:py-8">
-      <div className="max-h-[94vh] w-full max-w-[1560px] overflow-y-auto rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-6 xl:p-7">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/45 px-3 pt-24 pb-4 sm:px-4 sm:pt-28 sm:pb-6 xl:px-8 xl:pt-32 xl:pb-8">
+      <div className="max-h-[92vh] w-full max-w-[1480px] overflow-y-auto rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-6 xl:p-7">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Modal comercial</p>

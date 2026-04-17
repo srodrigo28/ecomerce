@@ -23,7 +23,6 @@ export default async function SellerDashboardPage() {
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Central operacional</p>
               <h2 className="mt-2 text-2xl font-semibold theme-heading">Categorias, pedidos, estoque e relatorios</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">Tudo que estava solto agora fica concentrado aqui em cima, de forma organizada e recolhivel, para nao competir com o catalogo da loja.</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">Abrir informacoes</span>

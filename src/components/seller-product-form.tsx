@@ -174,9 +174,9 @@ export type SellerProductEditRequest = {
   focusSection?: "catalogo" | "imagens" | "estoque";
 };
 
-type EditProductTab = "catalogo" | "comercial" | "estoque" | "imagens";
+type ProductFormTab = "catalogo" | "comercial" | "estoque" | "imagens";
 
-const getEditTabFromFocus = (focusSection?: "catalogo" | "imagens" | "estoque"): EditProductTab =>
+const getFormTabFromFocus = (focusSection?: "catalogo" | "imagens" | "estoque"): ProductFormTab =>
   focusSection === "imagens" ? "imagens" : focusSection === "estoque" ? "estoque" : "catalogo";
 
 export function SellerProductForm({
@@ -204,22 +204,14 @@ export function SellerProductForm({
   const [newCategoryPreviewUrl, setNewCategoryPreviewUrl] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [deletedApiImageIds, setDeletedApiImageIds] = useState<string[]>([]);
-  const [activeEditTab, setActiveEditTab] = useState<EditProductTab>("catalogo");
+  const [activeFormTab, setActiveFormTab] = useState<ProductFormTab>("catalogo");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const categoryImageInputRef = useRef<HTMLInputElement>(null);
   const latestImagesRef = useRef<ProductImage[]>([]);
 
   const scrollToFocusSection = (focusSection?: "catalogo" | "imagens" | "estoque") => {
     if (!focusSection) return;
-    if (editingProductId) {
-      setActiveEditTab(getEditTabFromFocus(focusSection));
-      return;
-    }
-    if (typeof window === "undefined") return;
-    const targetId = focusSection === "imagens" ? "produto-form-imagens" : focusSection === "estoque" ? "produto-form-estoque" : "cadastro-produto-form";
-    window.setTimeout(() => {
-      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 120);
+    setActiveFormTab(getFormTabFromFocus(focusSection));
   };
 
   useEffect(() => {
@@ -274,7 +266,7 @@ export function SellerProductForm({
         ];
 
     setEditingProductId(detail.id);
-    setActiveEditTab(getEditTabFromFocus(detail.focusSection));
+    setActiveFormTab(getFormTabFromFocus(detail.focusSection));
     setDraft({
       name: detail.name,
       description: parsedDescription.notes,
@@ -524,7 +516,7 @@ export function SellerProductForm({
     setMainImageId(null);
     setEditingProductId(null);
     setDeletedApiImageIds([]);
-    setActiveEditTab("catalogo");
+    setActiveFormTab("catalogo");
   };
 
   const handleSubmit = async () => {
@@ -651,7 +643,7 @@ export function SellerProductForm({
     }, 200);
   };
 
-  const editTabOptions: Array<{ value: EditProductTab; label: string; helper: string }> = [
+  const formTabOptions: Array<{ value: ProductFormTab; label: string; helper: string }> = [
     { value: "catalogo", label: "Informacoes gerais", helper: "Nome, categoria e descricao" },
     { value: "comercial", label: "Precificacao", helper: "Precos e numeracao interna" },
     { value: "estoque", label: "Estoque", helper: "Grade, quantidades e minimo" },
@@ -659,8 +651,8 @@ export function SellerProductForm({
   ];
 
   const productDataSection = (
-    <section className="rounded-[1.8rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <section className="rounded-[1.6rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)] sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <p className="text-lg font-semibold theme-heading">Dados do produto</p>
           <p className="mt-1 text-sm text-[var(--muted)]">Informacoes comerciais e de identificacao da peca.</p>
@@ -701,8 +693,8 @@ export function SellerProductForm({
   );
 
   const pricingSection = (
-    <section className="rounded-[1.8rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <section className="rounded-[1.6rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)] sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <p className="text-lg font-semibold theme-heading">Precificacao e numeracao interna</p>
           <p className="mt-1 text-sm text-[var(--muted)]">Agrupe valores e localizacao fisica do item em um unico bloco.</p>
@@ -736,8 +728,8 @@ export function SellerProductForm({
   );
 
   const stockSection = (
-    <section id="produto-form-estoque" className="rounded-[1.8rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <section id="produto-form-estoque" className="rounded-[1.6rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)] sm:p-5">
+      <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-lg font-semibold theme-heading">Grade, numeracao e estoque</p>
           <p className="mt-1 text-sm text-[var(--muted)]">Centralize tamanhos, quantidade, estoque minimo e preco por grade.</p>
@@ -796,8 +788,8 @@ export function SellerProductForm({
   );
 
   const imagesSection = (
-    <section id="produto-form-imagens" className="rounded-[1.8rem] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6 xl:sticky xl:top-32">
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <section id="produto-form-imagens" className="rounded-[1.6rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)] sm:p-5 xl:sticky xl:top-28">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <p className="text-lg font-semibold theme-heading">Imagens e apresentacao</p>
           <p className="mt-1 text-sm text-[var(--muted)]">Escolha a imagem principal e organize a galeria da vitrine.</p>
@@ -805,78 +797,87 @@ export function SellerProductForm({
         <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl theme-primary-cta px-4 py-2 text-sm font-semibold transition">Adicionar imagem</button>
       </div>
 
-      <div className="relative overflow-hidden rounded-[1.6rem] border border-[var(--border)] bg-[linear-gradient(180deg,#ffffff_0%,#eef4ff_100%)]">
-        <div className="aspect-[4/3] bg-slate-100">
-          {mainImage ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={mainImage.previewUrl} alt={mainImage.name} className="h-full w-full object-cover" />
-            </>
-          ) : (
-            <div className="flex h-full items-center justify-center px-8 text-center text-sm leading-6 text-[var(--muted)]">
-              Envie a foto principal do produto. Ela sera usada primeiro na vitrine e no painel.
-            </div>
-          )}
-        </div>
-        <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-4 right-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-[0_18px_36px_rgba(37,99,235,0.24)] transition hover:scale-[1.03] hover:bg-[var(--accent-strong)]" aria-label="Enviar imagens do produto">+</button>
-        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
-      </div>
-
-      {draft.images.length ? (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-[88px_minmax(0,1fr)] lg:items-start">
+        <div className="order-2 flex gap-3 overflow-x-auto pb-1 lg:order-1 lg:max-h-[280px] lg:flex-col lg:overflow-y-auto lg:overflow-x-visible">
           {draft.images.map((image) => {
             const isMain = image.id === mainImageId;
             return (
-              <article key={image.id} className={`overflow-hidden rounded-[1.2rem] border bg-[var(--surface)] ${isMain ? "border-[var(--accent)] shadow-[0_0_0_2px_rgba(37,99,235,0.08)]" : "border-[var(--border)]"}`}>
+              <article key={image.id} className={`w-[84px] shrink-0 overflow-hidden rounded-[0.9rem] border bg-[var(--surface)] lg:w-full ${isMain ? "border-[var(--accent)] shadow-[0_0_0_2px_rgba(37,99,235,0.08)]" : "border-[var(--border)]"}`}>
                 <button type="button" onClick={() => setMainImageId(image.id)} className="block w-full text-left">
-                  <div className="aspect-square bg-slate-100">
+                  <div className="aspect-[4/5] bg-slate-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={image.previewUrl} alt={image.name} className="h-full w-full object-cover" />
                   </div>
                 </button>
-                <div className="space-y-2 p-2">
-                  <p className="truncate text-xs text-[var(--muted)]" title={image.name}>{shortenImageName(image.name)}</p>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => setMainImageId(image.id)} className={`flex-1 rounded-full px-3 py-2 text-[11px] font-semibold transition ${isMain ? "bg-[var(--accent)] text-white" : "border border-[var(--border)] bg-white text-slate-700 hover:border-[var(--accent)]"}`}>{isMain ? "Principal" : "Usar"}</button>
-                    <button type="button" onClick={() => handleRemoveImage(image.id)} className="rounded-full border border-rose-200 px-3 py-2 text-[11px] font-semibold text-rose-600 transition hover:bg-rose-50">X</button>
+                <div className="space-y-1.5 p-2">
+                  <p className="truncate text-[9px] text-[var(--muted)]" title={image.name}>{shortenImageName(image.name, 12)}</p>
+                  <div className="flex gap-1.5">
+                    <button type="button" onClick={() => setMainImageId(image.id)} className={`flex-1 rounded-full px-2 py-1 text-[9px] font-semibold transition ${isMain ? "bg-[var(--accent)] text-white" : "border border-[var(--border)] bg-white text-slate-700 hover:border-[var(--accent)]"}`}>{isMain ? "Principal" : "Usar"}</button>
+                    <button type="button" onClick={() => handleRemoveImage(image.id)} className="rounded-full border border-rose-200 px-2 py-1 text-[9px] font-semibold text-rose-600 transition hover:bg-rose-50">X</button>
                   </div>
                 </div>
               </article>
             );
           })}
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex h-[112px] w-[84px] shrink-0 items-center justify-center rounded-[0.9rem] border border-dashed border-[var(--border)] bg-[var(--surface)] text-3xl font-light text-[var(--accent)] transition hover:border-[var(--accent)] lg:h-[100px] lg:w-full"
+            aria-label="Enviar imagens do produto"
+            title="Adicionar imagem"
+          >
+            +
+          </button>
         </div>
-      ) : null}
+
+        <div className="order-1 relative overflow-hidden rounded-[1.4rem] border border-[var(--border)] bg-[linear-gradient(180deg,#ffffff_0%,#eef4ff_100%)] lg:order-2">
+          <div className="h-[280px] max-h-[280px] bg-slate-100">
+            {mainImage ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={mainImage.previewUrl} alt={mainImage.name} className="h-full w-full object-cover" />
+              </>
+            ) : (
+              <div className="flex h-full items-center justify-center px-8 text-center text-sm leading-6 text-[var(--muted)]">
+                Envie a foto principal do produto. Ela sera usada primeiro na vitrine e no painel.
+              </div>
+            )}
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
+        </div>
+      </div>
     </section>
   );
 
   const isEditMode = Boolean(editingProductId);
 
   return (
-    <div id="cadastro-produto-form" className="space-y-6">
-      <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] sm:p-6 lg:p-8">
+    <div id="cadastro-produto-form" className="space-y-5">
+      <section className="rounded-[1.8rem] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-5 lg:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Cadastro inteligente</p>
-            <h2 className="mt-2 text-3xl font-semibold theme-heading">{editingProductId ? "Editar produto" : "Novo produto"}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
+            <h2 className="mt-2 text-[2rem] font-semibold theme-heading">{editingProductId ? "Editar produto" : "Novo produto"}</h2>
+            <p className="mt-2 max-w-3xl text-[13px] leading-6 text-[var(--muted)]">
               Organize o cadastro em blocos claros: dados do produto, imagens, precificacao, numeracao e estoque.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700">
               {variantPayload.length} tamanho(s)
             </div>
-            <div className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+            <div className="rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700">
               {draft.images.length}/{MAX_IMAGES} imagens
             </div>
-            <div className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+            <div className="rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700">
               {totalStock} unid em estoque
             </div>
             {onCancel ? (
               <button
                 type="button"
                 onClick={onCancel}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-lg font-semibold text-rose-600 transition hover:bg-rose-100"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-base font-semibold text-rose-600 transition hover:bg-rose-100"
                 aria-label="Fechar cadastro"
                 title="Fechar"
               >
@@ -886,68 +887,54 @@ export function SellerProductForm({
           </div>
         </div>
 
-        {isEditMode ? (
-          <div className="mt-6 rounded-[1.6rem] border border-[var(--border)] bg-white/80 p-2 shadow-[var(--shadow-soft)]">
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-              {editTabOptions.map((tab) => {
-                const isActive = activeEditTab === tab.value;
-                return (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    onClick={() => setActiveEditTab(tab.value)}
-                    className={`rounded-[1.2rem] border px-4 py-3 text-left transition ${isActive ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_10px_24px_rgba(37,99,235,0.12)]" : "border-transparent bg-slate-50 hover:border-[var(--border)] hover:bg-white"}`}
-                  >
-                    <strong className={`block text-sm ${isActive ? "text-[var(--accent-strong)]" : "theme-heading"}`}>{tab.label}</strong>
-                    <span className="mt-1 block text-xs leading-5 text-[var(--muted)]">{tab.helper}</span>
-                  </button>
-                );
-              })}
-            </div>
+        <div className="mt-5 rounded-[1.4rem] border border-[var(--border)] bg-white/80 p-2 shadow-[var(--shadow-soft)]">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {formTabOptions.map((tab) => {
+              const isActive = activeFormTab === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setActiveFormTab(tab.value)}
+                  className={`rounded-[1.05rem] border px-4 py-3 text-left transition ${isActive ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_10px_24px_rgba(37,99,235,0.12)]" : "border-transparent bg-slate-50 hover:border-[var(--border)] hover:bg-white"}`}
+                >
+                  <strong className={`block text-sm ${isActive ? "text-[var(--accent-strong)]" : "theme-heading"}`}>{tab.label}</strong>
+                  <span className="mt-1 block text-xs leading-5 text-[var(--muted)]">{tab.helper}</span>
+                </button>
+              );
+            })}
           </div>
-        ) : null}
+        </div>
       </section>
 
-      {isEditMode ? (
-        <>
-          {activeEditTab === "catalogo" ? (
-            <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-              <div>{productDataSection}</div>
-              <aside>{imagesSection}</aside>
-            </div>
-          ) : null}
-
-          {activeEditTab === "comercial" ? (
-            <div className="max-w-[1100px]">{pricingSection}</div>
-          ) : null}
-
-          {activeEditTab === "estoque" ? (
-            <div>{stockSection}</div>
-          ) : null}
-
-          {activeEditTab === "imagens" ? (
-            <div>{imagesSection}</div>
-          ) : null}
-        </>
-      ) : (
-        <div className="grid gap-6 xl:grid-cols-12">
-          <div className="space-y-6 xl:col-span-7">
-            {productDataSection}
-            {pricingSection}
-            {stockSection}
+      <>
+        {activeFormTab === "catalogo" ? (
+          <div className={isEditMode ? "grid gap-6 2xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]" : "max-w-[900px]"}>
+            <div>{productDataSection}</div>
+            {isEditMode ? <aside>{imagesSection}</aside> : null}
           </div>
+        ) : null}
 
-          <aside className="space-y-6 xl:col-span-5">
-            {imagesSection}
-          </aside>
-        </div>
-      )}
+        {activeFormTab === "comercial" ? (
+          <div className="max-w-[1100px]">{pricingSection}</div>
+        ) : null}
 
-      <section className="rounded-[1.8rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
+        {activeFormTab === "estoque" ? (
+          <div>{stockSection}</div>
+        ) : null}
+
+        {activeFormTab === "imagens" ? (
+          <div className="max-w-[780px]">{imagesSection}</div>
+        ) : null}
+      </>
+
+      <section className="rounded-[1.6rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm leading-6 text-[var(--muted)] lg:flex-1">{feedback}</div>
-          <div className="flex flex-wrap justify-end gap-3">
-            {submittedLabel ? <div className="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">Produto <strong>{submittedLabel}</strong></div> : null}
+          <div className="flex flex-1 flex-col items-stretch gap-3">
+            {submittedLabel ? <div className="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900 lg:max-w-[560px]">Produto <strong>{submittedLabel}</strong></div> : null}
+            <div className="rounded-2xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-sm leading-6 text-[var(--muted)] lg:max-w-[560px]">{feedback}</div>
+          </div>
+          <div className="flex justify-end lg:min-w-[220px]">
             <button type="button" onClick={() => { void handleSubmit(); }} disabled={isSubmitting} className={`rounded-2xl bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] ${isSubmitting ? "cursor-not-allowed opacity-70" : ""}`}>
               {isSubmitting ? "Salvando..." : editingProductId ? "Salvar produto" : "Cadastrar produto"}
             </button>

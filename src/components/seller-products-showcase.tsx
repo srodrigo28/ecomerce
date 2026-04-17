@@ -27,7 +27,7 @@ const EMPTY_LOCAL_PRODUCTS: LocalSellerProductRecord[] = [];
 type ProductViewMode = "vitrine" | "lista";
 type ProductFilterMode = "todos" | "estoque_baixo" | "sem_imagem" | "api" | "novo";
 type ProductSortMode = "recentes" | "nome" | "preco" | "estoque";
-type ManageSection = "catalogo" | "precos";
+type ManageSection = "resumo" | "catalogo" | "precos";
 type ProductEditFocusSection = "catalogo" | "imagens" | "estoque";
 
 type ShowcaseProductRecord = {
@@ -162,7 +162,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
         stock: "",
         categoryId: "",
       });
-      setManageSection("catalogo");
+      setManageSection("resumo");
       return;
     }
 
@@ -176,7 +176,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
       stock: String(manageTarget.stock),
       categoryId: manageTarget.categoryId,
     });
-    setManageSection("catalogo");
+    setManageSection("resumo");
   }, [manageTarget]);
 
   useEffect(() => {
@@ -623,12 +623,12 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Vitrine interna</p>
           <h2 className="mt-2 text-2xl font-semibold theme-heading">Produtos cadastrados da loja</h2>
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            Agora essa area tambem funciona como base de gestao, com busca, filtros e dois modos de leitura do catalogo.
+            Busca, filtros e dois modos de leitura do catalogo.
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <span className="rounded-full theme-border-button px-4 py-2 text-sm font-semibold transition">{summary.total} resultado(s)</span>
-            <span className="rounded-full theme-badge-warning px-3 py-1 text-xs font-semibold">{summary.lowStock} com estoque baixo</span>
+            <span className="rounded-full theme-badge-warning px-3 py-1 text-xs font-semibold">{summary.lowStock} estoque baixo</span>
             {actionFeedback ? <span className="rounded-full theme-badge-success px-3 py-1 text-xs font-semibold">{actionFeedback}</span> : null}
           </div>
         </div>
@@ -813,15 +813,15 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
           onClose={() => setManageTarget(null)}
           title={manageDisplayName}
         >
-          <div className="mt-4 grid gap-4 xl:h-[calc(100vh-220px)] xl:grid-cols-[minmax(560px,1.55fr)_minmax(380px,0.95fr)] 2xl:h-[calc(100vh-210px)] 2xl:grid-cols-[minmax(620px,1.65fr)_minmax(400px,0.95fr)]">
-            <div className="space-y-3 rounded-[2rem] bg-white p-2 shadow-[var(--shadow-soft)] xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:p-3">
+          <div className="mt-4 grid gap-4 xl:h-[calc(100vh-220px)] xl:grid-cols-[minmax(500px,1.45fr)_minmax(340px,0.9fr)] 2xl:h-[calc(100vh-210px)] 2xl:grid-cols-[minmax(560px,1.55fr)_minmax(360px,0.92fr)]">
+            <div className="space-y-3 rounded-[2rem] bg-white p-2 shadow-[var(--shadow-soft)] xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:p-2.5">
               <div className="relative overflow-hidden rounded-[1.7rem] bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_55%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
                 {manageHasGalleryNavigation ? (
                   <>
                     <button
                       type="button"
                       onClick={() => handleManageGalleryStep("prev")}
-                      className="absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-xl font-semibold text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.12)] transition hover:scale-[1.03]"
+                      className="absolute left-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-lg font-semibold text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.12)] transition hover:scale-[1.03]"
                       aria-label="Imagem anterior"
                     >
                       ‹
@@ -829,7 +829,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                     <button
                       type="button"
                       onClick={() => handleManageGalleryStep("next")}
-                      className="absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-xl font-semibold text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.12)] transition hover:scale-[1.03]"
+                      className="absolute right-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-lg font-semibold text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.12)] transition hover:scale-[1.03]"
                       aria-label="Proxima imagem"
                     >
                       ›
@@ -837,7 +837,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                   </>
                 ) : null}
 
-                <div className="min-h-[340px] sm:min-h-[420px] lg:min-h-[480px] xl:h-[52vh] xl:min-h-0 2xl:h-[56vh]">
+                <div className="min-h-[280px] sm:min-h-[340px] lg:min-h-[380px] xl:h-[42vh] xl:min-h-0 2xl:h-[46vh]">
                   {managePreviewImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={managePreviewImage.imageUrl} alt={manageDisplayName} className="h-full w-full object-contain px-0 py-0 sm:py-1" />
@@ -846,7 +846,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                   )}
                 </div>
 
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/20 via-transparent to-transparent px-5 py-4">
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/20 via-transparent to-transparent px-4 py-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700">
                       {manageSelectedIndex >= 0 ? manageSelectedIndex + 1 : 1} de {manageGallery.length || 1}
@@ -862,7 +862,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                             event.stopPropagation();
                             void handleDeleteSelectedManageImage();
                           }}
-                          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/92 text-rose-600 shadow-sm transition hover:bg-rose-50"
+                          className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/92 text-rose-600 shadow-sm transition hover:bg-rose-50"
                           aria-label="Excluir imagem selecionada"
                           title="Excluir imagem selecionada"
                         >
@@ -877,7 +877,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
               </div>
 
               {manageGallery.length > 1 ? (
-                <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-6">
                   {manageGallery.slice(0, 5).map((image) => {
                     const isSelected = managePreviewImage?.id === image.id;
                     return (
@@ -887,7 +887,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                         onClick={() => setManageImageId(image.id)}
                         className={`overflow-hidden rounded-[1rem] border transition ${isSelected ? "border-[var(--accent)] shadow-[0_0_0_2px_rgba(37,99,235,0.12)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
                       >
-                        <div className="aspect-[4/5] bg-slate-100 xl:aspect-[3/4]">
+                        <div className="aspect-[4/5] bg-slate-100 xl:aspect-[0.92]">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={image.imageUrl} alt={image.name} className="h-full w-full object-cover" />
                         </div>
@@ -898,7 +898,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                     <button
                       type="button"
                       onClick={() => handleEdit(manageTarget, "imagens")}
-                      className="flex aspect-[4/5] items-center justify-center rounded-[1rem] border border-dashed border-[var(--border)] bg-[var(--surface)] text-3xl font-light text-[var(--accent)] transition hover:border-[var(--accent)]"
+                      className="flex aspect-[4/5] items-center justify-center rounded-[1rem] border border-dashed border-[var(--border)] bg-[var(--surface)] text-3xl font-light text-[var(--accent)] transition hover:border-[var(--accent)] xl:aspect-[0.92]"
                       aria-label="Adicionar imagem"
                       title="Adicionar imagem"
                     >
@@ -910,7 +910,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                 <button
                   type="button"
                   onClick={handleOpenImageEditor}
-                  className="flex aspect-[4/5] max-w-[140px] items-center justify-center rounded-[1rem] border border-dashed border-[var(--border)] bg-[var(--surface)] text-3xl font-light text-[var(--accent)] transition hover:border-[var(--accent)]"
+                  className="flex aspect-[4/5] max-w-[120px] items-center justify-center rounded-[1rem] border border-dashed border-[var(--border)] bg-[var(--surface)] text-3xl font-light text-[var(--accent)] transition hover:border-[var(--accent)]"
                   aria-label="Adicionar imagem"
                   title="Adicionar imagem"
                 >
@@ -959,163 +959,187 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
               </details>
             </div>
 
-            <div className="space-y-3 xl:flex xl:h-full xl:flex-col xl:space-y-0">
-              <div className="rounded-[2rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)] xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:p-5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white">Gestao</span>
-                  <span className="rounded-full theme-badge-neutral px-3 py-1 text-xs font-semibold">{manageDisplayCategoryName}</span>
-                  {manageIsDeactivated ? (
-                    <span className="rounded-full theme-badge-danger px-3 py-1 text-xs font-semibold">Desativado</span>
-                  ) : (
-                    <span className="rounded-full theme-badge-success px-3 py-1 text-xs font-semibold">Ativo na vitrine</span>
-                  )}
-                </div>
-
-                <h3 className="mt-3 text-2xl font-semibold leading-tight theme-heading xl:text-[2rem]">{manageDisplayName}</h3>
-                <p className="mt-2 text-sm text-[var(--muted)]">Cod. interno /{manageTarget.slug}</p>
-
-                <div className="mt-4 border-t border-[var(--border)] pt-4">
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)] xl:items-start">
-                    <div>
-                      <p className="text-sm text-[var(--muted)]">Preco varejo</p>
-                      <p className="mt-2 text-3xl font-semibold leading-none text-rose-600 xl:text-[2.8rem]">{formatCurrency(manageDisplayPrice)}</p>
-                      <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
-                          Atacado {manageDisplayWholesale > 0 ? formatCurrency(manageDisplayWholesale) : "Nao definido"}
-                        </span>
-                        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
-                          Promocional {manageDisplayPromotion > 0 ? formatCurrency(manageDisplayPromotion) : "Nao definido"}
-                        </span>
-                      </div>
-                      <p className="mt-3 text-sm text-emerald-600">Estoque atual: {manageDisplayStock} unidade(s)</p>
-                      <p className="mt-2 text-sm text-[var(--muted)]">Estoque minimo configurado: {manageTarget.minStock} unidade(s)</p>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                      <div className="rounded-[1.1rem] border border-[var(--border)] bg-[var(--surface)] p-3">
-                        <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Estoque atual</p>
-                        <strong className="mt-1 block text-lg theme-heading">{manageDisplayStock} unid</strong>
-                      </div>
-                      <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface)] p-4">
-                        <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Estoque minimo</p>
-                        <strong className="mt-1 block text-lg theme-heading">{manageTarget.minStock} unid</strong>
-                      </div>
-                    </div>
+            <div className="space-y-3 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:space-y-0">
+              <div className="rounded-[2rem] border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-soft)] xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden xl:p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white">Gestao</span>
+                    <span className="rounded-full theme-badge-neutral px-3 py-1 text-xs font-semibold">{manageDisplayCategoryName}</span>
+                    {manageIsDeactivated ? (
+                      <span className="rounded-full theme-badge-danger px-3 py-1 text-xs font-semibold">Desativado</span>
+                    ) : (
+                      <span className="rounded-full theme-badge-success px-3 py-1 text-xs font-semibold">Ativo na vitrine</span>
+                    )}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setManageTarget(null)}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-base font-semibold text-rose-600 transition hover:bg-rose-100"
+                    aria-label="Fechar gerenciamento"
+                    title="Fechar"
+                  >
+                    X
+                  </button>
                 </div>
 
-                {manageVariantBadges.length ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {manageVariantBadges.map((variant, index) => (
-                      <span key={`${variant.sizeLabel}-${index}`} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-slate-700 xl:px-2.5">
-                        {variant.sizeLabel} · {variant.stock} unid
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-
-                <div className="mt-4 rounded-[1.2rem] border border-[var(--border)] bg-[var(--surface)] p-3 xl:p-3.5">
-                  <p className="text-sm leading-6 text-[var(--muted)] xl:text-[13px] xl:leading-5">{manageDescriptionMeta.notes || "Adicione uma descricao mais forte para a vitrine publica e para a operacao da loja."}</p>
-                </div>
+                <h3 className="mt-3 text-[2rem] font-semibold leading-tight theme-heading xl:text-[1.85rem]">{manageDisplayName}</h3>
+                <p className="mt-1.5 text-sm text-[var(--muted)]">Cod. interno /{manageTarget.slug}</p>
 
                 <div className="mt-4 flex gap-2 rounded-[1rem] border border-[var(--border)] bg-[var(--surface)] p-1 xl:mt-3">
                   <button
                     type="button"
+                    onClick={() => setManageSection("resumo")}
+                    className={`flex-1 rounded-[0.8rem] px-3 py-2 text-[13px] font-semibold transition ${manageSection === "resumo" ? "bg-white text-slate-950 shadow-sm" : "text-[var(--muted)]"}`}
+                  >
+                    Resumo
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setManageSection("catalogo")}
-                    className={`flex-1 rounded-[0.8rem] px-3 py-2 text-sm font-semibold transition ${manageSection === "catalogo" ? "bg-white text-slate-950 shadow-sm" : "text-[var(--muted)]"}`}
+                    className={`flex-1 rounded-[0.8rem] px-3 py-2 text-[13px] font-semibold transition ${manageSection === "catalogo" ? "bg-white text-slate-950 shadow-sm" : "text-[var(--muted)]"}`}
                   >
                     Catalogo
                   </button>
                   <button
                     type="button"
                     onClick={() => setManageSection("precos")}
-                    className={`flex-1 rounded-[0.8rem] px-3 py-2 text-sm font-semibold transition ${manageSection === "precos" ? "bg-white text-slate-950 shadow-sm" : "text-[var(--muted)]"}`}
+                    className={`flex-1 rounded-[0.8rem] px-3 py-2 text-[13px] font-semibold transition ${manageSection === "precos" ? "bg-white text-slate-950 shadow-sm" : "text-[var(--muted)]"}`}
                   >
                     Precos
                   </button>
                 </div>
 
-                <form
-                  className="mt-3 grid gap-3 sm:grid-cols-2 xl:mt-3 xl:gap-3"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void handleQuickSaveAndClose();
-                  }}
-                >
-                  {manageSection === "catalogo" ? (
-                    <>
-                      <label className="space-y-2 sm:col-span-2">
-                        <span className="text-sm font-medium theme-heading">Titulo</span>
-                        <input
-                          autoFocus
-                          value={manageDraft.name}
-                          onChange={(event) => setManageDraft((current) => ({ ...current, name: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
-                        />
-                      </label>
-                      <label className="space-y-2 sm:col-span-2">
-                        <span className="text-sm font-medium theme-heading">Categoria</span>
-                        <select
-                          value={manageDraft.categoryId}
-                          onChange={(event) => setManageDraft((current) => ({ ...current, categoryId: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
-                        >
-                          {workspace.categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
+                <div className="mt-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+                  {manageSection === "resumo" ? (
+                    <div className="space-y-4 border-t border-[var(--border)] pt-4">
+                      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(220px,0.9fr)] xl:items-start">
+                        <div>
+                          <p className="text-sm text-[var(--muted)]">Preco varejo</p>
+                          <p className="mt-2 text-3xl font-semibold leading-none text-rose-600 xl:text-[2.5rem]">{formatCurrency(manageDisplayPrice)}</p>
+                          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                            <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
+                              Atacado {manageDisplayWholesale > 0 ? formatCurrency(manageDisplayWholesale) : "Nao definido"}
+                            </span>
+                            <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-slate-700">
+                              Promocional {manageDisplayPromotion > 0 ? formatCurrency(manageDisplayPromotion) : "Nao definido"}
+                            </span>
+                          </div>
+                          <p className="mt-3 text-sm text-emerald-600">Estoque atual: {manageDisplayStock} unidade(s)</p>
+                          <p className="mt-2 text-sm text-[var(--muted)]">Estoque minimo configurado: {manageTarget.minStock} unidade(s)</p>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                          <div className="rounded-[1.1rem] border border-[var(--border)] bg-[var(--surface)] p-3">
+                            <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Estoque atual</p>
+                            <strong className="mt-1 block text-lg theme-heading">{manageDisplayStock} unid</strong>
+                          </div>
+                          <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface)] p-4">
+                            <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Estoque minimo</p>
+                            <strong className="mt-1 block text-lg theme-heading">{manageTarget.minStock} unid</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {manageVariantBadges.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {manageVariantBadges.map((variant, index) => (
+                            <span key={`${variant.sizeLabel}-${index}`} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-slate-700 xl:px-2.5">
+                              {variant.sizeLabel} · {variant.stock} unid
+                            </span>
                           ))}
-                        </select>
-                      </label>
-                    </>
+                        </div>
+                      ) : null}
+
+                      {manageDescriptionMeta.notes ? (
+                        <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--surface)] p-3 xl:p-3.5">
+                          <p className="text-sm leading-6 text-[var(--muted)] xl:text-[13px] xl:leading-5">{manageDescriptionMeta.notes}</p>
+                        </div>
+                      ) : null}
+                    </div>
                   ) : (
-                    <>
-                      <label className="space-y-2">
-                        <span className="text-sm font-medium theme-heading">Preco varejo</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={manageDraft.priceRetail}
-                          onChange={(event) => setManageDraft((current) => ({ ...current, priceRetail: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
-                        />
-                      </label>
-                      <label className="space-y-2">
-                        <span className="text-sm font-medium theme-heading">Preco atacado</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={manageDraft.priceWholesale}
-                          onChange={(event) => setManageDraft((current) => ({ ...current, priceWholesale: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
-                        />
-                      </label>
-                      <label className="space-y-2">
-                        <span className="text-sm font-medium theme-heading">Preco promocional</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={manageDraft.pricePromotion}
-                          onChange={(event) => setManageDraft((current) => ({ ...current, pricePromotion: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
-                        />
-                      </label>
-                      <label className="space-y-2">
-                        <span className="text-sm font-medium theme-heading">Quantidade</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={manageDraft.stock}
-                          onChange={(event) => setManageDraft((current) => ({ ...current, stock: event.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
-                        />
-                      </label>
-                    </>
+                    <form
+                      className="grid gap-3 sm:grid-cols-2"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void handleQuickSaveAndClose();
+                      }}
+                    >
+                      {manageSection === "catalogo" ? (
+                        <>
+                          <label className="space-y-2 sm:col-span-2">
+                            <span className="text-sm font-medium theme-heading">Titulo</span>
+                            <input
+                              autoFocus
+                              value={manageDraft.name}
+                              onChange={(event) => setManageDraft((current) => ({ ...current, name: event.target.value }))}
+                              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
+                            />
+                          </label>
+                          <label className="space-y-2 sm:col-span-2">
+                            <span className="text-sm font-medium theme-heading">Categoria</span>
+                            <select
+                              value={manageDraft.categoryId}
+                              onChange={(event) => setManageDraft((current) => ({ ...current, categoryId: event.target.value }))}
+                              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
+                            >
+                              {workspace.categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                  {category.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </>
+                      ) : (
+                        <>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium theme-heading">Preco varejo</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={manageDraft.priceRetail}
+                              onChange={(event) => setManageDraft((current) => ({ ...current, priceRetail: event.target.value }))}
+                              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium theme-heading">Preco atacado</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={manageDraft.priceWholesale}
+                              onChange={(event) => setManageDraft((current) => ({ ...current, priceWholesale: event.target.value }))}
+                              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium theme-heading">Preco promocional</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={manageDraft.pricePromotion}
+                              onChange={(event) => setManageDraft((current) => ({ ...current, pricePromotion: event.target.value }))}
+                              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium theme-heading">Quantidade</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={manageDraft.stock}
+                              onChange={(event) => setManageDraft((current) => ({ ...current, stock: event.target.value }))}
+                              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)] xl:py-2.5"
+                            />
+                          </label>
+                        </>
+                      )}
+                    </form>
                   )}
-                </form>
+                </div>
 
                 <div className="mt-4 space-y-3 xl:mt-auto xl:border-t xl:border-[var(--border)] xl:pt-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1123,6 +1147,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                       type="button"
                       variant="primary"
                       onClick={() => void handleQuickSaveAndClose()}
+                      size="sm"
                       className="rounded-[0.9rem] px-4"
                     >
                       Salvar alteracoes
@@ -1132,31 +1157,31 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                         type="button"
                         variant="secondary"
                         onClick={handleOpenImageEditor}
-                        className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-[var(--accent)] bg-[var(--accent)] p-0 text-white shadow-[0_10px_25px_rgba(37,99,235,0.22)] hover:border-[var(--accent-strong)] hover:bg-[var(--accent-strong)]"
+                        className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-[var(--accent)] bg-[var(--accent)] p-0 text-white shadow-[0_10px_25px_rgba(37,99,235,0.22)] hover:border-[var(--accent-strong)] hover:bg-[var(--accent-strong)]"
                         aria-label="Editar produto"
                         title="Editar produto"
                       >
-                        <FiEdit3 className="h-6 w-6" aria-hidden="true" />
+                        <FiEdit3 className="h-5 w-5" aria-hidden="true" />
                       </Button>
                       <Button
                         type="button"
                         variant="secondary"
                         onClick={() => handleCopyLink(manageTarget)}
-                        className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-sky-300 bg-sky-100 p-0 text-sky-700 shadow-[0_10px_25px_rgba(14,165,233,0.18)] hover:border-sky-400 hover:bg-sky-200"
+                        className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-sky-300 bg-sky-100 p-0 text-sky-700 shadow-[0_10px_25px_rgba(14,165,233,0.18)] hover:border-sky-400 hover:bg-sky-200"
                         aria-label="Compartilhar"
                         title="Compartilhar"
                       >
-                        <FiShare2 className="h-6 w-6" aria-hidden="true" />
+                        <FiShare2 className="h-5 w-5" aria-hidden="true" />
                       </Button>
                       <Button
                         type="button"
                         variant="secondary"
                         onClick={() => setDeleteTarget(manageTarget)}
-                        className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-rose-300 bg-rose-600 p-0 text-white shadow-[0_10px_25px_rgba(225,29,72,0.2)] hover:border-rose-400 hover:bg-rose-700"
+                        className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-rose-300 bg-rose-600 p-0 text-white shadow-[0_10px_25px_rgba(225,29,72,0.2)] hover:border-rose-400 hover:bg-rose-700"
                         aria-label="Excluir"
                         title="Excluir"
                       >
-                        <FiTrash2 className="h-6 w-6" aria-hidden="true" />
+                        <FiTrash2 className="h-5 w-5" aria-hidden="true" />
                       </Button>
                     </div>
                   </div>
@@ -1166,6 +1191,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                       type="button"
                       variant="secondary"
                       onClick={handleOpenStockEditor}
+                      size="sm"
                       className="justify-center rounded-[1rem] border border-[var(--border)] bg-white px-4 py-3 text-center theme-text hover:border-[var(--accent)]"
                     >
                       Editar estoque no formulario
@@ -1174,6 +1200,7 @@ export function SellerProductsShowcase({ workspace, onEditProduct }: { workspace
                       type="button"
                       variant="secondary"
                       onClick={handleOpenImageEditor}
+                      size="sm"
                       className="justify-center rounded-[1rem] border border-[var(--border)] bg-white px-4 py-3 text-center theme-text hover:border-[var(--accent)]"
                     >
                       Adicionar ou remover imagens

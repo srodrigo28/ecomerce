@@ -161,6 +161,12 @@ html {
   overflow-x: hidden;
 }
 
+@media (min-width: 1280px) {
+  html {
+    font-size: 15px;
+  }
+}
+
 body {
   min-height: 100vh;
   margin: 0;
@@ -406,6 +412,17 @@ html[data-theme="dark"] .hover\:bg-slate-700:hover {
     right: 0;
     width: auto;
     max-width: none;
+  }
+
+  .seller-topbar-shell::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.04), rgba(15, 23, 42, 0.12), rgba(15, 23, 42, 0.04));
+    pointer-events: none;
   }
 }
 
